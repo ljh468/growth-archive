@@ -1,2 +1,2 @@
-# wealthLibrary
-부습만
+# wealth-library
+부자 습관 만들기
