@@ -134,27 +134,27 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 6. Frontend App Shell / Navigation
 
-- [ ] Next.js app is created
-- [ ] TypeScript is configured
-- [ ] Tailwind CSS is configured
-- [ ] shadcn/ui or component base is configured
-- [ ] Design tokens from DESIGN-001 are applied
-- [ ] PC header navigation exists
-- [ ] Mobile bottom navigation exists
-- [ ] Mobile hamburger menu exists
+- [x] Next.js app is created
+- [x] TypeScript is configured
+- [x] Tailwind CSS is configured
+- [x] shadcn/ui or component base is configured
+- [x] Design tokens from DESIGN-001 are applied
+- [x] PC header navigation exists
+- [x] Mobile bottom navigation exists
+- [x] Mobile hamburger menu exists
 - [x] Guest routes render correctly
 - [x] Member-only route guard exists
 - [x] Admin route guard exists
-- [ ] Mobile WebView safe-area is considered
-- [ ] Loading state components exist
-- [ ] Empty state components exist
-- [ ] Error state components exist
+- [x] Mobile WebView safe-area is considered
+- [x] Loading state components exist
+- [x] Empty state components exist
+- [x] Error state components exist
 
 ---
 
 ## 7. Home / Public Pages
 
-- [ ] Home Hero renders brand message
+- [x] Home Hero renders brand message
 - [ ] Real-photo-first visual direction is reflected
 - [ ] This month recommended books section renders
 - [ ] Recent growth records section renders
@@ -162,17 +162,17 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [ ] Recent meetings section renders
 - [ ] Recent meeting reviews section renders
 - [ ] Growth people preview section renders
-- [ ] Guest can browse public content without login
-- [ ] Login CTA is visible where required
+- [x] Guest can browse public content without login
+- [x] Login CTA is visible where required
 
 ---
 
 ## 8. Reading Library
 
-- [ ] `/library` page exists
+- [x] `/library` page exists
 - [ ] Kakao Book Search integration works
 - [ ] Book search result list renders
-- [ ] Book detail page exists
+- [x] Book detail page exists
 - [ ] Book detail shows average rating, record count, readers
 - [ ] “이 책을 읽은 사람” section exists
 - [ ] Reading records are displayed by author accordion/toggle
@@ -205,9 +205,9 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 10. Growth People / Profiles
 
-- [ ] `/people` page exists
+- [x] `/people` page exists
 - [ ] Growth people page is card/showcase style, not plain table
-- [ ] Profile URL uses `/people/{memberId}`
+- [x] Profile URL uses `/people/{memberId}`
 - [ ] Guest sees public profile fields only
 - [ ] Member sees deeper profile fields
 - [ ] Job is not visible to Guest
@@ -222,8 +222,8 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 11. My Page / Dashboard
 
-- [ ] `/mypage` exists
-- [ ] My page requires Member access
+- [x] `/mypage` exists
+- [x] My page requires Member access
 - [ ] `GET /me/dashboard` or equivalent data loading exists
 - [ ] Monthly participation status is shown at top
 - [ ] Quick CTA for reading record exists
@@ -231,7 +231,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [ ] Quick CTA for reflection exists
 - [ ] Quick CTA for small meeting exists
 - [ ] Recent personal records are shown
-- [ ] Profile edit page exists
+- [x] Profile edit page exists
 
 ---
 
@@ -251,7 +251,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 13. Monthly Reflection
 
-- [ ] Monthly reflection page exists
+- [x] Monthly reflection page exists
 - [ ] Reflection is optional
 - [ ] Reflection does not count toward participation
 - [ ] Reflection slot/entry is available by month
@@ -281,7 +281,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 15. Meetings / Small Meetings
 
-- [ ] `/meetings` page exists
+- [x] `/meetings` page exists
 - [ ] Regular monthly reading meeting is auto-created
 - [ ] Regular monthly action meeting is auto-created
 - [ ] Scheduler runs at monthly 1st 00:10 KST or equivalent job exists
@@ -304,8 +304,8 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 16. Meeting Reviews / Images
 
-- [ ] `/reviews` page exists
-- [ ] Review detail page exists
+- [x] `/reviews` page exists
+- [x] Review detail page exists
 - [ ] Active Member can write review without attendance restriction
 - [ ] Review is linked to a meeting when possible
 - [ ] Review title validation is implemented
@@ -323,7 +323,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 17. Admin Console
 
-- [ ] Admin dashboard exists
+- [x] Admin dashboard exists
 - [ ] Admin member list exists
 - [ ] Admin can deactivate member
 - [ ] Admin can reactivate member
