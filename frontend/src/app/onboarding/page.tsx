@@ -29,7 +29,7 @@ export default function OnboardingPage() {
         return;
       }
       if (result.data.onboardingCompleted && !result.data.deactivated) {
-        window.location.replace("/my");
+        window.location.replace("/mypage");
         return;
       }
       if (!result.data.inviteVerified) {
@@ -159,7 +159,7 @@ export default function OnboardingPage() {
         {step === "done" && (
           <div className="mt-8 border border-[var(--color-line)] bg-[var(--color-warm-white)] p-5">
             <h2 className="text-xl font-semibold">성장 프로필이 만들어졌습니다.</h2>
-            <a className="mt-5 inline-block bg-[var(--color-ink)] px-4 py-3 text-sm text-[var(--color-warm-white)]" href="/my">
+            <a className="mt-5 inline-block bg-[var(--color-ink)] px-4 py-3 text-sm text-[var(--color-warm-white)]" href="/mypage">
               마이페이지로 이동
             </a>
           </div>
