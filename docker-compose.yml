@@ -31,6 +31,11 @@ services:
       DATABASE_PASSWORD: growth_archive
       CORS_ALLOWED_ORIGINS: http://localhost:3000
       FLYWAY_ENABLED: "true"
+      FRONTEND_BASE_URL: http://localhost:3000
+      JWT_SECRET: local-development-jwt-secret-change-before-production
+      JWT_SECURE_COOKIE: "false"
+      KAKAO_MOCK_ENABLED: "true"
+      INITIAL_INVITE_CODE: local-dev-invite
     ports:
       - "8080:8080"
     healthcheck:

@@ -71,7 +71,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [x] Hibernate `ddl-auto` is not used for schema creation in production
 - [x] Common API envelope is implemented
 - [x] Common error response is implemented
-- [ ] Global exception handler is implemented
+- [x] Global exception handler is implemented
 - [x] Bean Validation is enabled
 - [ ] Pagination convention is implemented
 
@@ -112,23 +112,23 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 5. Authentication / Onboarding
 
-- [ ] Kakao OAuth login endpoint exists
-- [ ] Kakao OAuth callback endpoint exists
-- [ ] JWT + HttpOnly Cookie auth is implemented
-- [ ] Refresh token handling is implemented or safely documented as TODO
-- [ ] Logout clears auth cookies
-- [ ] `/api/v1/auth/me` returns current user state
-- [ ] Invite code verification endpoint exists
-- [ ] Only one active invite code is supported
-- [ ] Admin can change active invite code
-- [ ] Terms agreement endpoint exists
-- [ ] Privacy agreement timestamp is stored
-- [ ] Onboarding endpoint exists
-- [ ] Nickname duplication is blocked
-- [ ] Onboarding required fields are validated
-- [ ] Member access is computed from timestamp fields
-- [ ] Deactivated members cannot use member-only APIs
-- [ ] Admin access requires active member + `role = ADMIN`
+- [x] Kakao OAuth login endpoint exists
+- [x] Kakao OAuth callback endpoint exists
+- [x] JWT + HttpOnly Cookie auth is implemented
+- [x] Refresh token handling is implemented or safely documented as TODO
+- [x] Logout clears auth cookies
+- [x] `/api/v1/auth/me` returns current user state
+- [x] Invite code verification endpoint exists
+- [x] Only one active invite code is supported
+- [x] Admin can change active invite code
+- [x] Terms agreement endpoint exists
+- [x] Privacy agreement timestamp is stored
+- [x] Onboarding endpoint exists
+- [x] Nickname duplication is blocked
+- [x] Onboarding required fields are validated
+- [x] Member access is computed from timestamp fields
+- [x] Deactivated members cannot use member-only APIs
+- [x] Admin access requires active member + `role = ADMIN`
 
 ---
 
@@ -142,9 +142,9 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [ ] PC header navigation exists
 - [ ] Mobile bottom navigation exists
 - [ ] Mobile hamburger menu exists
-- [ ] Guest routes render correctly
-- [ ] Member-only route guard exists
-- [ ] Admin route guard exists
+- [x] Guest routes render correctly
+- [x] Member-only route guard exists
+- [x] Admin route guard exists
 - [ ] Mobile WebView safe-area is considered
 - [ ] Loading state components exist
 - [ ] Empty state components exist
