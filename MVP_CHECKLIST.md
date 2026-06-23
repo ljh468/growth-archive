@@ -170,35 +170,35 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 ## 8. Reading Library
 
 - [x] `/library` page exists
-- [ ] Kakao Book Search integration works
-- [ ] Book search result list renders
+- [x] Kakao Book Search integration works
+- [x] Book search result list renders
 - [x] Book detail page exists
-- [ ] Book detail shows average rating, record count, readers
+- [x] Book detail shows average rating, record count, readers
 - [ ] “이 책을 읽은 사람” section exists
-- [ ] Reading records are displayed by author accordion/toggle
-- [ ] Recent reading records list exists
-- [ ] Popular books TOP5 calculation works
-- [ ] Recommended books 3~5 can be displayed
-- [ ] Book search no-result state exists
-- [ ] Member can manually register an `UNVERIFIED` book
+- [x] Reading records are displayed by author accordion/toggle
+- [x] Recent reading records list exists
+- [x] Popular books TOP5 calculation works
+- [x] Recommended books 3~5 can be displayed
+- [x] Book search no-result state exists
+- [x] Member can manually register an `UNVERIFIED` book
 
 ---
 
 ## 9. Reading Records
 
-- [ ] Member can create reading record
-- [ ] Book selection is required
-- [ ] Rating is optional
-- [ ] Rating accepts integer 1~5 only when provided
-- [ ] One-line review validation is implemented
-- [ ] Blog URL validation is implemented
-- [ ] Blog URL is visible to Guest
+- [x] Member can create reading record
+- [x] Book selection is required
+- [x] Rating is optional
+- [x] Rating accepts integer 1~5 only when provided
+- [x] One-line review validation is implemented
+- [x] Blog URL validation is implemented
+- [x] Blog URL is visible to Guest
 - [ ] Representative image can be uploaded
-- [ ] Author can edit own reading record
-- [ ] Author can delete own reading record
-- [ ] Admin cannot edit reading record content
-- [ ] Admin can hide reading record
-- [ ] Admin can delete/soft-delete reading record
+- [x] Author can edit own reading record
+- [x] Author can delete own reading record
+- [x] Admin cannot edit reading record content
+- [x] Admin can hide reading record
+- [x] Admin can delete/soft-delete reading record
 - [ ] Deleted reading records do not count toward participation
 
 ---
@@ -329,7 +329,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [ ] Admin can reactivate member
 - [ ] Admin can change active invite code
 - [ ] Admin can manage interest tags
-- [ ] Admin can manage recommended books
+- [x] Admin can manage recommended books
 - [ ] Admin can manage regular meetings
 - [ ] Admin can hide/delete member content where allowed
 - [ ] Admin can view participation status
