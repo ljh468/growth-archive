@@ -61,52 +61,52 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 3. Backend Foundation
 
-- [ ] Java 25 is configured
-- [ ] Spring Boot 4.1.0 is configured
-- [ ] Spring Security is configured
-- [ ] Spring Data JPA is configured
-- [ ] Querydsl is configured
-- [ ] Flyway is configured
-- [ ] PostgreSQL connection is configured
-- [ ] Hibernate `ddl-auto` is not used for schema creation in production
-- [ ] Common API envelope is implemented
-- [ ] Common error response is implemented
+- [x] Java 25 is configured
+- [x] Spring Boot 4.1.0 is configured
+- [x] Spring Security is configured
+- [x] Spring Data JPA is configured
+- [x] Querydsl is configured
+- [x] Flyway is configured
+- [x] PostgreSQL connection is configured
+- [x] Hibernate `ddl-auto` is not used for schema creation in production
+- [x] Common API envelope is implemented
+- [x] Common error response is implemented
 - [ ] Global exception handler is implemented
-- [ ] Bean Validation is enabled
+- [x] Bean Validation is enabled
 - [ ] Pagination convention is implemented
 
 ---
 
 ## 4. Database / ERD / Migration
 
-- [ ] `members` table exists
-- [ ] No `account_status` enum is used for members
-- [ ] `role` supports `MEMBER` and `ADMIN`
-- [ ] `invite_verified_at` exists
-- [ ] `terms_agreed_at` exists
-- [ ] `privacy_agreed_at` exists
-- [ ] `onboarding_completed_at` exists
-- [ ] `deactivated_at` exists
-- [ ] `oauth_accounts` table exists
-- [ ] `interest_tags` table exists
-- [ ] `member_interest_tags` table exists
-- [ ] `member_join_intro_sources` or equivalent internal migration table exists for signup greetings
-- [ ] `books` table exists
-- [ ] Manual books can be marked `UNVERIFIED`
-- [ ] `reading_records` table exists
-- [ ] `reading_records.recorded_at` exists and is used for monthly participation
-- [ ] `monthly_action_plans` table exists
-- [ ] `monthly_reflections` table exists
-- [ ] `meetings` table exists
-- [ ] `meeting_attendances` table exists
-- [ ] `meeting_reviews` table exists
-- [ ] `meeting_review_images` table exists or equivalent image relation exists
-- [ ] `recommended_books` table exists
-- [ ] `activity_events` table exists
-- [ ] `participation_admin_notes` table exists
-- [ ] `admin_audit_logs` table exists
-- [ ] Soft delete fields are applied where required
-- [ ] Required indexes are added for major list/search queries
+- [x] `members` table exists
+- [x] No `account_status` enum is used for members
+- [x] `role` supports `MEMBER` and `ADMIN`
+- [x] `invite_verified_at` exists
+- [x] `terms_agreed_at` exists
+- [x] `privacy_agreed_at` exists
+- [x] `onboarding_completed_at` exists
+- [x] `deactivated_at` exists
+- [x] `oauth_accounts` table exists
+- [x] `interest_tags` table exists
+- [x] `member_interest_tags` table exists
+- [x] `member_join_intro_sources` or equivalent internal migration table exists for signup greetings
+- [x] `books` table exists
+- [x] Manual books can be marked `UNVERIFIED`
+- [x] `reading_records` table exists
+- [x] `reading_records.recorded_at` exists and is used for monthly participation
+- [x] `monthly_action_plans` table exists
+- [x] `monthly_reflections` table exists
+- [x] `meetings` table exists
+- [x] `meeting_attendances` table exists
+- [x] `meeting_reviews` table exists
+- [x] `meeting_review_images` table exists or equivalent image relation exists
+- [x] `recommended_books` table exists
+- [x] `activity_events` table exists
+- [x] `participation_admin_notes` table exists
+- [x] `admin_audit_logs` table exists
+- [x] Soft delete fields are applied where required
+- [x] Required indexes are added for major list/search queries
 
 ---
 
