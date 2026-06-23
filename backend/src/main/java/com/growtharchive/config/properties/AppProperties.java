@@ -11,6 +11,7 @@ public class AppProperties {
     private final Frontend frontend = new Frontend();
     private final Jwt jwt = new Jwt();
     private final Kakao kakao = new Kakao();
+    private final BookSearch bookSearch = new BookSearch();
     private final Invite invite = new Invite();
 
     public Cors getCors() {
@@ -27,6 +28,10 @@ public class AppProperties {
 
     public Kakao getKakao() {
         return kakao;
+    }
+
+    public BookSearch getBookSearch() {
+        return bookSearch;
     }
 
     public Invite getInvite() {
@@ -153,6 +158,35 @@ public class AppProperties {
 
         public void setInitialCode(String initialCode) {
             this.initialCode = initialCode;
+        }
+    }
+
+    public static class BookSearch {
+        private final KakaoBook kakao = new KakaoBook();
+
+        public KakaoBook getKakao() {
+            return kakao;
+        }
+    }
+
+    public static class KakaoBook {
+        private String restApiKey = "";
+        private String endpoint = "https://dapi.kakao.com/v3/search/book";
+
+        public String getRestApiKey() {
+            return restApiKey;
+        }
+
+        public void setRestApiKey(String restApiKey) {
+            this.restApiKey = restApiKey;
+        }
+
+        public String getEndpoint() {
+            return endpoint;
+        }
+
+        public void setEndpoint(String endpoint) {
+            this.endpoint = endpoint;
         }
     }
 }

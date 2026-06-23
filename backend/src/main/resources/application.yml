@@ -44,5 +44,9 @@ app:
     redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/api/v1/auth/kakao/callback}
     mock-enabled: ${KAKAO_MOCK_ENABLED:true}
     initial-admin-provider-ids: ${KAKAO_INITIAL_ADMIN_PROVIDER_IDS:}
+  book-search:
+    kakao:
+      rest-api-key: ${KAKAO_BOOK_REST_API_KEY:${KAKAO_REST_API_KEY:}}
+      endpoint: ${KAKAO_BOOK_SEARCH_ENDPOINT:https://dapi.kakao.com/v3/search/book}
   invite:
     initial-code: ${INITIAL_INVITE_CODE:}
