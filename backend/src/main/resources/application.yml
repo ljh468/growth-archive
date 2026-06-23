@@ -31,3 +31,18 @@ management:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+  jwt:
+    secret: ${JWT_SECRET:local-development-jwt-secret-change-before-production}
+    access-token-seconds: ${JWT_ACCESS_TOKEN_SECONDS:3600}
+    refresh-token-seconds: ${JWT_REFRESH_TOKEN_SECONDS:1209600}
+    secure-cookie: ${JWT_SECURE_COOKIE:false}
+  kakao:
+    client-id: ${KAKAO_REST_API_KEY:${KAKAO_CLIENT_ID:}}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
+    redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/api/v1/auth/kakao/callback}
+    mock-enabled: ${KAKAO_MOCK_ENABLED:true}
+    initial-admin-provider-ids: ${KAKAO_INITIAL_ADMIN_PROVIDER_IDS:}
+  invite:
+    initial-code: ${INITIAL_INVITE_CODE:}
