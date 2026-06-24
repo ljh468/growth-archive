@@ -5,6 +5,7 @@ import com.growtharchive.exception.ErrorCode;
 import com.growtharchive.repository.BookRepository;
 import com.growtharchive.repository.ReadingRecordRepository;
 import com.growtharchive.repository.RecommendedBookRepository;
+import com.growtharchive.repository.AdminAuditLogRepository;
 import com.growtharchive.security.AccessLevel;
 import com.growtharchive.security.CurrentMemberResolver;
 import com.growtharchive.security.MemberPrincipal;
@@ -25,19 +26,22 @@ public class BookService {
     private final BookRepository bookRepository;
     private final ReadingRecordRepository readingRecordRepository;
     private final RecommendedBookRepository recommendedBookRepository;
+    private final AdminAuditLogRepository adminAuditLogRepository;
 
     public BookService(
         CurrentMemberResolver currentMemberResolver,
         BookSearchProvider bookSearchProvider,
         BookRepository bookRepository,
         ReadingRecordRepository readingRecordRepository,
-        RecommendedBookRepository recommendedBookRepository
+        RecommendedBookRepository recommendedBookRepository,
+        AdminAuditLogRepository adminAuditLogRepository
     ) {
         this.currentMemberResolver = currentMemberResolver;
         this.bookSearchProvider = bookSearchProvider;
         this.bookRepository = bookRepository;
         this.readingRecordRepository = readingRecordRepository;
         this.recommendedBookRepository = recommendedBookRepository;
+        this.adminAuditLogRepository = adminAuditLogRepository;
     }
 
     public List<BookSearchResult> searchExternal(HttpServletRequest request, String query, int page, int size) {
@@ -104,6 +108,14 @@ public class BookService {
             required(command.reason(), "추천 이유를 입력해 주세요."),
             command.displayOrder()
         );
+        adminAuditLogRepository.record(
+            admin.memberId(),
+            "CREATE_RECOMMENDED_BOOK",
+            "RECOMMENDED_BOOK",
+            id,
+            null,
+            "{\"bookId\":" + command.bookId() + ",\"targetMonth\":\"" + command.targetMonth().withDayOfMonth(1) + "\"}"
+        );
         return recommendedBookRepository.findActiveForMonth(command.targetMonth().withDayOfMonth(1))
             .stream()
             .filter(book -> book.id().equals(id))
@@ -111,10 +123,52 @@ public class BookService {
             .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
     }
 
+    public List<RecommendedBookView> getRecommendedForAdmin(HttpServletRequest request, LocalDate targetMonth) {
+        currentMemberResolver.require(request, AccessLevel.ADMIN);
+        return recommendedBookRepository.findActiveForMonth(targetMonth.withDayOfMonth(1));
+    }
+
+    @Transactional
+    public RecommendedBookView updateRecommended(HttpServletRequest request, Long recommendedBookId, RecommendedBookCommand command) {
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
+        RecommendedBookView before = recommendedBookRepository.findById(recommendedBookId)
+            .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
+        if (!readingRecordRepository.existsBook(command.bookId())) {
+            throw new ApiException(ErrorCode.BOOK_NOT_FOUND);
+        }
+        LocalDate targetMonth = command.targetMonth().withDayOfMonth(1);
+        recommendedBookRepository.update(
+            recommendedBookId,
+            admin.memberId(),
+            targetMonth,
+            command.bookId(),
+            required(command.reason(), "추천 이유를 입력해 주세요."),
+            command.displayOrder()
+        );
+        adminAuditLogRepository.record(
+            admin.memberId(),
+            "UPDATE_RECOMMENDED_BOOK",
+            "RECOMMENDED_BOOK",
+            recommendedBookId,
+            "{\"bookId\":" + before.bookId() + ",\"displayOrder\":" + before.displayOrder() + "}",
+            "{\"bookId\":" + command.bookId() + ",\"displayOrder\":" + command.displayOrder() + "}"
+        );
+        return recommendedBookRepository.findById(recommendedBookId)
+            .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
+    }
+
     @Transactional
     public void deleteRecommended(HttpServletRequest request, Long recommendedBookId) {
-        currentMemberResolver.require(request, AccessLevel.ADMIN);
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
         recommendedBookRepository.delete(recommendedBookId);
+        adminAuditLogRepository.record(
+            admin.memberId(),
+            "DELETE_RECOMMENDED_BOOK",
+            "RECOMMENDED_BOOK",
+            recommendedBookId,
+            null,
+            "{\"status\":\"DELETED\"}"
+        );
     }
 
     private void validateSearchResult(BookSearchResult result) {

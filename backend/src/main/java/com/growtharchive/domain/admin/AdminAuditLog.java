@@ -33,4 +33,13 @@ public class AdminAuditLog extends CreatedAtEntity {
 
     protected AdminAuditLog() {
     }
+
+    public AdminAuditLog(Long adminMemberId, String action, String entityType, Long entityId, String beforeData, String afterData) {
+        this.adminMemberId = adminMemberId;
+        this.action = action;
+        this.entityType = entityType;
+        this.entityId = entityId;
+        this.beforeData = beforeData;
+        this.afterData = afterData;
+    }
 }

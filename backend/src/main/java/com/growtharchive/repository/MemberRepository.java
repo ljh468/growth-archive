@@ -6,6 +6,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -140,6 +142,59 @@ public class MemberRepository {
         );
     }
 
+    public List<AdminMemberRow> findAdminMembers(String keyword, int limit, int offset) {
+        List<Object> args = new ArrayList<>();
+        String keywordFilter = "";
+        if (keyword != null && !keyword.isBlank()) {
+            keywordFilter = """
+                 AND (
+                    m.nickname ILIKE ?
+                    OR coalesce(m.real_name, '') ILIKE ?
+                    OR coalesce(m.job, '') ILIKE ?
+                 )
+                """;
+            String normalized = "%" + keyword.trim() + "%";
+            args.add(normalized);
+            args.add(normalized);
+            args.add(normalized);
+        }
+        args.add(limit);
+        args.add(offset);
+        return jdbcTemplate.query(
+            adminMemberSelect() + " WHERE 1 = 1 " + keywordFilter + adminMemberGroupBy() + " ORDER BY m.created_at DESC LIMIT ? OFFSET ?",
+            (rs, rowNum) -> mapAdminMember(rs),
+            args.toArray()
+        );
+    }
+
+    public Optional<AdminMemberRow> findAdminMemberById(Long memberId) {
+        return jdbcTemplate.query(
+            adminMemberSelect() + " WHERE m.id = ?" + adminMemberGroupBy(),
+            rs -> rs.next() ? Optional.of(mapAdminMember(rs)) : Optional.empty(),
+            memberId
+        );
+    }
+
+    public void updateParticipationStartMonth(Long memberId, LocalDate participationStartMonth) {
+        jdbcTemplate.update(
+            "UPDATE members SET participation_start_month = ?, updated_at = now() WHERE id = ?",
+            Date.valueOf(participationStartMonth.withDayOfMonth(1)),
+            memberId
+        );
+    }
+
+    public int countActiveMembers() {
+        Integer count = jdbcTemplate.queryForObject(
+            """
+                SELECT count(*)
+                FROM members
+                WHERE onboarding_completed_at IS NOT NULL AND deactivated_at IS NULL
+                """,
+            Integer.class
+        );
+        return count == null ? 0 : count;
+    }
+
     private Optional<MemberPrincipal> queryPrincipal(String whereClause, Object... args) {
         return jdbcTemplate.query(
             """
@@ -169,6 +224,51 @@ public class MemberRepository {
         );
     }
 
+    private String adminMemberSelect() {
+        return """
+            SELECT m.id, m.role, m.display_type, m.real_name, m.nickname, m.one_line_intro, m.job,
+                   coalesce(profile_image.public_url, m.kakao_profile_image_url) AS profile_image_url,
+                   m.participation_start_month, m.invite_verified_at, m.terms_agreed_at, m.privacy_agreed_at,
+                   m.onboarding_completed_at, m.deactivated_at, m.created_at,
+                   coalesce(array_remove(array_agg(it.name ORDER BY it.display_order), null), '{}') AS interest_tags
+            FROM members m
+            LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
+            LEFT JOIN member_interest_tags mit ON mit.member_id = m.id
+            LEFT JOIN interest_tags it ON it.id = mit.interest_tag_id
+            """;
+    }
+
+    private String adminMemberGroupBy() {
+        return """
+             GROUP BY m.id, profile_image.public_url
+            """;
+    }
+
+    private AdminMemberRow mapAdminMember(ResultSet rs) throws SQLException {
+        String displayType = rs.getString("display_type");
+        String realName = rs.getString("real_name");
+        String nickname = rs.getString("nickname");
+        String[] tags = (String[]) rs.getArray("interest_tags").getArray();
+        return new AdminMemberRow(
+            rs.getLong("id"),
+            rs.getString("role"),
+            "REAL_NAME".equals(displayType) && realName != null && !realName.isBlank() ? realName : nickname,
+            realName,
+            nickname,
+            rs.getString("one_line_intro"),
+            rs.getString("job"),
+            rs.getString("profile_image_url"),
+            rs.getDate("participation_start_month").toLocalDate(),
+            List.of(tags),
+            rs.getObject("invite_verified_at", OffsetDateTime.class),
+            rs.getObject("terms_agreed_at", OffsetDateTime.class),
+            rs.getObject("privacy_agreed_at", OffsetDateTime.class),
+            rs.getObject("onboarding_completed_at", OffsetDateTime.class),
+            rs.getObject("deactivated_at", OffsetDateTime.class),
+            rs.getObject("created_at", OffsetDateTime.class)
+        );
+    }
+
     private String uniqueSeedNickname(String providerUserId) {
         String suffix = providerUserId.replaceAll("[^A-Za-z0-9]", "");
         if (suffix.length() > 10) {
@@ -182,5 +282,25 @@ public class MemberRepository {
             nickname = nickname.substring(0, 20);
         }
         return nickname;
+    }
+
+    public record AdminMemberRow(
+        Long memberId,
+        String role,
+        String displayName,
+        String realName,
+        String nickname,
+        String oneLineIntro,
+        String job,
+        String profileImageUrl,
+        LocalDate participationStartMonth,
+        List<String> interestTags,
+        OffsetDateTime inviteVerifiedAt,
+        OffsetDateTime termsAgreedAt,
+        OffsetDateTime privacyAgreedAt,
+        OffsetDateTime onboardingCompletedAt,
+        OffsetDateTime deactivatedAt,
+        OffsetDateTime createdAt
+    ) {
     }
 }
