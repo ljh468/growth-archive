@@ -285,6 +285,47 @@ export type MeetingDetail = MeetingSummary & {
   attendees: MeetingAttendee[];
 };
 
+export type ReviewImage = {
+  imageId: number;
+  imageUrl: string | null;
+  displayOrder: number;
+};
+
+export type UploadedImage = {
+  imageId: number;
+  imageUrl: string | null;
+};
+
+export type MeetingReviewSummary = {
+  id: number;
+  meetingId: number;
+  meetingTitle: string;
+  memberId: number;
+  memberDisplayName: string;
+  memberProfileImageUrl: string | null;
+  title: string;
+  contentSummary: string;
+  representativeImageUrl: string | null;
+  status: "ACTIVE" | "HIDDEN" | "DELETED";
+  createdAt: string;
+};
+
+export type MeetingReviewDetail = {
+  id: number;
+  meetingId: number;
+  meetingTitle: string;
+  memberId: number;
+  memberDisplayName: string;
+  memberProfileImageUrl: string | null;
+  title: string;
+  content: string;
+  status: "ACTIVE" | "HIDDEN" | "DELETED";
+  createdAt: string;
+  updatedAt: string;
+  canEdit: boolean;
+  images: ReviewImage[];
+};
+
 export async function apiGet<T>(path: string): Promise<ApiResponse<T>> {
   const response = await fetch(`${apiBaseUrl()}${path}`, {
     credentials: "include",
@@ -321,6 +362,15 @@ export async function apiDelete<T>(path: string): Promise<ApiResponse<T>> {
   const response = await fetch(`${apiBaseUrl()}${path}`, {
     method: "DELETE",
     credentials: "include",
+  });
+  return response.json();
+}
+
+export async function apiPostForm<T>(path: string, formData: FormData): Promise<ApiResponse<T>> {
+  const response = await fetch(`${apiBaseUrl()}${path}`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
   });
   return response.json();
 }
