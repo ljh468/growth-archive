@@ -237,44 +237,44 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 12. Monthly Action Plan
 
-- [ ] Member can create monthly action plan
-- [ ] One monthly action plan per member per month is enforced
-- [ ] Action plan is free-form text
-- [ ] Author can edit own action plan
-- [ ] Author can delete own action plan
-- [ ] Admin cannot edit action plan content
-- [ ] Action plan is Member-only
-- [ ] Action plan counts toward monthly participation
-- [ ] Deleted action plan does not count toward participation
+- [x] Member can create monthly action plan
+- [x] One monthly action plan per member per month is enforced
+- [x] Action plan is free-form text
+- [x] Author can edit own action plan
+- [x] Author can delete own action plan
+- [x] Admin cannot edit action plan content
+- [x] Action plan is Member-only
+- [x] Action plan counts toward monthly participation
+- [x] Deleted action plan does not count toward participation
 
 ---
 
 ## 13. Monthly Reflection
 
 - [x] Monthly reflection page exists
-- [ ] Reflection is optional
-- [ ] Reflection does not count toward participation
-- [ ] Reflection slot/entry is available by month
+- [x] Reflection is optional
+- [x] Reflection does not count toward participation
+- [x] Reflection slot/entry is available by month
 - [ ] Actual activity event is created only after content is saved
-- [ ] Author can edit own reflection
-- [ ] Reflection is Member-only
-- [ ] Admin cannot rewrite reflection content
+- [x] Author can edit own reflection
+- [x] Reflection is Member-only
+- [x] Admin cannot rewrite reflection content
 
 ---
 
 ## 14. Monthly Participation
 
-- [ ] Participation rule is implemented: reading record >= 1 OR action plan >= 1
-- [ ] Participation is calculated by month
-- [ ] New member participation starts from defined start month
-- [ ] Deleted records are excluded
-- [ ] Member sees completed / needs participation state
-- [ ] Coffee support target is shown when incomplete
-- [ ] Coffee support unit is 투썸 아메리카노 1잔
-- [ ] Admin can view monthly completion summary
-- [ ] Admin can view non-participant list
-- [ ] Admin can download non-participant CSV
-- [ ] Admin can write operation memo for participation notes
+- [x] Participation rule is implemented: reading record >= 1 OR action plan >= 1
+- [x] Participation is calculated by month
+- [x] New member participation starts from defined start month
+- [x] Deleted records are excluded
+- [x] Member sees completed / needs participation state
+- [x] Coffee support target is shown when incomplete
+- [x] Coffee support unit is 투썸 아메리카노 1잔
+- [x] Admin can view monthly completion summary
+- [x] Admin can view non-participant list
+- [x] Admin can download non-participant CSV
+- [x] Admin can write operation memo for participation notes
 - [ ] Admin can adjust member participation start month
 
 ---
