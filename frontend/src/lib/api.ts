@@ -101,6 +101,88 @@ export type BookDetailResponse = {
   readingRecords: ReadingRecord[];
 };
 
+export type GrowthStats = {
+  readingRecordCount: number;
+  actionPlanCount: number;
+  monthlyReflectionCount: number;
+  meetingReviewCount: number;
+  smallMeetingCreatedCount: number;
+};
+
+export type ActivitySummary = {
+  type: string;
+  title: string;
+  href: string;
+  occurredAt: string;
+};
+
+export type ProfileCard = {
+  memberId: number;
+  displayName: string;
+  profileImageUrl: string | null;
+  oneLineIntro: string;
+  interestTags: string[];
+  futureMeAt50Summary: string;
+  growthStats: GrowthStats;
+  recentPublicActivity: ActivitySummary | null;
+};
+
+export type ProfileDetail = {
+  memberId: number;
+  displayName: string;
+  profileImageUrl: string | null;
+  oneLineIntro: string;
+  interestTags: string[];
+  futureMeAt50: string;
+  growthStats: GrowthStats;
+  recentReadingRecords: ReadingRecord[];
+  recentMeetingReviews: ActivitySummary[];
+  recentPublicActivities: ActivitySummary[];
+  memberOnly: {
+    job: string | null;
+    joinReason: string | null;
+    currentConcern: string | null;
+    threeYearGoal: string | null;
+    recentActionPlans: ActivitySummary[];
+    recentReflections: ActivitySummary[];
+  } | null;
+};
+
+export type MyProfile = {
+  memberId: number;
+  nickname: string;
+  realName: string | null;
+  displayNameType: "REAL_NAME" | "NICKNAME";
+  displayName: string;
+  profileImageUrl: string | null;
+  profileImageId: number | null;
+  oneLineIntro: string;
+  job: string | null;
+  interestTagIds: number[];
+  futureMeAt50: string;
+  joinReason: string | null;
+  currentConcern: string | null;
+  threeYearGoal: string | null;
+};
+
+export type MyDashboard = {
+  profile: {
+    memberId: number;
+    displayName: string;
+    profileImageUrl: string | null;
+    oneLineIntro: string;
+  };
+  participation: {
+    month: string;
+    readingRecordCount: number;
+    actionPlanCount: number;
+    completed: boolean;
+    coffeeSupportTarget: boolean;
+  };
+  quickStats: GrowthStats;
+  recentActivities: ActivitySummary[];
+};
+
 export async function apiGet<T>(path: string): Promise<ApiResponse<T>> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
