@@ -275,7 +275,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [x] Admin can view non-participant list
 - [x] Admin can download non-participant CSV
 - [x] Admin can write operation memo for participation notes
-- [ ] Admin can adjust member participation start month
+- [x] Admin can adjust member participation start month
 
 ---
 
@@ -324,17 +324,17 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 ## 17. Admin Console
 
 - [x] Admin dashboard exists
-- [ ] Admin member list exists
-- [ ] Admin can deactivate member
-- [ ] Admin can reactivate member
-- [ ] Admin can change active invite code
-- [ ] Admin can manage interest tags
+- [x] Admin member list exists
+- [x] Admin can deactivate member
+- [x] Admin can reactivate member
+- [x] Admin can change active invite code
+- [x] Admin can manage interest tags
 - [x] Admin can manage recommended books
-- [ ] Admin can manage regular meetings
-- [ ] Admin can hide/delete member content where allowed
-- [ ] Admin can view participation status
-- [ ] Admin can export non-participants CSV
-- [ ] Admin actions are recorded in audit log where practical
+- [x] Admin can manage regular meetings
+- [x] Admin can hide/delete member content where allowed
+- [x] Admin can view participation status
+- [x] Admin can export non-participants CSV
+- [x] Admin actions are recorded in audit log where practical
 
 ---
 
@@ -427,10 +427,10 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [ ] Member can attend a meeting
 - [ ] Member can create a small meeting
 - [x] Member can write a meeting review with up to 10 images
-- [ ] Admin can manage invite code
-- [ ] Admin can manage recommended books
-- [ ] Admin can view non-participants
-- [ ] Admin can hide/delete inappropriate content
+- [x] Admin can manage invite code
+- [x] Admin can manage recommended books
+- [x] Admin can view non-participants
+- [x] Admin can hide/delete inappropriate content
 - [ ] The service feels like a serious premium growth archive
 
 ---
