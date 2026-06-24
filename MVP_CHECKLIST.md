@@ -206,16 +206,16 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 ## 10. Growth People / Profiles
 
 - [x] `/people` page exists
-- [ ] Growth people page is card/showcase style, not plain table
+- [x] Growth people page is card/showcase style, not plain table
 - [x] Profile URL uses `/people/{memberId}`
-- [ ] Guest sees public profile fields only
-- [ ] Member sees deeper profile fields
-- [ ] Job is not visible to Guest
-- [ ] Age is not collected
-- [ ] 50살의 나 is prominently displayed
-- [ ] Growth statistics are displayed
-- [ ] Recent reading records are limited to 3 items
-- [ ] Recent action plans are limited to 3 items for Member view
+- [x] Guest sees public profile fields only
+- [x] Member sees deeper profile fields
+- [x] Job is not visible to Guest
+- [x] Age is not collected
+- [x] 50살의 나 is prominently displayed
+- [x] Growth statistics are displayed
+- [x] Recent reading records are limited to 3 items
+- [x] Recent action plans are limited to 3 items for Member view
 - [ ] Profile image fallback works: upload → Kakao → default
 
 ---
@@ -224,13 +224,13 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 - [x] `/mypage` exists
 - [x] My page requires Member access
-- [ ] `GET /me/dashboard` or equivalent data loading exists
-- [ ] Monthly participation status is shown at top
-- [ ] Quick CTA for reading record exists
-- [ ] Quick CTA for action plan exists
-- [ ] Quick CTA for reflection exists
-- [ ] Quick CTA for small meeting exists
-- [ ] Recent personal records are shown
+- [x] `GET /me/dashboard` or equivalent data loading exists
+- [x] Monthly participation status is shown at top
+- [x] Quick CTA for reading record exists
+- [x] Quick CTA for action plan exists
+- [x] Quick CTA for reflection exists
+- [x] Quick CTA for small meeting exists
+- [x] Recent personal records are shown
 - [x] Profile edit page exists
 
 ---
