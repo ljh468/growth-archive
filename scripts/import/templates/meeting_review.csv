@@ -1,0 +1,2 @@
+migration_key,member_alias,member_id,meeting_title,meeting_id,review_title,review_content,selected_image_paths,created_at,content_status
+review-001,노아,1,2024년 2월 독서모임,,좋았던 독서모임,실행 아이디어를 나눈 후기,https://example.com/review-photo-1.jpg;https://example.com/review-photo-2.jpg,2024-02-11T13:00:00+09:00,ACTIVE

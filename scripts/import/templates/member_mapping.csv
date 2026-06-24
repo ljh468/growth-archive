@@ -1,0 +1,2 @@
+migration_key,member_alias,member_id,real_name,nickname,display_name,joined_at,participation_start_month,note
+member-001,노아,1,노아,noah,노아,2024-01-01T00:00:00+09:00,2026-07,example only

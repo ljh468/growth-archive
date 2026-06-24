@@ -1,0 +1,2 @@
+migration_key,member_alias,member_id,book_title,author,isbn13,isbn10,rating,one_line_review,blog_url,image_url,recorded_at,content_status
+reading-001,노아,1,부자 아빠 가난한 아빠,로버트 기요사키,,,5,실행 관점을 바꾼 책,https://example.com/blog/reading-001,,2024-02-01T10:00:00+09:00,ACTIVE
