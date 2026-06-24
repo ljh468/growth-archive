@@ -183,6 +183,68 @@ export type MyDashboard = {
   recentActivities: ActivitySummary[];
 };
 
+export type MonthlyActionPlan = {
+  id: number;
+  memberId: number;
+  targetMonth: string;
+  title: string | null;
+  content: string;
+  status: "ACTIVE" | "HIDDEN" | "DELETED";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MonthlyReflection = {
+  id: number;
+  memberId: number;
+  targetMonth: string;
+  wellDone: string | null;
+  regret: string | null;
+  nextFocus: string | null;
+  status: "ACTIVE" | "HIDDEN" | "DELETED";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MonthlyReflectionSlot = {
+  targetMonth: string;
+  writable: boolean;
+  reflection: MonthlyReflection | null;
+};
+
+export type ParticipationStatus = {
+  month: string;
+  readingRecordCount: number;
+  actionPlanCount: number;
+  calculationTarget: boolean;
+  completed: boolean;
+  coffeeSupportTarget: boolean;
+  coffeeSupportItem: string;
+};
+
+export type AdminParticipationMember = {
+  memberId: number;
+  displayName: string;
+  nickname: string;
+  profileImageUrl: string | null;
+  readingRecordCount: number;
+  hasActionPlan: boolean;
+  calculationTarget: boolean;
+  completed: boolean;
+  coffeeSupportTarget: boolean;
+  coffeeSupportItem: string;
+  adminMemo: string | null;
+};
+
+export type AdminParticipationSummary = {
+  month: string;
+  totalTargetMemberCount: number;
+  completedCount: number;
+  incompleteCount: number;
+  completionRate: number;
+  members: AdminParticipationMember[];
+};
+
 export async function apiGet<T>(path: string): Promise<ApiResponse<T>> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
