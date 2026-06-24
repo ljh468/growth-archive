@@ -306,18 +306,18 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 - [x] `/reviews` page exists
 - [x] Review detail page exists
-- [ ] Active Member can write review without attendance restriction
-- [ ] Review is linked to a meeting when possible
-- [ ] Review title validation is implemented
-- [ ] Review content validation is implemented
-- [ ] Review image upload supports max 10 photos
-- [ ] Single image max size is 10MB
-- [ ] Uploaded images are converted/resized to WebP or equivalent optimized format
-- [ ] Original image is not permanently stored unless explicitly required
-- [ ] Photo public visibility warning is shown
-- [ ] Admin can hide review
-- [ ] Admin can delete/soft-delete review
-- [ ] Admin cannot rewrite review content
+- [x] Active Member can write review without attendance restriction
+- [x] Review is linked to a meeting when possible
+- [x] Review title validation is implemented
+- [x] Review content validation is implemented
+- [x] Review image upload supports max 10 photos
+- [x] Single image max size is 10MB
+- [x] Uploaded images are converted/resized to WebP or equivalent optimized format
+- [x] Original image is not permanently stored unless explicitly required
+- [x] Photo public visibility warning is shown
+- [x] Admin can hide review
+- [x] Admin can delete/soft-delete review
+- [x] Admin cannot rewrite review content
 
 ---
 
@@ -426,7 +426,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [ ] Member can view member-only profile details
 - [ ] Member can attend a meeting
 - [ ] Member can create a small meeting
-- [ ] Member can write a meeting review with up to 10 images
+- [x] Member can write a meeting review with up to 10 images
 - [ ] Admin can manage invite code
 - [ ] Admin can manage recommended books
 - [ ] Admin can view non-participants
