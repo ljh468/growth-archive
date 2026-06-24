@@ -93,6 +93,49 @@ export type RecommendedBook = {
   displayOrder: number;
 };
 
+export type AdminDashboard = {
+  month: string;
+  activeMemberCount: number;
+  activeReadingRecordCount: number;
+  meetingCount: number;
+  activeReviewCount: number;
+  unverifiedBookCount: number;
+  participationTargetCount: number;
+  participationCompletedCount: number;
+  participationIncompleteCount: number;
+};
+
+export type AdminMember = {
+  memberId: number;
+  role: "MEMBER" | "ADMIN";
+  displayName: string;
+  realName: string | null;
+  nickname: string;
+  oneLineIntro: string;
+  job: string | null;
+  profileImageUrl: string | null;
+  participationStartMonth: string;
+  interestTags: string[];
+  inviteVerifiedAt: string | null;
+  termsAgreedAt: string | null;
+  privacyAgreedAt: string | null;
+  onboardingCompletedAt: string | null;
+  deactivatedAt: string | null;
+  createdAt: string;
+};
+
+export type AdminInviteCode = {
+  codePreview: string | null;
+};
+
+export type AdminInterestTag = {
+  id: number;
+  name: string;
+  slug: string;
+  displayOrder: number;
+  active: boolean;
+};
+
 export type LibraryResponse = {
   recommendedBooks: RecommendedBook[];
   popularBooks: LibraryBook[];
