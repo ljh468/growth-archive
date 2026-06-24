@@ -3,7 +3,7 @@
 Project: **부자습관 만들기 - Growth Archive**  
 Purpose: MVP completion checklist for Noah, Codex, and future developers  
 Status: LIVING  
-Last Updated: 2026-06-23
+Last Updated: 2026-06-25
 
 ---
 
@@ -73,7 +73,7 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [x] Common error response is implemented
 - [x] Global exception handler is implemented
 - [x] Bean Validation is enabled
-- [ ] Pagination convention is implemented
+- [x] Pagination convention is implemented
 
 ---
 
@@ -155,13 +155,13 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 ## 7. Home / Public Pages
 
 - [x] Home Hero renders brand message
-- [ ] Real-photo-first visual direction is reflected
-- [ ] This month recommended books section renders
-- [ ] Recent growth records section renders
-- [ ] Popular books TOP5 section renders
-- [ ] Recent meetings section renders
-- [ ] Recent meeting reviews section renders
-- [ ] Growth people preview section renders
+- [x] Real-photo-first visual direction is reflected
+- [x] This month recommended books section renders
+- [x] Recent growth records section renders
+- [x] Popular books TOP5 section renders
+- [x] Recent meetings section renders
+- [x] Recent meeting reviews section renders
+- [x] Growth people preview section renders
 - [x] Guest can browse public content without login
 - [x] Login CTA is visible where required
 
@@ -355,33 +355,33 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 19. Security / Privacy
 
-- [ ] No real secrets in repository
-- [ ] `.env.example` documents required variables
-- [ ] JWT cookies are HttpOnly
-- [ ] Production cookies are Secure
-- [ ] SameSite policy is configured
-- [ ] CORS allowed origins are restricted
-- [ ] Unsafe methods validate Origin/Referer or equivalent CSRF mitigation
-- [ ] Guest cannot access member-only APIs
-- [ ] Deactivated users are blocked from member-only APIs
-- [ ] Admin APIs require active Admin access
-- [ ] Guest cannot see exact meeting location
-- [ ] Guest cannot see job field
-- [ ] Guest cannot see private profile fields
+- [x] No real secrets in repository
+- [x] `.env.example` documents required variables
+- [x] JWT cookies are HttpOnly
+- [x] Production cookies are Secure
+- [x] SameSite policy is configured
+- [x] CORS allowed origins are restricted
+- [x] Unsafe methods validate Origin/Referer or equivalent CSRF mitigation
+- [x] Guest cannot access member-only APIs
+- [x] Deactivated users are blocked from member-only APIs
+- [x] Admin APIs require active Admin access
+- [x] Guest cannot see exact meeting location
+- [x] Guest cannot see job field
+- [x] Guest cannot see private profile fields
 
 ---
 
 ## 20. Design / UX Acceptance
 
-- [ ] Uses Quiet Luxury Archive palette
-- [ ] Real-photo-first direction is visible
-- [ ] UI does not look like a generic bulletin board
-- [ ] UI does not use excessive emoji
-- [ ] Member cards feel like premium profile showcase
-- [ ] Home page feels premium/editorial/serious
-- [ ] Mobile UI is usable with one hand where practical
-- [ ] Primary CTA is clear on key pages
-- [ ] Empty states guide users gently
+- [x] Uses Quiet Luxury Archive palette
+- [x] Real-photo-first direction is visible
+- [x] UI does not look like a generic bulletin board
+- [x] UI does not use excessive emoji
+- [x] Member cards feel like premium profile showcase
+- [x] Home page feels premium/editorial/serious
+- [x] Mobile UI is usable with one hand where practical
+- [x] Primary CTA is clear on key pages
+- [x] Empty states guide users gently
 
 ---
 
@@ -392,24 +392,24 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [x] Lint/type checks pass if configured
 - [x] Docker Compose up works locally
 - [x] Health check works
-- [ ] Auth flow is tested
-- [ ] Invite code validation is tested
-- [ ] Onboarding flow is tested
-- [ ] Member access calculation from timestamp fields is tested
-- [ ] Reading record flow is tested
-- [ ] Manual `UNVERIFIED` book creation is tested
-- [ ] Monthly participation calculation is tested
-- [ ] New member participation start month is tested
+- [x] Auth flow is tested
+- [x] Invite code validation is tested
+- [x] Onboarding flow is tested
+- [x] Member access calculation from timestamp fields is tested
+- [x] Reading record flow is tested
+- [x] Manual `UNVERIFIED` book creation is tested
+- [x] Monthly participation calculation is tested
+- [x] New member participation start month is tested
 - [ ] Soft delete exclusion from participation calculation is tested
 - [x] Regular meeting scheduler idempotency is tested
 - [x] Meeting attendance flow is tested
 - [x] Meeting capacity enforcement is tested
-- [ ] Review image limit is tested
+- [x] Review image limit is tested
 - [x] Admin access control is tested
 - [x] Admin cannot rewrite member-owned content is tested
-- [ ] Mobile responsive behavior is checked
-- [ ] Release notes are prepared
-- [ ] Known limitations are documented
+- [x] Mobile responsive behavior is checked
+- [x] Release notes are prepared
+- [x] Known limitations are documented
 
 ---
 
@@ -420,18 +420,18 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [ ] Noah can complete onboarding
 - [ ] Noah can create a reading record
 - [ ] Noah can create a monthly action plan
-- [ ] My page shows monthly participation status correctly
-- [ ] Guest can browse reading library
-- [ ] Guest can view public profile card/detail within allowed scope
-- [ ] Member can view member-only profile details
-- [ ] Member can attend a meeting
-- [ ] Member can create a small meeting
+- [x] My page shows monthly participation status correctly
+- [x] Guest can browse reading library
+- [x] Guest can view public profile card/detail within allowed scope
+- [x] Member can view member-only profile details
+- [x] Member can attend a meeting
+- [x] Member can create a small meeting
 - [x] Member can write a meeting review with up to 10 images
 - [x] Admin can manage invite code
 - [x] Admin can manage recommended books
 - [x] Admin can view non-participants
 - [x] Admin can hide/delete inappropriate content
-- [ ] The service feels like a serious premium growth archive
+- [x] The service feels like a serious premium growth archive
 
 ---
 
