@@ -108,6 +108,7 @@ public class MemberRepository {
                     join_reason = ?,
                     current_concern = ?,
                     three_year_goal = ?,
+                    participation_start_month = (date_trunc('month', now()) + interval '1 month')::date,
                     onboarding_completed_at = coalesce(onboarding_completed_at, now()),
                     updated_at = now()
                 WHERE id = ?

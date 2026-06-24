@@ -212,21 +212,36 @@ public class ProfileRepository {
 
     public MyDashboard findDashboard(Long memberId, LocalDate month) {
         MyProfile profile = findMyProfile(memberId).orElseThrow();
-        LocalDate nextMonth = month.plusMonths(1);
-        Long readingRecordCount = countForMonth("reading_records", "recorded_at", memberId, month, nextMonth);
-        Long actionPlanCount = countTargetMonth("monthly_action_plans", memberId, month);
-        boolean completed = readingRecordCount > 0 || actionPlanCount > 0;
+        Long readingRecordCount = countReadingRecordsForMonth(memberId, month);
+        Long actionPlanCount = countActionPlansForMonth(memberId, month);
+        boolean calculationTarget = isParticipationTarget(memberId, month);
+        boolean completed = calculationTarget && (readingRecordCount > 0 || actionPlanCount > 0);
         return new MyDashboard(
             new MyDashboard.DashboardProfile(profile.memberId(), profile.displayName(), profile.profileImageUrl(), profile.oneLineIntro()),
-            new MyDashboard.DashboardParticipation(month.toString().substring(0, 7), readingRecordCount, actionPlanCount, completed, !completed),
+            new MyDashboard.DashboardParticipation(month.toString().substring(0, 7), readingRecordCount, actionPlanCount, completed, calculationTarget && !completed),
             growthStats(memberId),
             findPublicActivities(memberId, 5)
         );
     }
 
-    private Long countForMonth(String table, String timeColumn, Long memberId, LocalDate month, LocalDate nextMonth) {
+    private boolean isParticipationTarget(Long memberId, LocalDate month) {
+        Boolean target = jdbcTemplate.queryForObject(
+            "SELECT participation_start_month <= ? FROM members WHERE id = ? AND deactivated_at IS NULL",
+            Boolean.class,
+            Date.valueOf(month),
+            memberId
+        );
+        return Boolean.TRUE.equals(target);
+    }
+
+    private Long countReadingRecordsForMonth(Long memberId, LocalDate month) {
+        LocalDate nextMonth = month.plusMonths(1);
         Long count = jdbcTemplate.queryForObject(
-            "SELECT count(*) FROM " + table + " WHERE member_id = ? AND status = 'ACTIVE' AND " + timeColumn + " >= ? AND " + timeColumn + " < ?",
+            """
+                SELECT count(*)
+                FROM reading_records
+                WHERE member_id = ? AND status = 'ACTIVE' AND recorded_at >= ? AND recorded_at < ?
+                """,
             Long.class,
             memberId,
             Date.valueOf(month),
@@ -235,9 +250,13 @@ public class ProfileRepository {
         return count == null ? 0 : count;
     }
 
-    private Long countTargetMonth(String table, Long memberId, LocalDate month) {
+    private Long countActionPlansForMonth(Long memberId, LocalDate month) {
         Long count = jdbcTemplate.queryForObject(
-            "SELECT count(*) FROM " + table + " WHERE member_id = ? AND status = 'ACTIVE' AND target_month = ?",
+            """
+                SELECT count(*)
+                FROM monthly_action_plans
+                WHERE member_id = ? AND status = 'ACTIVE' AND target_month = ?
+                """,
             Long.class,
             memberId,
             Date.valueOf(month)
