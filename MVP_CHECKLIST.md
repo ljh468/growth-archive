@@ -282,23 +282,23 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 ## 15. Meetings / Small Meetings
 
 - [x] `/meetings` page exists
-- [ ] Regular monthly reading meeting is auto-created
-- [ ] Regular monthly action meeting is auto-created
-- [ ] Scheduler runs at monthly 1st 00:10 KST or equivalent job exists
-- [ ] Scheduler is idempotent
-- [ ] Admin can edit regular meeting operation fields
-- [ ] Member can create small meeting
-- [ ] Small meeting creator can edit own small meeting
-- [ ] Admin cannot edit small meeting content
-- [ ] Admin can hide/delete small meeting
-- [ ] Member can attend meeting
-- [ ] Member can cancel attendance
-- [ ] Meeting capacity is enforced if capacity > 0
-- [ ] capacity null/0 means unlimited
-- [ ] Guest sees region-level location only
-- [ ] Member sees exact location
-- [ ] Guest sees tiny attendee avatars only, no names/profile links
-- [ ] Member sees attendee names/profile links
+- [x] Regular monthly reading meeting is auto-created
+- [x] Regular monthly action meeting is auto-created
+- [x] Scheduler runs at monthly 1st 00:10 KST or equivalent job exists
+- [x] Scheduler is idempotent
+- [x] Admin can edit regular meeting operation fields
+- [x] Member can create small meeting
+- [x] Small meeting creator can edit own small meeting
+- [x] Admin cannot edit small meeting content
+- [x] Admin can hide/delete small meeting
+- [x] Member can attend meeting
+- [x] Member can cancel attendance
+- [x] Meeting capacity is enforced if capacity > 0
+- [x] capacity null/0 means unlimited
+- [x] Guest sees region-level location only
+- [x] Member sees exact location
+- [x] Guest sees tiny attendee avatars only, no names/profile links
+- [x] Member sees attendee names/profile links
 
 ---
 
@@ -387,11 +387,11 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 21. QA / Release Readiness
 
-- [ ] Backend tests pass
-- [ ] Frontend build passes
-- [ ] Lint/type checks pass if configured
-- [ ] Docker Compose up works locally
-- [ ] Health check works
+- [x] Backend tests pass
+- [x] Frontend build passes
+- [x] Lint/type checks pass if configured
+- [x] Docker Compose up works locally
+- [x] Health check works
 - [ ] Auth flow is tested
 - [ ] Invite code validation is tested
 - [ ] Onboarding flow is tested
@@ -401,12 +401,12 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 - [ ] Monthly participation calculation is tested
 - [ ] New member participation start month is tested
 - [ ] Soft delete exclusion from participation calculation is tested
-- [ ] Regular meeting scheduler idempotency is tested
-- [ ] Meeting attendance flow is tested
-- [ ] Meeting capacity enforcement is tested
+- [x] Regular meeting scheduler idempotency is tested
+- [x] Meeting attendance flow is tested
+- [x] Meeting capacity enforcement is tested
 - [ ] Review image limit is tested
-- [ ] Admin access control is tested
-- [ ] Admin cannot rewrite member-owned content is tested
+- [x] Admin access control is tested
+- [x] Admin cannot rewrite member-owned content is tested
 - [ ] Mobile responsive behavior is checked
 - [ ] Release notes are prepared
 - [ ] Known limitations are documented
