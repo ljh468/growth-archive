@@ -13,6 +13,7 @@ public class AppProperties {
     private final Kakao kakao = new Kakao();
     private final BookSearch bookSearch = new BookSearch();
     private final Invite invite = new Invite();
+    private final Storage storage = new Storage();
 
     public Cors getCors() {
         return cors;
@@ -36,6 +37,10 @@ public class AppProperties {
 
     public Invite getInvite() {
         return invite;
+    }
+
+    public Storage getStorage() {
+        return storage;
     }
 
     public static class Cors {
@@ -166,6 +171,44 @@ public class AppProperties {
 
         public KakaoBook getKakao() {
             return kakao;
+        }
+    }
+
+    public static class Storage {
+        private final Supabase supabase = new Supabase();
+
+        public Supabase getSupabase() {
+            return supabase;
+        }
+    }
+
+    public static class Supabase {
+        private String url = "";
+        private String serviceRoleKey = "";
+        private String bucket = "growth-archive";
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        public String getServiceRoleKey() {
+            return serviceRoleKey;
+        }
+
+        public void setServiceRoleKey(String serviceRoleKey) {
+            this.serviceRoleKey = serviceRoleKey;
+        }
+
+        public String getBucket() {
+            return bucket;
+        }
+
+        public void setBucket(String bucket) {
+            this.bucket = bucket;
         }
     }
 
