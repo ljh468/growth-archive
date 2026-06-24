@@ -340,16 +340,16 @@ Do not mark an item as done unless it is implemented and verified or explicitly 
 
 ## 18. Data Migration / Operations
 
-- [ ] CSV/Google Sheet import template is documented
-- [ ] Reading record import supports full target import
-- [ ] Existing mapped reading records can be ACTIVE
-- [ ] Unmapped records remain HIDDEN
-- [ ] Existing meeting review photos are manually selected max 10
-- [ ] Existing signup greetings are imported as internal/member-admin data
-- [ ] Existing Somoim/Notion original links are not preserved
-- [ ] Blog URLs are preserved
-- [ ] Import failures are logged
-- [ ] Admin can review imported data or import output is documented
+- [x] CSV/Google Sheet import template is documented
+- [x] Reading record import supports full target import
+- [x] Existing mapped reading records can be ACTIVE
+- [x] Unmapped records remain HIDDEN
+- [x] Existing meeting review photos are manually selected max 10
+- [x] Existing signup greetings are imported as internal/member-admin data
+- [x] Existing Somoim/Notion original links are not preserved
+- [x] Blog URLs are preserved
+- [x] Import failures are logged
+- [x] Admin can review imported data or import output is documented
 
 ---
 
