@@ -3,7 +3,7 @@
 Project: **부자습관 만들기 - Growth Archive**  
 Purpose: Guide Codex and future coding agents when implementing the MVP.  
 Status: FINAL_REVIEWED  
-Last Updated: 2026-06-23
+Last Updated: 2026-06-24
 
 ---
 
@@ -46,6 +46,67 @@ Before implementing, read the project documents in this order. Use the exact rep
 10. `MVP_CHECKLIST.md`
 
 If a file is missing, do not invent requirements. Create or update a TODO/Open Questions section and continue only with non-blocking work.
+
+---
+
+## 2.1 Karpathy Guidelines for Coding Agents
+
+Use these behavioral guidelines when writing, reviewing, or refactoring code in this repository. They are included directly here so future agents do not need to rely on external skill loading.
+
+### Think Before Coding
+
+Do not assume or hide confusion.
+
+- State assumptions explicitly when requirements are ambiguous.
+- If multiple interpretations exist, surface them instead of silently choosing one.
+- If a simpler approach exists, mention it.
+- If a decision is product-critical, security-critical, billing-related, destructive, or impossible to infer from local context, stop and ask Noah.
+
+### Simplicity First
+
+Write the minimum code that solves the documented requirement.
+
+- Do not add features beyond what was requested or documented.
+- Do not add abstractions for single-use code.
+- Do not add speculative configurability or future-proofing.
+- Do not add complex error handling for impossible scenarios.
+- If a solution is becoming large, check whether a smaller implementation would satisfy the same acceptance criteria.
+
+### Surgical Changes
+
+Touch only what is needed for the task.
+
+- Do not refactor unrelated code.
+- Do not reformat unrelated files.
+- Match the existing project style even if another style is personally preferred.
+- Remove unused imports, variables, and helpers introduced by your own changes.
+- If unrelated dead code or design issues are noticed, mention them instead of changing them.
+
+Every changed line should trace back to the current request, project documents, or a failing verification step.
+
+### Goal-Driven Execution
+
+Define success criteria and verify them.
+
+- For validation work, add or run checks that prove invalid inputs are rejected.
+- For bug fixes, reproduce the bug when practical, then verify the fix.
+- For refactors, run tests before and after when practical.
+- For multi-step implementation, keep a short plan and update it as work completes.
+- Do not mark checklist items complete unless implemented and verified or explicitly accepted by Noah.
+
+### Priority
+
+If guidance conflicts, follow this order:
+
+```text
+Latest Noah decision
+> AGENTS.md project/domain/security rules
+> PRD/TSD/DESIGN/OPS documents
+> Karpathy Guidelines in this section
+> general implementation preferences
+```
+
+If this section conflicts with a product requirement, security requirement, or explicit Noah decision, follow the project/user requirement and mention the tradeoff.
 
 ---
 
