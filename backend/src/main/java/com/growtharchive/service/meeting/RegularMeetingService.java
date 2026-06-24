@@ -1,0 +1,55 @@
+package com.growtharchive.service.meeting;
+
+import com.growtharchive.repository.MeetingRepository;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
+import org.springframework.stereotype.Service;
+
+@Service
+public class RegularMeetingService {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
+    private final MeetingRepository meetingRepository;
+
+    public RegularMeetingService(MeetingRepository meetingRepository) {
+        this.meetingRepository = meetingRepository;
+    }
+
+    public int ensureRegularMeetingsForMonth(YearMonth month) {
+        LocalDate targetMonth = month.atDay(1);
+        int created = 0;
+        if (meetingRepository.createRegularIfMissing(
+            "REGULAR_READING",
+            month.getMonthValue() + "월 독서기록 모임",
+            meetingAt(month, 2),
+            "온라인 또는 추후 공지",
+            "이번 달 독서기록을 함께 나누는 정기 모임입니다.",
+            targetMonth
+        )) {
+            created++;
+        }
+        if (meetingRepository.createRegularIfMissing(
+            "REGULAR_ACTION",
+            month.getMonthValue() + "월 실행계획 모임",
+            meetingAt(month, 4),
+            "온라인 또는 추후 공지",
+            "이번 달 실행계획과 실행 경험을 나누는 정기 모임입니다.",
+            targetMonth
+        )) {
+            created++;
+        }
+        return created;
+    }
+
+    OffsetDateTime meetingAt(YearMonth month, int sundayOrdinal) {
+        LocalDate date = month.atDay(1)
+            .with(TemporalAdjusters.dayOfWeekInMonth(sundayOrdinal, DayOfWeek.SUNDAY));
+        return date.atTime(LocalTime.of(10, 0)).atZone(KST).toOffsetDateTime();
+    }
+}
