@@ -414,8 +414,8 @@ MVP 기본 길이 제한은 아래와 같다.
 | Field | Rule |
 |---|---|
 | nickname | 2~20자, 중복 불가 |
+| realName | 2~50자, 필수 |
 | oneLineIntro | 최대 80자 |
-| job | 최대 50자, 선택 |
 | futureMeAt50 | 최대 1000자 |
 | joinReason | 최대 1000자, 선택 |
 | currentConcern | 최대 1000자, 선택 |
@@ -467,24 +467,24 @@ Required Access Level: `PUBLIC`
 
 Purpose:
 
-카카오 인증 코드를 받아 서버 세션/JWT 쿠키를 발급한다.
+카카오 인증 코드를 받아 기존 회원은 서버 세션/JWT 쿠키를 발급하고, 신규 사용자는 가입 완료 전 `signup_token`을 발급한다.
 
 System Behavior:
 
 ```text
 1. Kakao token exchange
 2. Kakao profile 조회
-3. oauth_accounts 저장 또는 갱신
-4. member row가 없으면 최소 정보 row 생성 가능
-5. JWT access_token / refresh_token HttpOnly Cookie 발급
-6. 온보딩 상태에 따라 프론트 리다이렉트
+3. oauth_accounts에서 provider_user_id로 기존 member_id 조회
+4. 기존 회원이면 oauth_accounts 갱신 후 JWT access_token / refresh_token HttpOnly Cookie 발급
+5. 신규 사용자이면 members/oauth_accounts row를 만들지 않고 HttpOnly signup_token 발급
+6. 상태에 따라 프론트 리다이렉트
 ```
 
 Redirect target:
 
 ```text
 온보딩 완료 회원: /
-온보딩 미완료 사용자: /onboarding
+신규 또는 온보딩 미완료 사용자: /onboarding
 ```
 
 ---
@@ -576,7 +576,7 @@ Request:
 
 ```json
 {
-  "code": "RICH2026"
+  "code": "test"
 }
 ```
 
@@ -585,7 +585,7 @@ System Behavior:
 ```text
 - 활성 초대코드는 1개만 유지한다.
 - 대소문자 구분 없이 비교한다.
-- 성공 시 invite_verified_at을 저장한다.
+- 성공 시 signup_token의 inviteVerified 값을 true로 갱신한다.
 ```
 
 Response:
@@ -665,8 +665,9 @@ Request:
   "nickname": "노아",
   "oneLineIntro": "매일 조금씩 성장하는 백엔드 개발자",
   "realName": "이재훈",
-  "displayNameType": "NICKNAME",
-  "job": "백엔드 개발자",
+  "displayNameType": "REAL_NAME",
+  "birthDate": "1990-05-10",
+  "profileImageId": 100,
   "interestTagIds": [1, 2, 3],
   "futureMeAt50": "기술과 사업을 연결하는 사람이 된다.",
   "joinReason": "성장하는 사람들과 함께하고 싶어서",
@@ -679,6 +680,7 @@ Required fields:
 
 ```text
 nickname
+realName
 oneLineIntro
 interestTagIds 최소 1개
 futureMeAt50
@@ -688,8 +690,8 @@ displayNameType
 Optional fields:
 
 ```text
-realName
-job
+birthDate
+profileImageId
 joinReason
 currentConcern
 threeYearGoal
@@ -700,20 +702,23 @@ Validation:
 ```text
 nickname 중복 불가
 nickname 2~20자
+realName 2~50자
 oneLineIntro 1~80자
-job 입력 시 50자 이하
 futureMeAt50 1~1000자
 joinReason/currentConcern/threeYearGoal 입력 시 각 1000자 이하
-displayNameType = REAL_NAME인 경우 realName 필수
+birthDate는 미래 날짜 불가
+profileImageId는 가입 중 업로드한 PROFILE 이미지 또는 null
+displayNameType은 REAL_NAME 또는 NICKNAME이며 기본 선택은 REAL_NAME
 ```
 
 System Behavior:
 
 ```text
-1. 프로필 저장
-2. interest tag 매핑 저장
-3. onboarding_completed_at 저장
-4. role 기본값 MEMBER 유지
+1. signup_token의 Kakao Provider ID와 fallback 프로필을 검증한다.
+2. members row를 생성하고 invite_verified_at, terms_agreed_at, privacy_agreed_at, onboarding_completed_at을 저장한다.
+3. oauth_accounts row를 생성하거나 provider_user_id에 member_id를 연결한다.
+4. interest tag 매핑과 프로필 이미지 소유자를 저장한다.
+5. signup_token을 삭제하고 JWT access_token / refresh_token HttpOnly Cookie를 발급한다.
 ```
 
 ---
@@ -776,7 +781,6 @@ recentPublicActivities
 MEMBER additional fields:
 
 ```text
-job
 joinReason
 currentConcern
 threeYearGoal
@@ -857,7 +861,8 @@ nickname
 oneLineIntro
 realName
 displayNameType
-job
+birthDate
+profileImageId
 interestTagIds
 futureMeAt50
 joinReason
@@ -1651,7 +1656,7 @@ Validation:
 ```text
 최대 10MB
 지원 형식: jpg, jpeg, png, webp
-서버에서 WebP 변환 권장
+서버에서 WebP 변환 권장. WebP writer가 없으면 리사이즈된 JPEG 저장
 ```
 
 Response:
@@ -1812,7 +1817,7 @@ Request:
 
 ```json
 {
-  "code": "RICH2026"
+  "code": "test"
 }
 ```
 

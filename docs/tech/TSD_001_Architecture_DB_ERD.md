@@ -56,7 +56,7 @@ PRD에 없는 기능을 임의로 추가하지 않는다.
 문서에 남은 애매한 요구사항은 임의 결정하지 않고 TODO로 남긴다.
 DB 마이그레이션은 되돌리기 어렵기 때문에 신중하게 작성한다.
 권한 검증은 Controller가 아니라 Service/Security Layer에서 일관되게 처리한다.
-이미지 업로드는 원본 저장보다 WebP 변환/리사이징을 우선한다.
+이미지 업로드는 원본 저장보다 리사이징된 표시용 이미지 저장을 우선한다. WebP writer가 있으면 WebP로 변환하고, 없으면 리사이즈된 JPEG로 저장한다.
 ```
 
 ---
@@ -72,8 +72,8 @@ DB 마이그레이션은 되돌리기 어렵기 때문에 신중하게 작성한
 | Backend | Java 25 + Spring Boot 4.1.0 | REST API 서버, stateless 구조 |
 | Security | Spring Security + Kakao OAuth + JWT Cookie | Kakao Login, Role 기반 인가, HttpOnly Secure Cookie |
 | DB | Supabase PostgreSQL | 관리형 PostgreSQL |
-| ORM / Query | Spring Data JPA + Querydsl | CRUD는 JPA, 복잡한 조회/통계는 Querydsl |
-| Migration | Flyway | SQL 기반 마이그레이션, Hibernate ddl-auto는 validate |
+| DB Access / Query | Spring JDBC + explicit SQL | MVP는 단순성과 SQL 가시성을 우선한다. JPA annotation model은 스키마 문서화/향후 전환 여지를 위해 compile-only로 일부 유지한다. |
+| Migration | Flyway | SQL 기반 마이그레이션. Runtime ORM schema validation은 사용하지 않는다. |
 | Storage | Supabase Storage → Self-hosted disk-backed storage | MVP는 Supabase Storage, 최종 개인 서버 디스크 기반 저장소로 전환 가능 |
 | Scheduler | Spring Scheduler | 정기모임 자동 생성, 향후 책 검증 스케줄러 |
 | Deployment | Docker Compose local + Kubernetes-ready | 로컬은 Docker Compose, 운영 확장 기준은 Kubernetes-ready |
@@ -129,8 +129,8 @@ Supabase는 Firebase처럼 직접 클라이언트에서 사용하는 구조가 �
 Java 25
 Spring Boot 4.1.0
 Spring Security
-Spring Data JPA
-Querydsl
+Spring JDBC
+Explicit SQL
 Flyway
 PostgreSQL Driver
 Validation
@@ -522,10 +522,10 @@ erDiagram
 | `id` | BIGINT GENERATED IDENTITY | N | Public profile URL uses this ID |
 | `role` | VARCHAR(20) | N | `MEMBER`, `ADMIN` |
 | `display_type` | VARCHAR(20) | N | `REAL_NAME`, `NICKNAME` |
-| `real_name` | VARCHAR(50) | Y | 실명 공개 선택 시 필수 |
+| `real_name` | VARCHAR(50) | N | 필수 입력. 실명 공개 선택 시 공개 표시명으로 사용 |
 | `nickname` | VARCHAR(20) | N | 중복 불가, 2~20자 |
 | `one_line_intro` | VARCHAR(80) | N | 한 줄 소개, 1~80자 |
-| `job` | VARCHAR(50) | Y | Member 전용 공개, 선택 입력 |
+| `job` | VARCHAR(50) | Y | 레거시/이관 호환용. MVP 온보딩/프로필에서는 수집하지 않음 |
 | `profile_image_id` | BIGINT | Y | image_assets FK |
 | `kakao_profile_image_url` | TEXT | Y | fallback profile image |
 | `fifty_year_old_me` | TEXT | N | Guest 공개 가능 |
@@ -557,7 +557,7 @@ Rules:
 닉네임은 2~20자.
 한 줄 소개는 1~80자.
 나이는 MVP에서 수집하지 않는다.
-직업은 선택 입력이며 50자 이하, Guest에게 공개하지 않는다.
+직업은 MVP 온보딩/프로필에서 수집하지 않는다. 컬럼은 기존 데이터 이관 또는 운영 호환을 위해 남겨둔다.
 50살의 나는 필수 입력이며 1~1000자.
 가입 이유, 현재 고민, 3년 뒤 목표는 선택 입력이며 각각 1000자 이하.
 프로필 URL은 /people/{memberId}.
@@ -1010,7 +1010,7 @@ ON meeting_review_images (meeting_review_id, display_order);
 | `object_key` | TEXT | N | |
 | `public_url` | TEXT | Y | |
 | `image_type` | VARCHAR(50) | N | `PROFILE`, `READING_RECORD`, `MEETING_COVER`, `MEETING_REVIEW` |
-| `mime_type` | VARCHAR(50) | N | MVP target `image/webp` |
+| `mime_type` | VARCHAR(50) | N | `image/webp` or resized `image/jpeg` fallback |
 | `width` | INT | Y | |
 | `height` | INT | Y | |
 | `size_bytes` | BIGINT | Y | |
@@ -1020,7 +1020,7 @@ Rules:
 
 ```text
 모임 후기 사진은 최대 10장.
-업로드 시 WebP 변환과 리사이징을 기본 정책으로 한다.
+업로드 시 가능하면 WebP 변환을 적용하고, 최소한 리사이징된 표시용 이미지를 저장한다.
 원본 저장은 MVP에서 기본 제외.
 ```
 
@@ -1370,13 +1370,12 @@ Future / final self-hosted direction:
 Personal server disk-backed storage
 ```
 
-단, 애플리케이션 코드가 Supabase에 강하게 결합되지 않도록 `ImageStorageService` 인터페이스를 둔다.
+단, 애플리케이션 코드가 Supabase에 강하게 결합되지 않도록 `StorageService` 인터페이스를 둔다.
 
 ```java
-public interface ImageStorageService {
-    StoredImage upload(ImageUploadCommand command);
-    void delete(String objectKey);
-    String resolvePublicUrl(String objectKey);
+public interface StorageService {
+    StoredImage storeImage(Long memberId, String imageType, OptimizedImage image);
+    Optional<StoredLocalImage> loadLocalImage(String objectKey);
 }
 ```
 
@@ -1425,7 +1424,7 @@ Meeting review images: max 10 images
 ### 12.3 Processing Policy
 
 ```text
-Convert to WebP when possible.
+Convert to WebP when possible. If no WebP writer is available in the runtime, store a resized JPEG display image.
 Resize large images.
 Do not store original by default.
 Generate public or signed URL depending image type.
@@ -1465,7 +1464,6 @@ Generate public or signed URL depending image type.
 ```text
 정확한 모임 장소
 참석자 이름/프로필 이동
-직업
 가입 이유
 현재 고민
 3년 뒤 목표
@@ -1559,8 +1557,7 @@ Recommended structure:
 backend/src/main/resources/db/migration/
 ├─ V1__init_schema.sql
 ├─ V2__seed_interest_tags.sql
-├─ V3__seed_initial_invite_code.sql
-└─ V4__seed_initial_admins.sql
+└─ V3__seed_demo_growth_archive_data.sql
 ```
 
 ### 16.2 Seed Data
@@ -1569,9 +1566,9 @@ MVP seed data:
 
 ```text
 Interest tags
-Initial invite code
-Initial admins
-Default profile image metadata or config
+Demo members and oauth mappings
+Initial active invite code
+Demo books, recommended books, reading records, meetings, reviews
 ```
 
 Caution:
@@ -1726,7 +1723,7 @@ Mandatory validation:
 ```text
 nickname length 2~20 and uniqueness
 one_line_intro length 1~80
-job length <= 50 when provided
+job is not collected in MVP onboarding/profile; legacy/import values must remain <= 50 when present
 fifty_year_old_me length 1~1000
 join_reason/current_concern/three_year_goal length <= 1000 when provided
 blog_url format
@@ -1813,8 +1810,10 @@ Personal server disk-backed storage
 Implementation notes:
 
 ```text
-Use ImageStorageService interface.
+Use StorageService interface.
 MVP implementation: SupabaseStorageService.
+Local development may enable explicit temp-file fallback with LOCAL_STORAGE_FALLBACK_ENABLED=true.
+Production should configure Supabase Storage and keep local fallback disabled.
 Future implementation: DiskStorageService or SelfHostedObjectStorageService.
 Do not save persistent business images inside the application container filesystem.
 ```
@@ -1828,15 +1827,15 @@ Do not save persistent business images inside the application container filesyst
 Decision:
 
 ```text
-Spring Data JPA + Querydsl
+Spring JDBC + explicit SQL for MVP
 ```
 
 Implementation notes:
 
 ```text
-Basic CRUD: Spring Data JPA
-Dynamic search/statistics/admin queries: Querydsl
-Native SQL can be used only when Querydsl/JPA is insufficient and must be documented.
+Repository classes use JdbcTemplate with parameterized SQL.
+Complex search/statistics/admin queries are written as explicit SQL and covered by focused service tests.
+Spring Data JPA + Querydsl can be reconsidered after MVP if repository complexity starts to justify the migration cost.
 ```
 
 ---
@@ -1869,7 +1868,7 @@ Flyway
 Implementation notes:
 
 ```text
-Hibernate ddl-auto should be validate in shared environments.
+Runtime ORM schema validation is not used in the MVP.
 All schema changes must be represented by Flyway migration files.
 ```
 

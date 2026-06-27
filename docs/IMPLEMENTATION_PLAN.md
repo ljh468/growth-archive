@@ -386,7 +386,7 @@ ERD 기반 DB 스키마와 migration 구조를 만든다.
 ### Backend
 
 - Flyway 설정
-- Hibernate ddl-auto=validate
+- Runtime ORM schema validation은 사용하지 않고 Flyway SQL로 스키마를 관리
 - 공통 BaseEntity 생성
   - id
   - created_at
@@ -628,7 +628,7 @@ Mobile hamburger:
 - 독서기록 수정 화면
 - 책 검색 UI
 - 검색 결과 없음 → 직접 등록 flow
-- 작성자별 토글 UI
+- 작성자별 기록 카드 UI
 
 ## 완료 조건
 
@@ -690,7 +690,6 @@ Guest 공개:
 
 Member 전용:
 
-- 직업
 - 가입 이유
 - 현재 고민
 - 3년 뒤 목표
@@ -885,7 +884,7 @@ Guest는 다음을 볼 수 없다.
 - 단일 이미지 최대 10MB
 - 후기 사진 최대 10장
 - 전체 권장 업로드 용량 50MB 이하
-- WebP 변환
+- 가능하면 WebP 변환, 지원 환경이 없으면 리사이즈된 JPEG 저장
 - 리사이징
 - 원본 미저장
 - Supabase Storage 저장

@@ -155,8 +155,8 @@ Do not add excluded features unless explicitly requested by the product owner.
 - Java 25
 - Spring Boot 4.1.0
 - Spring Security
-- Spring Data JPA
-- Querydsl
+- Spring JDBC with explicit SQL for MVP
+- Spring Data JPA / Querydsl may be reconsidered after MVP if repository complexity justifies it
 - Flyway
 - PostgreSQL via Supabase
 - JWT + HttpOnly Secure Cookie

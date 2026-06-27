@@ -486,14 +486,15 @@ MVP의 기본 컬러 방향은 **Quiet Luxury Archive**로 한다.
 MVP에서는 아래 팔레트를 기본값으로 사용한다. 실제 사진 톤과 구현 결과에 따라 소폭 조정은 가능하지만, 브랜드 방향은 이 팔레트를 기준으로 유지한다.
 
 ```text
-Background / Ivory       #F6F1E8
-Surface / Warm White     #FFFDF8
-Foreground / Ink         #171717
-Primary / Charcoal       #2A2926
-Secondary Text           #5B5751
+Background / Soft Ivory  #F8F6EE
+Surface / Warm White     #FFFEFA
+Foreground / Ink         #22221C
+Primary / Charcoal       #342F26
+Secondary Text           #6E685F
 Border / Line            #E5DCCF
-Accent / Bronze          #A97845
-Growth Accent / Green    #1F4D3A
+Accent / Bronze          #8A6A45
+Growth Accent / Green    #2F5A43
+Wood Brown               #4A3424
 Success                  #2F855A
 Warning                  #B7791F
 Danger                   #C53030
@@ -502,18 +503,19 @@ Danger                   #C53030
 ### 8.3 Token Mapping
 
 ```text
---background: #F6F1E8
---foreground: #171717
---card: #FFFDF8
---card-foreground: #171717
+--background: #F8F6EE
+--foreground: #22221C
+--card: #FFFEFA
+--card-foreground: #22221C
 --muted: #EFE7DB
---muted-foreground: #5B5751
+--muted-foreground: #6E685F
 --border: #E5DCCF
---primary: #2A2926
---primary-foreground: #FFFDF8
---accent: #A97845
---accent-foreground: #FFFDF8
---success: #1F4D3A
+--primary: #2F5A43
+--primary-foreground: #FFFEFA
+--accent: #8A6A45
+--accent-foreground: #FFFEFA
+--success: #2F5A43
+--wood-brown: #4A3424
 --warning: #B7791F
 --danger: #C53030
 ```
@@ -521,11 +523,12 @@ Danger                   #C53030
 ### 8.4 Usage Rules
 
 ```text
-Primary/Charcoal은 주요 CTA와 헤더 텍스트에 사용한다.
-Ivory 배경은 전체 서비스의 차분한 바탕으로 사용한다.
+Deep Green은 주요 CTA와 참여 완료, 성장 체크 완료, 긍정 상태에 사용한다.
+Wood Brown은 녹색 CTA hover/focus와 우드톤 포인트에 사용한다.
+Charcoal은 헤더 텍스트와 본문 강조에 사용한다.
+Soft Ivory 배경은 전체 서비스의 차분한 바탕으로 사용한다.
 Warm White는 카드, 폼, 모달, 프로필 영역의 표면색으로 사용한다.
 Bronze는 이달의 추천책, 큐레이션, 중요한 라벨에 제한적으로 사용한다.
-Deep Green은 참여 완료, 성장 체크 완료, 긍정 상태에 사용한다.
 Danger는 삭제/숨김 같은 파괴적 액션에만 사용한다.
 화면 전체가 금색/초록색으로 느껴지지 않도록 포인트 컬러는 10% 이하로 제한한다.
 ```
@@ -547,13 +550,15 @@ Danger는 삭제/숨김 같은 파괴적 액션에만 사용한다.
 
 ### 9.1 Font Family
 
-MVP 기본 폰트는 시스템 폰트 또는 Pretendard 계열을 권장한다.
+MVP 기본 폰트는 북클럽 무드에 맞춰 아래 조합을 사용한다.
 
 ```css
-font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+--font-body: "Gowun Batang", "Noto Serif KR", "Apple SD Gothic Neo", serif;
+--font-display: "NanumSquare", "Gowun Batang", "Noto Serif KR", sans-serif;
+--font-latin: "Caveat", "Nanum Pen Script", cursive;
 ```
 
-폰트 파일은 저장소에 직접 포함하지 않는다.  
+운영 안정성을 위해 필요한 핵심 폰트 파일은 저장소의 `frontend/public/fonts/`에 포함할 수 있다.
 웹폰트 사용 여부는 성능과 라이선스 확인 후 결정한다.
 
 ### 9.2 Type Scale
@@ -892,7 +897,6 @@ Member 추가 정보는 카드가 아니라 상세 프로필에서 보여준다.
 Member에게만 추가 노출:
 
 ```text
-직업
 가입 이유
 현재 고민
 3년 뒤 목표
@@ -1082,7 +1086,7 @@ Guest도 볼 수 있다.
 ```text
 최대 10장
 자동 리사이징
-WebP 변환
+가능하면 WebP 변환, 지원 환경이 없으면 리사이즈된 JPEG
 대표 이미지 자동 지정
 ```
 
@@ -1175,10 +1179,10 @@ Hero에는 가능하면 실제 모임 또는 책/대화 장면 사진을 사용�
 평균 평점
 독서기록 수
 이 책을 읽은 사람
-작성자별 독서기록 아코디언
+작성자별 독서기록 카드 목록
 ```
 
-작성자별 독서기록은 토글/아코디언으로 제공한다.
+작성자별 독서기록은 책 표지와 지표 아래에 카드형 목록으로 제공한다. 각 카드에는 작성자 표시명, 평점, 작성일, 한줄평, 대표 사진, 블로그 원문 링크를 함께 보여준다.
 
 ---
 
@@ -1399,7 +1403,7 @@ MVP에서는 과한 애니메이션을 피한다.
 
 ```text
 카드 hover
-아코디언 열림/닫힘
+카드 focus/hover
 모바일 메뉴 slide
 toast fade
 사진 카드의 아주 약한 hover zoom on desktop
@@ -1482,7 +1486,7 @@ Codex는 이미지 구현 시 다음 원칙을 따른다.
 3. object-fit: cover를 기본으로 한다.
 4. 이미지가 없을 때 고급스러운 fallback UI를 제공한다.
 5. 외부 스톡 이미지 URL을 코드에 하드코딩하지 않는다.
-6. 업로드 이미지는 WebP 변환과 리사이징 정책을 고려한다.
+6. 업로드 이미지는 가능하면 WebP 변환을 적용하고, 최소한 리사이징된 표시용 이미지로 보여준다.
 7. 프로필/모임/후기 이미지는 public/private 공개 정책을 PRD 기준으로 따른다.
 8. 얼굴이 포함된 모임 사진은 공개 안내 문구를 UX에 포함한다.
 ```
