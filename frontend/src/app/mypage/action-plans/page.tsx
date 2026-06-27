@@ -82,7 +82,7 @@ function ActionPlanContent() {
               <div className="flex flex-wrap gap-3">
                 <Button type="submit">{plan ? "수정" : "저장"}</Button>
                 {plan && (
-                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={remove} type="button">
+                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={remove} type="button">
                     삭제
                   </button>
                 )}

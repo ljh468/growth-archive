@@ -61,16 +61,16 @@ function AdminReviewsContent() {
                   <Tag>{review.status}</Tag>
                   <Tag>{review.meetingTitle}</Tag>
                 </div>
-                <h2 className="mt-4 text-lg font-semibold">{review.title}</h2>
+                <h2 className="mt-4 text-lg font-normal">{review.title}</h2>
                 <p className="mt-2 text-sm text-[var(--color-charcoal)]">{review.memberDisplayName} · {formatDate(review.createdAt)}</p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <Button href={`/reviews/${review.id}`} variant="secondary">상세 보기</Button>
                   {review.status === "HIDDEN" ? (
-                    <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={() => restore(review.id)} type="button">복구</button>
+                    <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => restore(review.id)} type="button">복구</button>
                   ) : (
-                    <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={() => hide(review.id)} type="button">숨김</button>
+                    <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => hide(review.id)} type="button">숨김</button>
                   )}
-                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={() => remove(review.id)} type="button">삭제</button>
+                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => remove(review.id)} type="button">삭제</button>
                 </div>
               </Card>
             ))}

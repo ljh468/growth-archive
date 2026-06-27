@@ -47,7 +47,7 @@ function AdminParticipationContent() {
         <div className="grid gap-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <PageHeader eyebrow="Admin" title="참여 현황 관리" description="월별 참여 완료와 커피 후원 대상자를 운영용으로 확인합니다." />
-            <a className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" href={`${API_BASE_URL}/admin/participation.csv?month=${month}`}>
+            <a className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" href={`${API_BASE_URL}/admin/participation.csv?month=${month}`}>
               CSV 다운로드
             </a>
           </div>
@@ -68,7 +68,7 @@ function AdminParticipationContent() {
                   <Card key={member.memberId}>
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
-                        <h2 className="font-semibold">{member.displayName}</h2>
+                        <h2 className="font-normal">{member.displayName}</h2>
                         <p className="mt-1 text-sm text-[var(--color-charcoal)]">@{member.nickname}</p>
                         <p className="mt-3 text-sm">독서기록 {member.readingRecordCount}개 · 실행계획 {member.hasActionPlan ? "있음" : "없음"}</p>
                       </div>
@@ -91,7 +91,7 @@ function Metric({ label, value }: { label: string; value: number }) {
   return (
     <Card>
       <p className="text-sm text-[var(--color-charcoal)]">{label}</p>
-      <p className="mt-3 text-2xl font-semibold">{value}</p>
+      <p className="mt-3 text-2xl font-normal">{value}</p>
     </Card>
   );
 }

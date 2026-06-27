@@ -49,7 +49,7 @@ function AdminInviteCodeContent() {
           {message && <EmptyState title="상태" description={message} />}
           <Card>
             <p className="text-sm text-[var(--color-charcoal)]">현재 활성 코드 미리보기</p>
-            <p className="mt-3 text-2xl font-semibold">{codePreview ?? "없음"}</p>
+            <p className="mt-3 text-2xl font-normal">{codePreview ?? "없음"}</p>
           </Card>
           <Card>
             <form className="grid gap-3" onSubmit={submit}>

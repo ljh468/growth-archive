@@ -1,17 +1,20 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { Button, Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
-import { apiGet, apiPost, type BookSearchResult, type BookSummary, type ReadingRecord } from "@/lib/api";
+import { apiGet, apiPost, type BookSearchResult, type BookSummary, type ReadingRecord, uploadImage } from "@/lib/api";
 
 export default function NewReadingRecordPage() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<BookSearchResult[]>([]);
   const [selectedBook, setSelectedBook] = useState<BookSummary | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [manualBook, setManualBook] = useState({ title: "", author: "", publisher: "" });
   const [record, setRecord] = useState({ rating: "", oneLineReview: "", blogUrl: "" });
+  const [recordImageFile, setRecordImageFile] = useState<File | null>(null);
 
   async function searchBooks(event: FormEvent) {
     event.preventDefault();
@@ -54,17 +57,34 @@ export default function NewReadingRecordPage() {
       setMessage("책을 먼저 선택해 주세요.");
       return;
     }
+    const imageId = await uploadRecordImage();
+    if (imageId === undefined) {
+      return;
+    }
     const response = await apiPost<ReadingRecord>("/reading-records", {
       bookId: selectedBook.id,
       rating: record.rating ? Number(record.rating) : null,
       oneLineReview: record.oneLineReview,
       blogUrl: record.blogUrl,
+      imageId,
     });
     if (!response.success) {
       setMessage(response.error?.message ?? "독서기록을 저장하지 못했습니다.");
       return;
     }
-    window.location.href = `/books/${response.data.bookId}`;
+    router.push(`/books/${response.data.bookId}`);
+  }
+
+  async function uploadRecordImage() {
+    if (!recordImageFile) {
+      return null;
+    }
+    const result = await uploadImage(recordImageFile, "READING_RECORD");
+    if (!result.success) {
+      setMessage(result.error?.message ?? "독서기록 이미지를 업로드하지 못했습니다.");
+      return undefined;
+    }
+    return result.data.imageId;
   }
 
   return (
@@ -81,7 +101,7 @@ export default function NewReadingRecordPage() {
               {message && <EmptyState title="상태" description={message} />}
 
               <Card>
-                <h2 className="text-xl font-semibold">1. 책 검색</h2>
+                <h2 className="text-xl font-normal">1. 책 검색</h2>
                 <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={searchBooks}>
                   <input
                     className="min-h-11 flex-1 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3"
@@ -99,7 +119,7 @@ export default function NewReadingRecordPage() {
                       onClick={() => importBook(result)}
                       type="button"
                     >
-                      <span className="font-semibold">{result.title}</span>
+                      <span className="font-normal">{result.title}</span>
                       <span className="mt-1 block text-sm text-[var(--color-charcoal)]">{result.authorsText}</span>
                     </button>
                   ))}
@@ -107,7 +127,7 @@ export default function NewReadingRecordPage() {
               </Card>
 
               <Card>
-                <h2 className="text-xl font-semibold">2. 직접 책 등록</h2>
+                <h2 className="text-xl font-normal">2. 직접 책 등록</h2>
                 <form className="mt-4 grid gap-3" onSubmit={createManualBook}>
                   <input
                     className="min-h-11 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3"
@@ -135,7 +155,7 @@ export default function NewReadingRecordPage() {
 
               <Card>
                 <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-xl font-semibold">3. 기록 저장</h2>
+                  <h2 className="text-xl font-normal">3. 기록 저장</h2>
                   {selectedBook && <Tag>{selectedBook.title}</Tag>}
                 </div>
                 <form className="mt-4 grid gap-3" onSubmit={createRecord}>
@@ -163,6 +183,10 @@ export default function NewReadingRecordPage() {
                     placeholder="https://blog.example.com/post"
                     value={record.blogUrl}
                   />
+                  <label className="grid gap-2 text-sm">
+                    대표 이미지
+                    <input accept="image/jpeg,image/png,image/webp" onChange={(event) => setRecordImageFile(event.target.files?.[0] ?? null)} type="file" />
+                  </label>
                   <Button type="submit">독서기록 저장</Button>
                 </form>
               </Card>

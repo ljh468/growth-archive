@@ -83,19 +83,19 @@ export function ReviewDetailClient({ reviewId }: { reviewId: string }) {
                 <textarea className="min-h-56 border border-[var(--color-line)] bg-[var(--color-warm-white)] p-3" onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))} value={form.content} />
                 <div className="flex flex-wrap gap-3">
                   <Button type="submit">수정 저장</Button>
-                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={() => setEditing(false)} type="button">취소</button>
+                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => setEditing(false)} type="button">취소</button>
                 </div>
               </form>
             )}
             {review.canEdit && !editing && (
               <div className="mt-6 flex flex-wrap gap-3">
-                <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={() => setEditing(true)} type="button">수정</button>
-                <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={remove} type="button">삭제</button>
+                <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => setEditing(true)} type="button">수정</button>
+                <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={remove} type="button">삭제</button>
               </div>
             )}
           </Card>
           <Card>
-            <h2 className="text-lg font-semibold">사진</h2>
+            <h2 className="text-lg font-normal">사진</h2>
             {review.images.length === 0 && <p className="mt-3 text-sm text-[var(--color-charcoal)]">등록된 사진이 없습니다.</p>}
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {review.images.map((image) => (

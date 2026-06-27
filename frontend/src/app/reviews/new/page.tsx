@@ -70,7 +70,7 @@ function NewReviewContent() {
     <main>
       <Section>
         <div className="grid gap-8">
-          <PageHeader eyebrow="Meeting Review" title="모임 후기 작성" description="참석 버튼 여부와 무관하게 활성 멤버는 후기를 작성할 수 있습니다." />
+          <PageHeader eyebrow="Meeting Review" title="모임 후기 작성" description="참석 버튼 여부와 무관하게 성장하는 사람들은 후기를 작성할 수 있습니다." />
           <EmptyState title="사진 공개 안내" description="업로드한 사진은 공개 모임 후기에 노출될 수 있어요. 함께 나온 사람들에게 공개 가능 여부를 확인해주세요." />
           {message && <EmptyState title="상태" description={message} />}
           <Card>

@@ -23,7 +23,7 @@ export default function BooksPage() {
       return;
     }
     setBooks(result.data);
-    setMessage(result.data.length === 0 ? "내부 아카이브에서 찾지 못했습니다. 멤버는 독서기록 작성 화면에서 카카오 검색 또는 직접 등록을 사용할 수 있습니다." : "");
+    setMessage(result.data.length === 0 ? "내부 아카이브에서 찾지 못했습니다. 성장하는 사람들은 독서기록 작성 화면에서 카카오 검색 또는 직접 등록을 사용할 수 있습니다." : "");
   }
 
   return (
@@ -52,7 +52,7 @@ export default function BooksPage() {
                   <Tag>{book.status}</Tag>
                   {book.publisher && <Tag>{book.publisher}</Tag>}
                 </div>
-                <Link className="mt-4 block text-lg font-semibold" href={`/books/${book.id}`}>
+                <Link className="mt-4 block text-lg font-normal" href={`/books/${book.id}`}>
                   {book.title}
                 </Link>
                 <p className="mt-2 text-sm text-[var(--color-charcoal)]">{book.authorsText}</p>

@@ -136,6 +136,11 @@ export type AdminInterestTag = {
   active: boolean;
 };
 
+export type InterestTag = {
+  id: number;
+  name: string;
+};
+
 export type LibraryResponse = {
   recommendedBooks: RecommendedBook[];
   popularBooks: LibraryBook[];
@@ -168,6 +173,7 @@ export type ActivitySummary = {
 
 export type ProfileCard = {
   memberId: number;
+  role: "MEMBER" | "ADMIN";
   displayName: string;
   profileImageUrl: string | null;
   oneLineIntro: string;
@@ -189,7 +195,6 @@ export type ProfileDetail = {
   recentMeetingReviews: ActivitySummary[];
   recentPublicActivities: ActivitySummary[];
   memberOnly: {
-    job: string | null;
     joinReason: string | null;
     currentConcern: string | null;
     threeYearGoal: string | null;
@@ -207,7 +212,7 @@ export type MyProfile = {
   profileImageUrl: string | null;
   profileImageId: number | null;
   oneLineIntro: string;
-  job: string | null;
+  birthDate: string | null;
   interestTagIds: number[];
   futureMeAt50: string;
   joinReason: string | null;
@@ -314,10 +319,11 @@ export type MeetingSummary = {
   coverImageUrl: string | null;
   status: "SCHEDULED" | "HELD" | "CANCELED" | "HIDDEN" | "DELETED";
   attendeeCount: number;
-  attendeePreviewImageUrls: string[];
+  attendeePreviewImageUrls: Array<string | null>;
 };
 
 export type MeetingDetail = MeetingSummary & {
+  coverImageId: number | null;
   exactLocation: string | null;
   hostMemberId: number | null;
   hostDisplayName: string | null;
@@ -337,6 +343,13 @@ export type ReviewImage = {
 export type UploadedImage = {
   imageId: number;
   imageUrl: string | null;
+};
+
+export type UploadedSingleImage = {
+  imageId: number;
+  url: string | null;
+  width: number | null;
+  height: number | null;
 };
 
 export type MeetingReviewSummary = {
@@ -416,6 +429,13 @@ export async function apiPostForm<T>(path: string, formData: FormData): Promise<
     body: formData,
   });
   return response.json();
+}
+
+export function uploadImage(file: File, purpose: "PROFILE" | "READING_RECORD" | "MEETING" | "REVIEW" | "BOOK") {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("purpose", purpose);
+  return apiPostForm<UploadedSingleImage>("/uploads/images", formData);
 }
 
 export function kakaoLoginUrl() {

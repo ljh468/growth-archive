@@ -111,7 +111,7 @@ function AdminMembersContent() {
                     <Tag>{member.role}</Tag>
                     <Tag>{member.deactivatedAt ? "DEACTIVATED" : member.onboardingCompletedAt ? "ACTIVE" : "ONBOARDING"}</Tag>
                   </div>
-                  <p className="mt-3 font-semibold">{member.displayName}</p>
+                  <p className="mt-3 font-normal">{member.displayName}</p>
                   <p className="mt-1 text-sm text-[var(--color-charcoal)]">@{member.nickname} · 참여 시작 {member.participationStartMonth.slice(0, 7)}</p>
                 </button>
               ))}
@@ -125,7 +125,7 @@ function AdminMembersContent() {
                       <Tag>{selected.role}</Tag>
                       <Tag>{selected.deactivatedAt ? "DEACTIVATED" : selected.onboardingCompletedAt ? "ACTIVE" : "ONBOARDING"}</Tag>
                     </div>
-                    <h2 className="mt-3 text-lg font-semibold">{selected.displayName}</h2>
+                    <h2 className="mt-3 text-lg font-normal">{selected.displayName}</h2>
                     <p className="mt-1 text-sm text-[var(--color-charcoal)]">@{selected.nickname}</p>
                     <p className="mt-3 text-sm leading-6">{selected.oneLineIntro}</p>
                     {selected.interestTags.length > 0 && <p className="mt-3 text-sm text-[var(--color-charcoal)]">{selected.interestTags.join(", ")}</p>}
@@ -139,9 +139,9 @@ function AdminMembersContent() {
                   </form>
                   <div className="flex flex-wrap gap-3">
                     {selected.deactivatedAt ? (
-                      <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={reactivate} type="button">재활성화 실행</button>
+                      <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={reactivate} type="button">재활성화 실행</button>
                     ) : (
-                      <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={deactivate} type="button">비활성화 실행</button>
+                      <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={deactivate} type="button">비활성화 실행</button>
                     )}
                   </div>
                 </div>

@@ -83,11 +83,11 @@ function AdminInterestTagsContent() {
                       <Tag>{tag.active ? "ACTIVE" : "HIDDEN"}</Tag>
                       <Tag>#{tag.displayOrder}</Tag>
                     </div>
-                    <p className="mt-3 font-semibold">{tag.name}</p>
+                    <p className="mt-3 font-normal">{tag.name}</p>
                     <p className="mt-1 text-sm text-[var(--color-charcoal)]">{tag.slug}</p>
                   </button>
                   {tag.active && (
-                    <button className="inline-flex min-h-10 items-center border border-[var(--color-line)] px-3 text-sm font-semibold" onClick={() => deactivate(tag.id)} type="button">
+                    <button className="inline-flex min-h-10 items-center border border-[var(--color-line)] px-3 text-sm font-normal" onClick={() => deactivate(tag.id)} type="button">
                       비활성화
                     </button>
                   )}
@@ -96,7 +96,7 @@ function AdminInterestTagsContent() {
             </div>
             <Card>
               <form className="grid gap-3" onSubmit={submit}>
-                <h2 className="text-lg font-semibold">{selected ? "태그 수정" : "태그 추가"}</h2>
+                <h2 className="text-lg font-normal">{selected ? "태그 수정" : "태그 추가"}</h2>
                 <Input label="태그명" onChange={(value) => setForm((current) => ({ ...current, name: value }))} value={form.name} />
                 <Input label="Slug" onChange={(value) => setForm((current) => ({ ...current, slug: value }))} value={form.slug} />
                 <Input label="노출 순서" onChange={(value) => setForm((current) => ({ ...current, displayOrder: value }))} type="number" value={form.displayOrder} />
@@ -106,7 +106,7 @@ function AdminInterestTagsContent() {
                 </label>
                 <div className="flex flex-wrap gap-3">
                   <Button type="submit">{selected ? "수정" : "추가"}</Button>
-                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={reset} type="button">
+                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={reset} type="button">
                     새 태그
                   </button>
                 </div>

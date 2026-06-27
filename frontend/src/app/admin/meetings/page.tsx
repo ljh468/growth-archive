@@ -122,7 +122,7 @@ function AdminMeetingsContent() {
                     <Tag>{meeting.meetingType}</Tag>
                     <Tag>{meeting.status}</Tag>
                   </div>
-                  <p className="mt-3 font-semibold">{meeting.title}</p>
+                  <p className="mt-3 font-normal">{meeting.title}</p>
                   <p className="mt-1 text-sm text-[var(--color-charcoal)]">{formatDateTime(meeting.meetingAt)} · {meeting.locationRegion}</p>
                 </button>
               ))}
@@ -159,11 +159,11 @@ function AdminMeetingsContent() {
                   <div className="flex flex-wrap gap-3">
                     {selected.meetingType !== "SMALL" && <Button type="submit">정기모임 수정</Button>}
                     {selected.status === "HIDDEN" ? (
-                      <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={restore} type="button">복구</button>
+                      <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={restore} type="button">복구</button>
                     ) : (
-                      <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={hide} type="button">숨김</button>
+                      <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={hide} type="button">숨김</button>
                     )}
-                    <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={remove} type="button">삭제</button>
+                    <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={remove} type="button">삭제</button>
                   </div>
                 </form>
               )}

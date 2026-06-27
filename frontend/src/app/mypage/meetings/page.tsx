@@ -6,7 +6,7 @@ export default function MyMeetingsPage() {
       required="MEMBER"
       eyebrow="My Meetings"
       title="내 모임"
-      description="내 참석 모임, 생성한 소소모임, 작성 가능한 후기를 확인하는 멤버 전용 화면입니다."
+      description="내 참석 모임, 생성한 소소모임, 작성 가능한 후기를 확인하는 성장하는 사람들 전용 화면입니다."
     />
   );
 }

@@ -90,11 +90,11 @@ function AdminRecommendedBooksContent() {
                       <Tag>#{book.displayOrder}</Tag>
                       <Tag>Book {book.bookId}</Tag>
                     </div>
-                    <p className="mt-3 font-semibold">{book.title}</p>
+                    <p className="mt-3 font-normal">{book.title}</p>
                     <p className="mt-1 text-sm text-[var(--color-charcoal)]">{book.authorsText}</p>
                     <p className="mt-3 text-sm leading-6">{book.reason}</p>
                   </button>
-                  <button className="inline-flex min-h-10 items-center border border-[var(--color-line)] px-3 text-sm font-semibold" onClick={() => remove(book.id)} type="button">
+                  <button className="inline-flex min-h-10 items-center border border-[var(--color-line)] px-3 text-sm font-normal" onClick={() => remove(book.id)} type="button">
                     삭제
                   </button>
                 </div>
@@ -103,14 +103,14 @@ function AdminRecommendedBooksContent() {
             </div>
             <Card>
               <form className="grid gap-3" onSubmit={submit}>
-                <h2 className="text-lg font-semibold">{selected ? "추천책 수정" : "추천책 등록"}</h2>
+                <h2 className="text-lg font-normal">{selected ? "추천책 수정" : "추천책 등록"}</h2>
                 <input className="min-h-11 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3" onChange={(event) => setForm((current) => ({ ...current, targetMonth: event.target.value }))} type="date" value={form.targetMonth} />
                 <input className="min-h-11 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3" onChange={(event) => setForm((current) => ({ ...current, bookId: event.target.value }))} placeholder="Book ID" value={form.bookId} />
                 <input className="min-h-11 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3" onChange={(event) => setForm((current) => ({ ...current, displayOrder: event.target.value }))} placeholder="노출 순서 1~5" type="number" value={form.displayOrder} />
                 <textarea className="min-h-28 border border-[var(--color-line)] bg-[var(--color-warm-white)] p-3" onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} placeholder="추천 이유" value={form.reason} />
                 <div className="flex flex-wrap gap-3">
                   <Button type="submit">{selected ? "수정" : "등록"}</Button>
-                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-semibold" onClick={reset} type="button">
+                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={reset} type="button">
                     새 추천책
                   </button>
                 </div>

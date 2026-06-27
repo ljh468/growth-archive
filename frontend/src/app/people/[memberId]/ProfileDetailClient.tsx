@@ -49,14 +49,14 @@ export function ProfileDetailClient({ memberId }: { memberId: string }) {
               <Stat label="소소모임" value={profile.growthStats.smallMeetingCreatedCount} />
             </div>
             <section className="grid gap-4">
-              <h2 className="text-xl font-semibold">최근 공개 독서기록</h2>
+              <h2 className="text-xl font-normal">최근 공개 독서기록</h2>
               {profile.recentReadingRecords.length === 0 ? (
                 <EmptyState title="공개 독서기록이 없습니다." description="ACTIVE 독서기록이 작성되면 표시됩니다." />
               ) : (
                 <div className="grid gap-4">
                   {profile.recentReadingRecords.map((record) => (
                     <Card key={record.id}>
-                      <Link className="font-semibold" href={`/books/${record.bookId}`}>
+                      <Link className="font-normal" href={`/books/${record.bookId}`}>
                         {record.bookTitle}
                       </Link>
                       <p className="mt-3 text-sm leading-6">{record.oneLineReview}</p>
@@ -67,9 +67,8 @@ export function ProfileDetailClient({ memberId }: { memberId: string }) {
             </section>
             {profile.memberOnly && (
               <section className="grid gap-4">
-                <h2 className="text-xl font-semibold">멤버 전용 성장 정보</h2>
+                <h2 className="text-xl font-normal">성장하는 사람들 전용 정보</h2>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Info title="직업" value={profile.memberOnly.job} />
                   <Info title="가입 이유" value={profile.memberOnly.joinReason} />
                   <Info title="현재 고민" value={profile.memberOnly.currentConcern} />
                   <Info title="3년 뒤 목표" value={profile.memberOnly.threeYearGoal} />
@@ -87,7 +86,7 @@ function Stat({ label, value }: { label: string; value: number }) {
   return (
     <Card>
       <p className="text-sm text-[var(--color-charcoal)]">{label}</p>
-      <p className="mt-3 text-2xl font-semibold">{value}</p>
+      <p className="mt-3 text-2xl font-normal">{value}</p>
     </Card>
   );
 }
@@ -95,7 +94,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 function Info({ title, value }: { title: string; value: string | null }) {
   return (
     <Card>
-      <h3 className="font-semibold">{title}</h3>
+      <h3 className="font-normal">{title}</h3>
       <p className="mt-3 text-sm leading-6 text-[var(--color-charcoal)]">{value || "아직 입력되지 않았습니다."}</p>
     </Card>
   );

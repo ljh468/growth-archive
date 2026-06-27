@@ -36,14 +36,26 @@ function MyPageContent() {
         {!dashboard && !error && <EmptyState title="불러오는 중입니다." description="내 성장 기록을 확인하고 있습니다." />}
         {dashboard && (
           <div className="grid gap-8">
-            <PageHeader eyebrow="My Archive" title={`${dashboard.profile.displayName}님의 성장 기록`} description={dashboard.profile.oneLineIntro} />
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex items-center gap-4">
+                {dashboard.profile.profileImageUrl ? (
+                  <img alt="" className="size-16 rounded-full object-cover shadow-[var(--shadow-soft)]" src={dashboard.profile.profileImageUrl} />
+                ) : (
+                  <div className="flex size-16 items-center justify-center rounded-full bg-[var(--color-deep-green)] text-xl text-[var(--color-warm-white)]">
+                    {dashboard.profile.displayName.slice(0, 1)}
+                  </div>
+                )}
+                <PageHeader eyebrow="My Archive" title={`${dashboard.profile.displayName}님의 성장 기록`} description={dashboard.profile.oneLineIntro} />
+              </div>
+            </div>
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <Tag>{dashboard.participation.month}</Tag>
-                  <h2 className="mt-4 text-2xl font-semibold">{dashboard.participation.completed ? "이번 달 참여 완료" : "이번 달 참여가 필요합니다"}</h2>
+                  <h2 className="mt-4 text-2xl font-normal">{dashboard.participation.completed ? "이번 달의 흔적이 채워졌습니다" : "이번 달 성장 기록을 기다리고 있어요"}</h2>
                   <p className="mt-2 text-sm text-[var(--color-charcoal)]">
-                    독서기록 {dashboard.participation.readingRecordCount}개 · 액션플랜 {dashboard.participation.actionPlanCount}개
+                    {dashboard.participation.completed ? "읽고 실행한 기록이 이번 달 아카이브에 남았습니다." : "독서기록이나 실행계획 중 하나만 남기면 이번 달 참여가 채워집니다."}
+                    {" "}독서기록 {dashboard.participation.readingRecordCount}개 · 액션플랜 {dashboard.participation.actionPlanCount}개
                   </p>
                 </div>
                 {dashboard.participation.coffeeSupportTarget && <Tag>투썸 아메리카노 1잔</Tag>}
@@ -79,7 +91,7 @@ function Stat({ label, value }: { label: string; value: number }) {
   return (
     <Card>
       <p className="text-sm text-[var(--color-charcoal)]">{label}</p>
-      <p className="mt-3 text-2xl font-semibold">{value}</p>
+      <p className="mt-3 text-2xl font-normal">{value}</p>
     </Card>
   );
 }
