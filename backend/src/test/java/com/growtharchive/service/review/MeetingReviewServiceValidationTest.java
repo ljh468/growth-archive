@@ -3,12 +3,14 @@ package com.growtharchive.service.review;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.growtharchive.exception.ApiException;
-import com.growtharchive.repository.MeetingReviewRepository;
+import com.growtharchive.repository.ImageAssetRepository;
 import com.growtharchive.security.AccessLevel;
-import com.growtharchive.security.AccessLevelCalculator;
+import com.growtharchive.security.AuthCookieService;
 import com.growtharchive.security.CurrentMemberResolver;
+import com.growtharchive.security.JwtService;
 import com.growtharchive.security.MemberPrincipal;
 import com.growtharchive.service.storage.StorageService;
+import com.growtharchive.service.upload.ImageUploadService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -21,11 +23,12 @@ class MeetingReviewServiceValidationTest {
     void rejectsMoreThanTenReviewImages() {
         CurrentMemberResolver resolver = Mockito.mock(CurrentMemberResolver.class);
         Mockito.when(resolver.require(Mockito.isNull(), Mockito.eq(AccessLevel.MEMBER))).thenReturn(member());
-        MeetingReviewService service = new MeetingReviewService(
+        ImageUploadService service = new ImageUploadService(
             resolver,
-            new AccessLevelCalculator(),
-            Mockito.mock(MeetingReviewRepository.class),
-            Mockito.mock(StorageService.class)
+            Mockito.mock(AuthCookieService.class),
+            Mockito.mock(JwtService.class),
+            Mockito.mock(StorageService.class),
+            Mockito.mock(ImageAssetRepository.class)
         );
         MultipartFile file = Mockito.mock(MultipartFile.class);
         Mockito.when(file.isEmpty()).thenReturn(false);

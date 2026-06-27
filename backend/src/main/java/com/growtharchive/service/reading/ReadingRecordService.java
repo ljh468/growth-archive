@@ -2,6 +2,7 @@ package com.growtharchive.service.reading;
 
 import com.growtharchive.exception.ApiException;
 import com.growtharchive.exception.ErrorCode;
+import com.growtharchive.repository.ImageAssetRepository;
 import com.growtharchive.repository.ReadingRecordRepository;
 import com.growtharchive.security.AccessLevel;
 import com.growtharchive.security.CurrentMemberResolver;
@@ -17,10 +18,16 @@ public class ReadingRecordService {
 
     private final CurrentMemberResolver currentMemberResolver;
     private final ReadingRecordRepository readingRecordRepository;
+    private final ImageAssetRepository imageAssetRepository;
 
-    public ReadingRecordService(CurrentMemberResolver currentMemberResolver, ReadingRecordRepository readingRecordRepository) {
+    public ReadingRecordService(
+        CurrentMemberResolver currentMemberResolver,
+        ReadingRecordRepository readingRecordRepository,
+        ImageAssetRepository imageAssetRepository
+    ) {
         this.currentMemberResolver = currentMemberResolver;
         this.readingRecordRepository = readingRecordRepository;
+        this.imageAssetRepository = imageAssetRepository;
     }
 
     public List<ReadingRecordDetail> getPublic(Long bookId, Long memberId, int page, int size) {
@@ -36,6 +43,7 @@ public class ReadingRecordService {
         if (!readingRecordRepository.existsBook(command.bookId())) {
             throw new ApiException(ErrorCode.BOOK_NOT_FOUND);
         }
+        validateImage(member.memberId(), command.imageId());
         Long id = readingRecordRepository.create(
             member.memberId(),
             command.bookId(),
@@ -60,6 +68,7 @@ public class ReadingRecordService {
         if (!current.memberId().equals(member.memberId())) {
             throw new ApiException(ErrorCode.FORBIDDEN, "작성자만 독서기록을 수정할 수 있습니다.");
         }
+        validateImage(member.memberId(), command.imageId());
         readingRecordRepository.updateContent(
             recordId,
             member.memberId(),
@@ -131,6 +140,12 @@ public class ReadingRecordService {
             }
         } catch (RuntimeException exception) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "블로그 URL 형식을 확인해 주세요.");
+        }
+    }
+
+    private void validateImage(Long memberId, Long imageId) {
+        if (!imageAssetRepository.isOwnedImage(memberId, imageId, "READING_RECORD")) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "사용할 수 없는 독서기록 이미지입니다.");
         }
     }
 

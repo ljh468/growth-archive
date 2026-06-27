@@ -39,7 +39,7 @@ public class RegularMeetingService {
             month.getMonthValue() + "월 실행계획 모임",
             meetingAt(month, 4),
             "온라인 또는 추후 공지",
-            "이번 달 실행계획과 실행 경험을 나누는 정기 모임입니다.",
+            "월초에 정한 실행목표를 함께 이야기하고 편하게 수다 나누는 정기 모임입니다.",
             targetMonth
         )) {
             created++;

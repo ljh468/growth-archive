@@ -12,6 +12,7 @@ import com.growtharchive.security.MemberPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,20 +50,24 @@ public class AuthService {
         this.accessLevelCalculator = accessLevelCalculator;
     }
 
-    public URI kakaoLoginUri(String state) {
+    public URI kakaoLoginUri(String state, HttpServletRequest request, HttpServletResponse response) {
+        if (properties.getKakao().isMockEnabled() && properties.getKakao().getClientId().isBlank()) {
+            String providerUserId = mockProviderUserId(request);
+            authCookieService.addMockKakaoProviderUserCookie(response, providerUserId);
+            return URI.create(kakaoOAuthClient.authorizationUrl(state, providerUserId));
+        }
         return URI.create(kakaoOAuthClient.authorizationUrl(state));
     }
 
     @Transactional
     public URI handleKakaoCallback(String code, HttpServletResponse response) {
         KakaoUserProfile profile = kakaoOAuthClient.fetchProfile(code);
-        Long memberId = oauthAccountRepository.findMemberId(PROVIDER_KAKAO, profile.providerUserId())
-            .orElseGet(() -> memberRepository.createPreOnboardingMember(
-                profile.providerUserId(),
-                profile.nickname(),
-                profile.profileImageUrl(),
-                properties.getKakao().getInitialAdminProviderIds().contains(profile.providerUserId())
-            ));
+        return oauthAccountRepository.findMemberId(PROVIDER_KAKAO, profile.providerUserId())
+            .map(memberId -> handleExistingMemberLogin(memberId, profile, response))
+            .orElseGet(() -> handleSignupStart(profile, response));
+    }
+
+    private URI handleExistingMemberLogin(Long memberId, KakaoUserProfile profile, HttpServletResponse response) {
         oauthAccountRepository.upsert(
             PROVIDER_KAKAO,
             profile.providerUserId(),
@@ -72,16 +77,49 @@ public class AuthService {
             profile.profileImageUrl()
         );
         issueCookies(memberId, response);
+        authCookieService.clearSignupCookie(response);
         MemberPrincipal principal = memberRepository.findPrincipalById(memberId).orElseThrow();
         return URI.create(properties.getFrontend().getBaseUrl()
             + (principal.onboardingCompleted() && !principal.deactivated() ? "/" : "/onboarding"));
+    }
+
+    private URI handleSignupStart(KakaoUserProfile profile, HttpServletResponse response) {
+        JwtService.SignupToken signupToken = new JwtService.SignupToken(
+            PROVIDER_KAKAO,
+            profile.providerUserId(),
+            profile.email(),
+            profile.nickname(),
+            profile.profileImageUrl(),
+            false,
+            false,
+            false
+        );
+        authCookieService.clearAuthCookies(response);
+        authCookieService.addSignupCookie(response, jwtService.issueSignup(signupToken));
+        return URI.create(properties.getFrontend().getBaseUrl() + "/onboarding");
     }
 
     public MeResponse me(HttpServletRequest request) {
         MemberPrincipal principal = currentMemberResolver.resolveOptional(request);
         AccessLevel accessLevel = accessLevelCalculator.calculate(principal);
         if (principal == null) {
-            return MeResponse.publicUser();
+            JwtService.SignupToken signupToken = resolveSignupToken(request);
+            if (signupToken == null) {
+                return MeResponse.publicUser();
+            }
+            return new MeResponse(
+                true,
+                signupToken.inviteVerified() ? AccessLevel.INVITE_VERIFIED.name() : AccessLevel.AUTHENTICATED.name(),
+                null,
+                null,
+                signupToken.nickname(),
+                signupToken.profileImageUrl(),
+                signupToken.inviteVerified(),
+                signupToken.termsAgreed(),
+                signupToken.privacyAgreed(),
+                false,
+                false
+            );
         }
         return new MeResponse(
             true,
@@ -106,12 +144,34 @@ public class AuthService {
 
     public void logout(HttpServletResponse response) {
         authCookieService.clearAuthCookies(response);
+        authCookieService.clearSignupCookie(response);
+        authCookieService.clearMockKakaoProviderUserCookie(response);
+    }
+
+    private JwtService.SignupToken resolveSignupToken(HttpServletRequest request) {
+        String token = authCookieService.readCookie(request, AuthCookieService.SIGNUP_TOKEN_COOKIE);
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        try {
+            return jwtService.verifySignup(token);
+        } catch (Exception exception) {
+            return null;
+        }
     }
 
     private void issueCookies(Long memberId, HttpServletResponse response) {
         String accessToken = jwtService.issue(memberId, JwtService.TokenType.ACCESS);
         String refreshToken = jwtService.issue(memberId, JwtService.TokenType.REFRESH);
         authCookieService.addAuthCookies(response, accessToken, refreshToken);
+    }
+
+    private String mockProviderUserId(HttpServletRequest request) {
+        String providerUserId = authCookieService.readCookie(request, AuthCookieService.MOCK_KAKAO_PROVIDER_USER_COOKIE);
+        if (providerUserId == null || !providerUserId.matches("[0-9a-fA-F-]{36}")) {
+            return UUID.randomUUID().toString();
+        }
+        return providerUserId;
     }
 
     public record MeResponse(

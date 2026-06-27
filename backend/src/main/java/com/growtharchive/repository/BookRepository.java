@@ -52,6 +52,24 @@ public class BookRepository {
         );
     }
 
+    public List<BookSummary> findAdminBooks(String verificationStatus, int limit, int offset) {
+        String statusFilter = verificationStatus == null ? "" : " WHERE status = ?";
+        Object[] args = verificationStatus == null
+            ? new Object[] {limit, offset}
+            : new Object[] {verificationStatus, limit, offset};
+        return jdbcTemplate.query(
+            """
+                SELECT id, title, authors_text, publisher, published_date, thumbnail_url, status
+                FROM books
+                """ + statusFilter + """
+                ORDER BY created_at DESC, id DESC
+                LIMIT ? OFFSET ?
+                """,
+            this::mapSummary,
+            args
+        );
+    }
+
     public Optional<BookDetail> findDetailById(Long bookId) {
         return jdbcTemplate.query(
             """
@@ -72,16 +90,23 @@ public class BookRepository {
     public List<LibraryBook> findPopularBooks(int size) {
         return jdbcTemplate.query(
             """
+                WITH popular AS (
+                    SELECT book_id,
+                           count(*) AS reading_record_count,
+                           avg(rating) FILTER (WHERE rating IS NOT NULL) AS average_rating,
+                           max(recorded_at) AS latest_recorded_at
+                    FROM reading_records
+                    WHERE status = 'ACTIVE'
+                    GROUP BY book_id
+                    ORDER BY reading_record_count DESC, average_rating DESC NULLS LAST, latest_recorded_at DESC
+                    LIMIT ?
+                )
                 SELECT b.id, b.title, b.authors_text, b.publisher, b.thumbnail_url,
-                       count(rr.id) AS reading_record_count,
-                       avg(rr.rating) FILTER (WHERE rr.rating IS NOT NULL) AS average_rating,
-                       max(rr.recorded_at) AS latest_recorded_at
-                FROM books b
-                JOIN reading_records rr ON rr.book_id = b.id
-                WHERE rr.status = 'ACTIVE'
-                GROUP BY b.id
-                ORDER BY reading_record_count DESC, average_rating DESC NULLS LAST, latest_recorded_at DESC
-                LIMIT ?
+                       popular.reading_record_count,
+                       popular.average_rating
+                FROM popular
+                JOIN books b ON b.id = popular.book_id
+                ORDER BY popular.reading_record_count DESC, popular.average_rating DESC NULLS LAST, popular.latest_recorded_at DESC
                 """,
             (rs, rowNum) -> new LibraryBook(
                 rs.getLong("id"),
@@ -147,6 +172,29 @@ public class BookRepository {
             result.publishedDate() == null ? null : Date.valueOf(result.publishedDate()),
             result.thumbnailUrl(),
             result.sourcePayload()
+        );
+    }
+
+    public void updateBasicInfo(Long bookId, String title, String authorsText, String publisher, LocalDate publishedDate, String thumbnailUrl) {
+        jdbcTemplate.update(
+            """
+                UPDATE books
+                SET title = ?, authors_text = ?, publisher = ?, published_date = ?, thumbnail_url = ?, updated_at = now()
+                WHERE id = ?
+                """,
+            title,
+            authorsText,
+            publisher,
+            publishedDate == null ? null : Date.valueOf(publishedDate),
+            thumbnailUrl,
+            bookId
+        );
+    }
+
+    public void verify(Long bookId) {
+        jdbcTemplate.update(
+            "UPDATE books SET status = 'VERIFIED', updated_at = now() WHERE id = ?",
+            bookId
         );
     }
 

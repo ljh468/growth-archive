@@ -2,6 +2,7 @@ package com.growtharchive.service.meeting;
 
 import com.growtharchive.exception.ApiException;
 import com.growtharchive.exception.ErrorCode;
+import com.growtharchive.repository.ImageAssetRepository;
 import com.growtharchive.repository.MeetingRepository;
 import com.growtharchive.security.AccessLevel;
 import com.growtharchive.security.AccessLevelCalculator;
@@ -9,6 +10,8 @@ import com.growtharchive.security.CurrentMemberResolver;
 import com.growtharchive.security.MemberPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,23 +19,37 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MeetingService {
 
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     private final CurrentMemberResolver currentMemberResolver;
     private final AccessLevelCalculator accessLevelCalculator;
     private final MeetingRepository meetingRepository;
+    private final ImageAssetRepository imageAssetRepository;
 
     public MeetingService(
         CurrentMemberResolver currentMemberResolver,
         AccessLevelCalculator accessLevelCalculator,
-        MeetingRepository meetingRepository
+        MeetingRepository meetingRepository,
+        ImageAssetRepository imageAssetRepository
     ) {
         this.currentMemberResolver = currentMemberResolver;
         this.accessLevelCalculator = accessLevelCalculator;
         this.meetingRepository = meetingRepository;
+        this.imageAssetRepository = imageAssetRepository;
     }
 
-    public List<MeetingSummary> list(String type, int page, int size) {
+    public List<MeetingSummary> list(String type, String scope, int monthOffset, int page, int size) {
         int boundedSize = Math.min(Math.max(size, 1), 50);
-        return meetingRepository.findPublic(normalizeTypeFilter(type), boundedSize, Math.max(page, 0) * boundedSize);
+        YearMonth targetMonth = targetMonth(scope, monthOffset);
+        boolean past = "past".equals(scope);
+        return meetingRepository.findPublicInMonth(
+            normalizeTypeFilter(type),
+            targetMonth.atDay(1).atStartOfDay(KST).toOffsetDateTime(),
+            targetMonth.plusMonths(1).atDay(1).atStartOfDay(KST).toOffsetDateTime(),
+            past,
+            boundedSize,
+            Math.max(page, 0) * boundedSize
+        );
     }
 
     public List<MeetingSummary> adminList(HttpServletRequest request, String type, int page, int size) {
@@ -64,6 +81,7 @@ public class MeetingService {
                 detail.capacity(),
                 detail.feeAmount(),
                 detail.coverImageUrl(),
+                detail.coverImageId(),
                 detail.hostMemberId(),
                 null,
                 detail.status(),
@@ -87,6 +105,7 @@ public class MeetingService {
             detail.capacity(),
             detail.feeAmount(),
             detail.coverImageUrl(),
+            detail.coverImageId(),
             detail.hostMemberId(),
             detail.hostDisplayName(),
             detail.status(),
@@ -104,6 +123,7 @@ public class MeetingService {
     public MeetingDetail createSmall(HttpServletRequest request, MeetingCommand command) {
         MemberPrincipal member = currentMemberResolver.require(request, AccessLevel.MEMBER);
         MeetingCommand normalized = normalize(command, false);
+        validateCoverImage(member.memberId(), normalized.thumbnailImageId());
         Long meetingId = meetingRepository.createSmall(member.memberId(), normalized);
         return detail(request, meetingId);
     }
@@ -119,19 +139,23 @@ public class MeetingService {
         if (existing.hostMemberId() == null || !existing.hostMemberId().equals(member.memberId())) {
             throw new ApiException(ErrorCode.FORBIDDEN, "소소모임 생성자만 수정할 수 있습니다.");
         }
-        meetingRepository.updateSmall(meetingId, normalize(command, false));
+        MeetingCommand normalized = normalize(command, false);
+        validateCoverImage(member.memberId(), normalized.thumbnailImageId());
+        meetingRepository.updateSmall(meetingId, normalized);
         return detail(request, meetingId);
     }
 
     @Transactional
     public MeetingDetail updateRegular(HttpServletRequest request, Long meetingId, MeetingCommand command) {
-        currentMemberResolver.require(request, AccessLevel.ADMIN);
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
         MeetingDetail existing = meetingRepository.findEditableById(meetingId)
             .orElseThrow(() -> new ApiException(ErrorCode.MEETING_NOT_FOUND));
         if ("SMALL".equals(existing.meetingType())) {
             throw new ApiException(ErrorCode.FORBIDDEN, "Admin은 소소모임 내용을 직접 수정할 수 없습니다.");
         }
-        meetingRepository.updateRegular(meetingId, normalize(command, true));
+        MeetingCommand normalized = normalize(command, true);
+        validateCoverImage(admin.memberId(), normalized.thumbnailImageId());
+        meetingRepository.updateRegular(meetingId, normalized);
         return detail(request, meetingId);
     }
 
@@ -142,6 +166,9 @@ public class MeetingService {
             .orElseThrow(() -> new ApiException(ErrorCode.MEETING_NOT_FOUND));
         if (!"SCHEDULED".equals(meeting.status())) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "예정된 모임만 참석할 수 있습니다.");
+        }
+        if (!meeting.meetingAt().isAfter(OffsetDateTime.now())) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "이미 지난 모임에는 참석할 수 없습니다.");
         }
         if (!meetingRepository.isJoined(meetingId, member.memberId())
             && meeting.capacity() != null
@@ -245,12 +272,31 @@ public class MeetingService {
         return type;
     }
 
+    private YearMonth targetMonth(String scope, int monthOffset) {
+        String normalizedScope = scope == null || scope.isBlank() ? "current" : scope.trim();
+        YearMonth current = YearMonth.now(KST);
+        if ("current".equals(normalizedScope)) {
+            return current;
+        }
+        if (!"past".equals(normalizedScope)) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "모임 조회 범위를 확인해 주세요.");
+        }
+        int boundedOffset = Math.min(Math.max(monthOffset, 1), 36);
+        return current.minusMonths(boundedOffset);
+    }
+
     private String required(String value, String message) {
         String normalized = trimToNull(value);
         if (normalized == null) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, message);
         }
         return normalized;
+    }
+
+    private void validateCoverImage(Long memberId, Long imageId) {
+        if (!imageAssetRepository.isOwnedImage(memberId, imageId, "MEETING_COVER")) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "사용할 수 없는 모임 이미지입니다.");
+        }
     }
 
     private String trimToNull(String value) {

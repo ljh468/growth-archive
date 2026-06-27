@@ -34,10 +34,12 @@ public class MeetingController {
     @GetMapping
     public ApiResponse<List<MeetingSummary>> list(
         @RequestParam(required = false) String type,
+        @RequestParam(defaultValue = "current") String scope,
+        @RequestParam(defaultValue = "0") int monthOffset,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.success(meetingService.list(type, page, size));
+        return ApiResponse.success(meetingService.list(type, scope, monthOffset, page, size));
     }
 
     @GetMapping("/{meetingId}")

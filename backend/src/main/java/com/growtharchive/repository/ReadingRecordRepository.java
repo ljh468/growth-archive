@@ -134,7 +134,7 @@ public class ReadingRecordRepository {
 
     public List<ReadingRecordDetail> findRecentPublic(int limit) {
         return jdbcTemplate.query(
-            baseSelect() + " WHERE rr.status = 'ACTIVE' ORDER BY rr.recorded_at DESC LIMIT ?",
+            baseSelect() + " WHERE rr.status = 'ACTIVE' ORDER BY rr.created_at DESC, rr.id DESC LIMIT ?",
             (rs, rowNum) -> mapDetail(rs),
             limit
         );
@@ -155,12 +155,14 @@ public class ReadingRecordRepository {
             SELECT rr.id, rr.member_id, rr.book_id, rr.rating, rr.one_line_review, rr.blog_url, rr.status,
                    rr.recorded_at, rr.created_at, rr.representative_image_id,
                    b.title AS book_title, b.authors_text, b.thumbnail_url AS book_thumbnail_url,
-                   m.nickname, m.real_name, m.display_type, m.kakao_profile_image_url,
+                   m.nickname, m.real_name, m.display_type,
+                   coalesce(profile_image.public_url, m.kakao_profile_image_url) AS member_profile_image_url,
                    ia.public_url AS record_image_url
             FROM reading_records rr
             JOIN books b ON b.id = rr.book_id
             JOIN members m ON m.id = rr.member_id
             LEFT JOIN image_assets ia ON ia.id = rr.representative_image_id
+            LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
             """;
     }
 
@@ -172,7 +174,7 @@ public class ReadingRecordRepository {
             rs.getLong("id"),
             rs.getLong("member_id"),
             "REAL_NAME".equals(displayType) && realName != null && !realName.isBlank() ? realName : nickname,
-            rs.getString("kakao_profile_image_url"),
+            rs.getString("member_profile_image_url"),
             rs.getLong("book_id"),
             rs.getString("book_title"),
             rs.getString("authors_text"),

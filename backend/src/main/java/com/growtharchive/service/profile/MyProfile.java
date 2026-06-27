@@ -1,5 +1,6 @@
 package com.growtharchive.service.profile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public record MyProfile(
@@ -11,7 +12,7 @@ public record MyProfile(
     String profileImageUrl,
     Long profileImageId,
     String oneLineIntro,
-    String job,
+    LocalDate birthDate,
     List<Long> interestTagIds,
     String futureMeAt50,
     String joinReason,

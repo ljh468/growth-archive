@@ -12,6 +12,8 @@ public class AuthCookieService {
 
     public static final String ACCESS_TOKEN_COOKIE = "access_token";
     public static final String REFRESH_TOKEN_COOKIE = "refresh_token";
+    public static final String SIGNUP_TOKEN_COOKIE = "signup_token";
+    public static final String MOCK_KAKAO_PROVIDER_USER_COOKIE = "mock_kakao_provider_user_id";
 
     private final AppProperties properties;
 
@@ -27,6 +29,22 @@ public class AuthCookieService {
     public void clearAuthCookies(HttpServletResponse response) {
         addCookie(response, ACCESS_TOKEN_COOKIE, "", 0);
         addCookie(response, REFRESH_TOKEN_COOKIE, "", 0);
+    }
+
+    public void addSignupCookie(HttpServletResponse response, String signupToken) {
+        addCookie(response, SIGNUP_TOKEN_COOKIE, signupToken, properties.getJwt().getRefreshTokenSeconds());
+    }
+
+    public void clearSignupCookie(HttpServletResponse response) {
+        addCookie(response, SIGNUP_TOKEN_COOKIE, "", 0);
+    }
+
+    public void addMockKakaoProviderUserCookie(HttpServletResponse response, String providerUserId) {
+        addCookie(response, MOCK_KAKAO_PROVIDER_USER_COOKIE, providerUserId, properties.getJwt().getRefreshTokenSeconds());
+    }
+
+    public void clearMockKakaoProviderUserCookie(HttpServletResponse response) {
+        addCookie(response, MOCK_KAKAO_PROVIDER_USER_COOKIE, "", 0);
     }
 
     public String readCookie(HttpServletRequest request, String name) {

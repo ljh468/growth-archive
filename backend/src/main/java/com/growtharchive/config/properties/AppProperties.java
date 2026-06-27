@@ -176,9 +176,18 @@ public class AppProperties {
 
     public static class Storage {
         private final Supabase supabase = new Supabase();
+        private boolean localFallbackEnabled = true;
 
         public Supabase getSupabase() {
             return supabase;
+        }
+
+        public boolean isLocalFallbackEnabled() {
+            return localFallbackEnabled;
+        }
+
+        public void setLocalFallbackEnabled(boolean localFallbackEnabled) {
+            this.localFallbackEnabled = localFallbackEnabled;
         }
     }
 

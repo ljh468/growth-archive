@@ -23,7 +23,7 @@ public class Member extends BaseEntity {
     @Column(nullable = false, length = 20)
     private String nickname;
 
-    @Column(name = "one_line_intro", nullable = false, length = 80)
+    @Column(name = "one_line_intro", length = 80)
     private String oneLineIntro;
 
     @Column(length = 50)
@@ -35,7 +35,7 @@ public class Member extends BaseEntity {
     @Column(name = "kakao_profile_image_url", columnDefinition = "text")
     private String kakaoProfileImageUrl;
 
-    @Column(name = "fifty_year_old_me", nullable = false, columnDefinition = "text")
+    @Column(name = "fifty_year_old_me", columnDefinition = "text")
     private String fiftyYearOldMe;
 
     @Column(name = "join_reason", columnDefinition = "text")

@@ -15,6 +15,7 @@ public record MeetingDetail(
     Integer capacity,
     Integer feeAmount,
     String coverImageUrl,
+    Long coverImageId,
     Long hostMemberId,
     String hostDisplayName,
     String status,

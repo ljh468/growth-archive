@@ -5,8 +5,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "books")
@@ -45,7 +43,6 @@ public class Book extends BaseEntity {
     @Column(name = "created_by_member_id")
     private Long createdByMemberId;
 
-    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "source_payload", columnDefinition = "jsonb")
     private String sourcePayload;
 

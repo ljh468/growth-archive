@@ -47,8 +47,45 @@ class BookServiceTest {
         verify(bookRepository).createManualBook(1L, "책 제목", "저자", null, null, null);
     }
 
+    @Test
+    void adminCanVerifyUnverifiedBook() {
+        CurrentMemberResolver resolver = Mockito.mock(CurrentMemberResolver.class);
+        BookRepository bookRepository = Mockito.mock(BookRepository.class);
+        AdminAuditLogRepository auditLogRepository = Mockito.mock(AdminAuditLogRepository.class);
+        BookService service = new BookService(
+            resolver,
+            Mockito.mock(BookSearchProvider.class),
+            bookRepository,
+            Mockito.mock(ReadingRecordRepository.class),
+            Mockito.mock(RecommendedBookRepository.class),
+            auditLogRepository
+        );
+        Mockito.when(resolver.require(Mockito.isNull(), Mockito.eq(AccessLevel.ADMIN))).thenReturn(admin());
+        Mockito.when(bookRepository.findSummaryById(10L))
+            .thenReturn(Optional.of(new BookSummary(10L, "책 제목", "저자", null, null, null, "UNVERIFIED")))
+            .thenReturn(Optional.of(new BookSummary(10L, "책 제목", "저자", null, null, null, "VERIFIED")));
+
+        BookSummary result = service.verifyBookByAdmin(null, 10L);
+
+        assertThat(result.status()).isEqualTo("VERIFIED");
+        verify(bookRepository).verify(10L);
+        verify(auditLogRepository).record(
+            Mockito.eq(1L),
+            Mockito.eq("VERIFY_BOOK"),
+            Mockito.eq("BOOK"),
+            Mockito.eq(10L),
+            Mockito.eq("{\"status\":\"UNVERIFIED\"}"),
+            Mockito.eq("{\"status\":\"VERIFIED\"}")
+        );
+    }
+
     private MemberPrincipal member() {
         OffsetDateTime now = OffsetDateTime.now();
         return new MemberPrincipal(1L, "MEMBER", "NICKNAME", null, "member", null, now, now, now, now, null);
+    }
+
+    private MemberPrincipal admin() {
+        OffsetDateTime now = OffsetDateTime.now();
+        return new MemberPrincipal(1L, "ADMIN", "NICKNAME", null, "admin", null, now, now, now, now, null);
     }
 }

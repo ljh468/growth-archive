@@ -24,11 +24,12 @@ public class PeopleController {
 
     @GetMapping
     public ApiResponse<List<ProfileCard>> list(
+        HttpServletRequest request,
         @RequestParam(required = false) Long interestTagId,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.success(profileService.getPeople(interestTagId, page, size));
+        return ApiResponse.success(profileService.getPeople(request, interestTagId, page, size));
     }
 
     @GetMapping("/{memberId}")

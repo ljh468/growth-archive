@@ -28,13 +28,19 @@ public class ProfileRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public List<ProfileCard> findPeople(Long interestTagId, int limit, int offset) {
+    public List<ProfileCard> findPeople(Long interestTagId, int limit, int offset, boolean revealPrivateProfile) {
         String tagFilter = interestTagId == null ? "" : " AND EXISTS (SELECT 1 FROM member_interest_tags mit_filter WHERE mit_filter.member_id = m.id AND mit_filter.interest_tag_id = ?)";
         Object[] args = interestTagId == null ? new Object[] {limit, offset} : new Object[] {interestTagId, limit, offset};
-        return jdbcTemplate.query(
+        String displayNameSelect = revealPrivateProfile
+            ? "CASE WHEN m.real_name IS NOT NULL AND m.real_name <> '' THEN m.real_name ELSE m.nickname END"
+            : "m.nickname";
+        String profileImageSelect = revealPrivateProfile
+            ? "coalesce(profile_image.public_url, m.kakao_profile_image_url)"
+            : "null";
+        String sql = (
             """
-                SELECT m.id, m.display_type, m.real_name, m.nickname, m.one_line_intro,
-                       coalesce(profile_image.public_url, m.kakao_profile_image_url) AS profile_image_url,
+                SELECT m.id, m.role, %s AS display_name, m.one_line_intro,
+                       %s AS profile_image_url,
                        m.fifty_year_old_me,
                        coalesce(array_agg(it.name ORDER BY it.display_order) FILTER (WHERE it.id IS NOT NULL), '{}') AS interest_tags,
                        stats.reading_record_count, stats.action_plan_count, stats.monthly_reflection_count,
@@ -68,10 +74,14 @@ public class ProfileRepository {
                          latest.title, latest.href, latest.occurred_at
                 ORDER BY latest.occurred_at DESC NULLS LAST, m.id DESC
                 LIMIT ? OFFSET ?
-                """,
+                """
+        ).formatted(displayNameSelect, profileImageSelect);
+        return jdbcTemplate.query(
+            sql,
             (rs, rowNum) -> new ProfileCard(
                 rs.getLong("id"),
-                displayName(rs),
+                rs.getString("role"),
+                rs.getString("display_name"),
                 rs.getString("profile_image_url"),
                 rs.getString("one_line_intro"),
                 readStringArray(rs, "interest_tags"),
@@ -84,11 +94,17 @@ public class ProfileRepository {
     }
 
     public Optional<ProfileDetail> findProfileDetail(Long memberId, boolean includeMemberOnly) {
+        String displayNameSelect = includeMemberOnly
+            ? "CASE WHEN m.real_name IS NOT NULL AND m.real_name <> '' THEN m.real_name ELSE m.nickname END"
+            : "m.nickname";
+        String profileImageSelect = includeMemberOnly
+            ? "coalesce(profile_image.public_url, m.kakao_profile_image_url)"
+            : "null";
         return jdbcTemplate.query(
             """
-                SELECT m.id, m.display_type, m.real_name, m.nickname, m.one_line_intro, m.job,
+                SELECT m.id, %s AS display_name, m.one_line_intro,
                        m.join_reason, m.current_concern, m.three_year_goal,
-                       coalesce(profile_image.public_url, m.kakao_profile_image_url) AS profile_image_url,
+                       %s AS profile_image_url,
                        m.fifty_year_old_me,
                        coalesce(array_agg(it.name ORDER BY it.display_order) FILTER (WHERE it.id IS NOT NULL), '{}') AS interest_tags,
                        stats.reading_record_count, stats.action_plan_count, stats.monthly_reflection_count,
@@ -108,14 +124,13 @@ public class ProfileRepository {
                 WHERE m.id = ? AND m.onboarding_completed_at IS NOT NULL AND m.deactivated_at IS NULL
                 GROUP BY m.id, profile_image.public_url, stats.reading_record_count, stats.action_plan_count,
                          stats.monthly_reflection_count, stats.meeting_review_count, stats.small_meeting_created_count
-                """,
+                """.formatted(displayNameSelect, profileImageSelect),
             rs -> {
                 if (!rs.next()) {
                     return Optional.empty();
                 }
                 ProfileDetail.MemberOnlyProfile memberOnly = includeMemberOnly
                     ? new ProfileDetail.MemberOnlyProfile(
-                        rs.getString("job"),
                         rs.getString("join_reason"),
                         rs.getString("current_concern"),
                         rs.getString("three_year_goal"),
@@ -125,13 +140,13 @@ public class ProfileRepository {
                     : null;
                 return Optional.of(new ProfileDetail(
                     rs.getLong("id"),
-                    displayName(rs),
+                    rs.getString("display_name"),
                     rs.getString("profile_image_url"),
                     rs.getString("one_line_intro"),
                     readStringArray(rs, "interest_tags"),
                     rs.getString("fifty_year_old_me"),
                     mapStats(rs),
-                    findRecentReadingRecords(memberId, 3),
+                    findRecentReadingRecords(memberId, 3, includeMemberOnly),
                     findMeetingReviews(memberId, 3),
                     findPublicActivities(memberId, 5),
                     memberOnly
@@ -144,7 +159,7 @@ public class ProfileRepository {
     public Optional<MyProfile> findMyProfile(Long memberId) {
         return jdbcTemplate.query(
             """
-                SELECT m.id, m.nickname, m.real_name, m.display_type, m.one_line_intro, m.job, m.profile_image_id,
+                SELECT m.id, m.nickname, m.real_name, m.display_type, m.one_line_intro, m.birth_date, m.profile_image_id,
                        coalesce(profile_image.public_url, m.kakao_profile_image_url) AS profile_image_url,
                        m.fifty_year_old_me, m.join_reason, m.current_concern, m.three_year_goal,
                        coalesce(array_agg(it.id ORDER BY it.display_order) FILTER (WHERE it.id IS NOT NULL), '{}') AS interest_tag_ids
@@ -164,7 +179,7 @@ public class ProfileRepository {
                 rs.getString("profile_image_url"),
                 readNullableLong(rs, "profile_image_id"),
                 rs.getString("one_line_intro"),
-                rs.getString("job"),
+                readNullableDate(rs, "birth_date"),
                 readLongArray(rs, "interest_tag_ids"),
                 rs.getString("fifty_year_old_me"),
                 rs.getString("join_reason"),
@@ -181,7 +196,7 @@ public class ProfileRepository {
         String oneLineIntro,
         String displayType,
         String realName,
-        String job,
+        LocalDate birthDate,
         String futureMeAt50,
         String joinReason,
         String currentConcern,
@@ -191,7 +206,7 @@ public class ProfileRepository {
         jdbcTemplate.update(
             """
                 UPDATE members
-                SET nickname = ?, one_line_intro = ?, display_type = ?, real_name = ?, job = ?,
+                SET nickname = ?, one_line_intro = ?, display_type = ?, real_name = ?, birth_date = ?,
                     fifty_year_old_me = ?, join_reason = ?, current_concern = ?, three_year_goal = ?,
                     profile_image_id = ?, updated_at = now()
                 WHERE id = ?
@@ -200,7 +215,7 @@ public class ProfileRepository {
             oneLineIntro,
             displayType,
             realName,
-            job,
+            birthDate == null ? null : Date.valueOf(birthDate),
             futureMeAt50,
             joinReason,
             currentConcern,
@@ -283,27 +298,35 @@ public class ProfileRepository {
         );
     }
 
-    private List<ReadingRecordDetail> findRecentReadingRecords(Long memberId, int limit) {
+    private List<ReadingRecordDetail> findRecentReadingRecords(Long memberId, int limit, boolean includeMemberOnly) {
+        String displayNameSelect = includeMemberOnly
+            ? "CASE WHEN m.real_name IS NOT NULL AND m.real_name <> '' THEN m.real_name ELSE m.nickname END"
+            : "m.nickname";
+        String profileImageSelect = includeMemberOnly
+            ? "coalesce(profile_image.public_url, m.kakao_profile_image_url)"
+            : "null";
         return jdbcTemplate.query(
             """
                 SELECT rr.id, rr.member_id, rr.book_id, rr.rating, rr.one_line_review, rr.blog_url, rr.status,
                        rr.recorded_at, rr.created_at, rr.representative_image_id,
                        b.title AS book_title, b.authors_text, b.thumbnail_url AS book_thumbnail_url,
-                       m.nickname, m.real_name, m.display_type, m.kakao_profile_image_url,
+                       %s AS member_display_name,
+                       %s AS member_profile_image_url,
                        ia.public_url AS record_image_url
                 FROM reading_records rr
                 JOIN books b ON b.id = rr.book_id
                 JOIN members m ON m.id = rr.member_id
                 LEFT JOIN image_assets ia ON ia.id = rr.representative_image_id
+                LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
                 WHERE rr.member_id = ? AND rr.status = 'ACTIVE'
                 ORDER BY rr.recorded_at DESC
                 LIMIT ?
-                """,
+                """.formatted(displayNameSelect, profileImageSelect),
             (rs, rowNum) -> new ReadingRecordDetail(
                 rs.getLong("id"),
                 rs.getLong("member_id"),
-                displayName(rs),
-                rs.getString("kakao_profile_image_url"),
+                rs.getString("member_display_name"),
+                rs.getString("member_profile_image_url"),
                 rs.getLong("book_id"),
                 rs.getString("book_title"),
                 rs.getString("authors_text"),
@@ -454,5 +477,10 @@ public class ProfileRepository {
     private Long readNullableLong(ResultSet rs, String column) throws SQLException {
         long value = rs.getLong(column);
         return rs.wasNull() ? null : value;
+    }
+
+    private LocalDate readNullableDate(ResultSet rs, String column) throws SQLException {
+        Date value = rs.getDate(column);
+        return value == null ? null : value.toLocalDate();
     }
 }

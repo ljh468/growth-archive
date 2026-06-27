@@ -128,6 +128,54 @@ public class BookService {
         return recommendedBookRepository.findActiveForMonth(targetMonth.withDayOfMonth(1));
     }
 
+    public List<BookSummary> getAdminBooks(HttpServletRequest request, String verificationStatus, int page, int size) {
+        currentMemberResolver.require(request, AccessLevel.ADMIN);
+        String status = normalizeVerificationStatus(verificationStatus);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        return bookRepository.findAdminBooks(status, safeSize, Math.max(page, 0) * safeSize);
+    }
+
+    @Transactional
+    public BookSummary updateBookByAdmin(HttpServletRequest request, Long bookId, AdminBookCommand command) {
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
+        BookSummary before = bookRepository.findSummaryById(bookId)
+            .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
+        bookRepository.updateBasicInfo(
+            bookId,
+            required(command.title(), "책 제목을 입력해 주세요."),
+            required(command.authorsText(), "저자를 입력해 주세요."),
+            trimToNull(command.publisher()),
+            command.publishedDate(),
+            trimToNull(command.thumbnailUrl())
+        );
+        adminAuditLogRepository.record(
+            admin.memberId(),
+            "UPDATE_BOOK",
+            "BOOK",
+            bookId,
+            "{\"title\":\"" + escape(before.title()) + "\",\"authorsText\":\"" + escape(before.authorsText()) + "\"}",
+            "{\"title\":\"" + escape(command.title()) + "\",\"authorsText\":\"" + escape(command.authorsText()) + "\"}"
+        );
+        return bookRepository.findSummaryById(bookId).orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
+    }
+
+    @Transactional
+    public BookSummary verifyBookByAdmin(HttpServletRequest request, Long bookId) {
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
+        BookSummary before = bookRepository.findSummaryById(bookId)
+            .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
+        bookRepository.verify(bookId);
+        adminAuditLogRepository.record(
+            admin.memberId(),
+            "VERIFY_BOOK",
+            "BOOK",
+            bookId,
+            "{\"status\":\"" + before.status() + "\"}",
+            "{\"status\":\"VERIFIED\"}"
+        );
+        return bookRepository.findSummaryById(bookId).orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
+    }
+
     @Transactional
     public RecommendedBookView updateRecommended(HttpServletRequest request, Long recommendedBookId, RecommendedBookCommand command) {
         MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
@@ -210,6 +258,21 @@ public class BookService {
         return value.trim();
     }
 
+    private String normalizeVerificationStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        String normalized = status.trim().toUpperCase();
+        if (!List.of("VERIFIED", "UNVERIFIED").contains(normalized)) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "책 검증 상태를 확인해 주세요.");
+        }
+        return normalized;
+    }
+
+    private String escape(String value) {
+        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
     public record ManualBookCommand(
         String title,
         String author,
@@ -234,6 +297,15 @@ public class BookService {
         Long bookId,
         String reason,
         int displayOrder
+    ) {
+    }
+
+    public record AdminBookCommand(
+        String title,
+        String authorsText,
+        String publisher,
+        LocalDate publishedDate,
+        String thumbnailUrl
     ) {
     }
 }

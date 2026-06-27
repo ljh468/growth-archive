@@ -2,6 +2,7 @@ package com.growtharchive.service.profile;
 
 import com.growtharchive.exception.ApiException;
 import com.growtharchive.exception.ErrorCode;
+import com.growtharchive.repository.ImageAssetRepository;
 import com.growtharchive.repository.InterestTagRepository;
 import com.growtharchive.repository.MemberRepository;
 import com.growtharchive.repository.ProfileRepository;
@@ -23,24 +24,30 @@ public class ProfileService {
     private final ProfileRepository profileRepository;
     private final MemberRepository memberRepository;
     private final InterestTagRepository interestTagRepository;
+    private final ImageAssetRepository imageAssetRepository;
 
     public ProfileService(
         CurrentMemberResolver currentMemberResolver,
         AccessLevelCalculator accessLevelCalculator,
         ProfileRepository profileRepository,
         MemberRepository memberRepository,
-        InterestTagRepository interestTagRepository
+        InterestTagRepository interestTagRepository,
+        ImageAssetRepository imageAssetRepository
     ) {
         this.currentMemberResolver = currentMemberResolver;
         this.accessLevelCalculator = accessLevelCalculator;
         this.profileRepository = profileRepository;
         this.memberRepository = memberRepository;
         this.interestTagRepository = interestTagRepository;
+        this.imageAssetRepository = imageAssetRepository;
     }
 
-    public List<ProfileCard> getPeople(Long interestTagId, int page, int size) {
+    public List<ProfileCard> getPeople(HttpServletRequest request, Long interestTagId, int page, int size) {
         int safeSize = Math.min(Math.max(size, 1), 50);
-        return profileRepository.findPeople(interestTagId, safeSize, Math.max(page, 0) * safeSize);
+        MemberPrincipal current = currentMemberResolver.resolveOptional(request);
+        AccessLevel actual = accessLevelCalculator.calculate(current);
+        boolean revealPrivateProfile = accessLevelCalculator.hasAtLeast(actual, AccessLevel.MEMBER);
+        return profileRepository.findPeople(interestTagId, safeSize, Math.max(page, 0) * safeSize, revealPrivateProfile);
     }
 
     public ProfileDetail getProfile(HttpServletRequest request, Long memberId) {
@@ -73,8 +80,8 @@ public class ProfileService {
         if (!"REAL_NAME".equals(command.displayNameType()) && !"NICKNAME".equals(command.displayNameType())) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "공개 표시 방식을 선택해 주세요.");
         }
-        if ("REAL_NAME".equals(command.displayNameType()) && isBlank(command.realName())) {
-            throw new ApiException(ErrorCode.VALIDATION_ERROR, "실명 공개 선택 시 실명을 입력해 주세요.");
+        if (isBlank(command.realName())) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "실명을 입력해 주세요.");
         }
         if (command.interestTagIds() == null || command.interestTagIds().isEmpty() || command.interestTagIds().size() > 5) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "관심 분야는 1~5개 선택해 주세요.");
@@ -82,13 +89,19 @@ public class ProfileService {
         if (interestTagRepository.countActiveIds(command.interestTagIds()) != command.interestTagIds().size()) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "선택할 수 없는 관심 분야가 포함되어 있습니다.");
         }
+        if (command.birthDate() != null && command.birthDate().isAfter(LocalDate.now())) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "생년월일을 다시 확인해 주세요.");
+        }
+        if (!imageAssetRepository.isOwnedImage(member.memberId(), command.profileImageId(), "PROFILE")) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "사용할 수 없는 프로필 이미지입니다.");
+        }
         profileRepository.updateMyProfile(
             member.memberId(),
             nickname,
             required(command.oneLineIntro(), "한 줄 소개를 입력해 주세요."),
             command.displayNameType(),
-            trimToNull(command.realName()),
-            trimToNull(command.job()),
+            command.realName().trim(),
+            command.birthDate(),
             required(command.futureMeAt50(), "50살의 나를 입력해 주세요."),
             trimToNull(command.joinReason()),
             trimToNull(command.currentConcern()),
@@ -122,7 +135,7 @@ public class ProfileService {
         String oneLineIntro,
         String realName,
         String displayNameType,
-        String job,
+        LocalDate birthDate,
         List<Long> interestTagIds,
         String futureMeAt50,
         String joinReason,

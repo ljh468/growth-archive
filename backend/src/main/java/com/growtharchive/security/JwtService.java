@@ -22,6 +22,8 @@ public class JwtService {
         REFRESH
     }
 
+    private static final String SIGNUP_TOKEN_TYPE = "SIGNUP";
+
     private static final Base64.Encoder URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder URL_DECODER = Base64.getUrlDecoder();
 
@@ -44,6 +46,32 @@ public class JwtService {
         payload.put("typ", tokenType.name());
         payload.put("iat", now);
         payload.put("exp", now + ttl);
+
+        try {
+            String headerPart = encodeJson(header);
+            String payloadPart = encodeJson(payload);
+            String signaturePart = sign(headerPart + "." + payloadPart);
+            return headerPart + "." + payloadPart + "." + signaturePart;
+        } catch (Exception exception) {
+            throw new ApiException(ErrorCode.INTERNAL_ERROR);
+        }
+    }
+
+    public String issueSignup(SignupToken signupToken) {
+        long now = Instant.now().getEpochSecond();
+        Map<String, Object> header = Map.of("alg", "HS256", "typ", "JWT");
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("sub", signupToken.providerUserId());
+        payload.put("typ", SIGNUP_TOKEN_TYPE);
+        payload.put("provider", signupToken.provider());
+        payload.put("email", signupToken.email());
+        payload.put("nickname", signupToken.nickname());
+        payload.put("profileImageUrl", signupToken.profileImageUrl());
+        payload.put("inviteVerified", signupToken.inviteVerified());
+        payload.put("termsAgreed", signupToken.termsAgreed());
+        payload.put("privacyAgreed", signupToken.privacyAgreed());
+        payload.put("iat", now);
+        payload.put("exp", now + properties.getJwt().getRefreshTokenSeconds());
 
         try {
             String headerPart = encodeJson(header);
@@ -85,6 +113,45 @@ public class JwtService {
         }
     }
 
+    public SignupToken verifySignup(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED);
+            }
+            String expectedSignature = sign(parts[0] + "." + parts[1]);
+            if (!constantTimeEquals(expectedSignature, parts[2])) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED);
+            }
+            Map<String, Object> payload = objectMapper.readValue(
+                URL_DECODER.decode(parts[1]),
+                new TypeReference<>() {
+                }
+            );
+            if (!SIGNUP_TOKEN_TYPE.equals(payload.get("typ"))) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED);
+            }
+            Number exp = (Number) payload.get("exp");
+            if (exp.longValue() < Instant.now().getEpochSecond()) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED);
+            }
+            return new SignupToken(
+                readText(payload, "provider"),
+                readText(payload, "sub"),
+                readText(payload, "email"),
+                readText(payload, "nickname"),
+                readText(payload, "profileImageUrl"),
+                Boolean.TRUE.equals(payload.get("inviteVerified")),
+                Boolean.TRUE.equals(payload.get("termsAgreed")),
+                Boolean.TRUE.equals(payload.get("privacyAgreed"))
+            );
+        } catch (ApiException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
     private String encodeJson(Map<String, Object> value) throws Exception {
         return URL_ENCODER.encodeToString(objectMapper.writeValueAsBytes(value));
     }
@@ -100,6 +167,23 @@ public class JwtService {
             left.getBytes(StandardCharsets.UTF_8),
             right.getBytes(StandardCharsets.UTF_8)
         );
+    }
+
+    private String readText(Map<String, Object> payload, String key) {
+        Object value = payload.get(key);
+        return value == null ? null : value.toString();
+    }
+
+    public record SignupToken(
+        String provider,
+        String providerUserId,
+        String email,
+        String nickname,
+        String profileImageUrl,
+        boolean inviteVerified,
+        boolean termsAgreed,
+        boolean privacyAgreed
+    ) {
     }
 
     private static final class MessageDigestUtil {

@@ -3,6 +3,7 @@ package com.growtharchive.service.reading;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.growtharchive.exception.ApiException;
+import com.growtharchive.repository.ImageAssetRepository;
 import com.growtharchive.repository.ReadingRecordRepository;
 import com.growtharchive.security.AccessLevel;
 import com.growtharchive.security.CurrentMemberResolver;
@@ -15,7 +16,8 @@ class ReadingRecordServiceTest {
 
     private final CurrentMemberResolver resolver = Mockito.mock(CurrentMemberResolver.class);
     private final ReadingRecordRepository repository = Mockito.mock(ReadingRecordRepository.class);
-    private final ReadingRecordService service = new ReadingRecordService(resolver, repository);
+    private final ImageAssetRepository imageAssetRepository = Mockito.mock(ImageAssetRepository.class);
+    private final ReadingRecordService service = new ReadingRecordService(resolver, repository, imageAssetRepository);
 
     @Test
     void rejectsRatingOutsideOneToFive() {

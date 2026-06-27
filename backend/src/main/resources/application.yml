@@ -10,10 +10,6 @@ spring:
     driver-class-name: org.postgresql.Driver
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    open-in-view: false
   servlet:
     multipart:
       max-file-size: 10MB
@@ -55,6 +51,7 @@ app:
   invite:
     initial-code: ${INITIAL_INVITE_CODE:}
   storage:
+    local-fallback-enabled: ${LOCAL_STORAGE_FALLBACK_ENABLED:false}
     supabase:
       url: ${SUPABASE_URL:}
       service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}

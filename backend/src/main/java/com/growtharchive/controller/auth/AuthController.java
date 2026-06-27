@@ -23,8 +23,12 @@ public class AuthController {
     }
 
     @GetMapping("/kakao/login")
-    public ResponseEntity<Void> kakaoLogin(@RequestParam(defaultValue = "") String state) {
-        return ResponseEntity.status(302).location(authService.kakaoLoginUri(state)).build();
+    public ResponseEntity<Void> kakaoLogin(
+        @RequestParam(defaultValue = "") String state,
+        HttpServletRequest request,
+        HttpServletResponse response
+    ) {
+        return ResponseEntity.status(302).location(authService.kakaoLoginUri(state, request, response)).build();
     }
 
     @GetMapping("/kakao/callback")

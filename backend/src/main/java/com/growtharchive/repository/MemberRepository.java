@@ -21,24 +21,46 @@ public class MemberRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public Long createPreOnboardingMember(String providerUserId, String kakaoNickname, String kakaoProfileImageUrl, boolean admin) {
-        String seedNickname = uniqueSeedNickname(providerUserId);
-        LocalDate startMonth = LocalDate.now().withDayOfMonth(1);
+    public Long createOnboardedMember(
+        String role,
+        String nickname,
+        String oneLineIntro,
+        String displayType,
+        String realName,
+        LocalDate birthDate,
+        Long profileImageId,
+        String kakaoProfileImageUrl,
+        String fiftyYearOldMe,
+        String joinReason,
+        String currentConcern,
+        String threeYearGoal
+    ) {
+        LocalDate startMonth = LocalDate.now().withDayOfMonth(1).plusMonths(1);
         return jdbcTemplate.queryForObject(
             """
                 INSERT INTO members (
-                    role, display_type, nickname, one_line_intro, kakao_profile_image_url,
-                    fifty_year_old_me, participation_start_month, created_at, updated_at
+                    role, display_type, nickname, one_line_intro, real_name, birth_date,
+                    profile_image_id, kakao_profile_image_url, fifty_year_old_me, join_reason,
+                    current_concern, three_year_goal, participation_start_month,
+                    invite_verified_at, terms_agreed_at, privacy_agreed_at, onboarding_completed_at,
+                    created_at, updated_at
                 )
-                VALUES (?, 'NICKNAME', ?, ?, ?, ?, ?, now(), now())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now(), now(), now(), now(), now())
                 RETURNING id
                 """,
             Long.class,
-            admin ? "ADMIN" : "MEMBER",
-            seedNickname,
-            "온보딩을 진행 중입니다.",
+            role,
+            displayType,
+            nickname,
+            oneLineIntro,
+            realName,
+            birthDate == null ? null : Date.valueOf(birthDate),
+            profileImageId,
             kakaoProfileImageUrl,
-            "온보딩을 진행 중입니다.",
+            fiftyYearOldMe,
+            joinReason,
+            currentConcern,
+            threeYearGoal,
             Date.valueOf(startMonth)
         );
     }
@@ -92,7 +114,8 @@ public class MemberRepository {
         String oneLineIntro,
         String displayType,
         String realName,
-        String job,
+        LocalDate birthDate,
+        Long profileImageId,
         String fiftyYearOldMe,
         String joinReason,
         String currentConcern,
@@ -105,7 +128,8 @@ public class MemberRepository {
                     one_line_intro = ?,
                     display_type = ?,
                     real_name = ?,
-                    job = ?,
+                    birth_date = ?,
+                    profile_image_id = ?,
                     fifty_year_old_me = ?,
                     join_reason = ?,
                     current_concern = ?,
@@ -119,7 +143,8 @@ public class MemberRepository {
             oneLineIntro,
             displayType,
             realName,
-            job,
+            birthDate == null ? null : Date.valueOf(birthDate),
+            profileImageId,
             fiftyYearOldMe,
             joinReason,
             currentConcern,
@@ -267,21 +292,6 @@ public class MemberRepository {
             rs.getObject("deactivated_at", OffsetDateTime.class),
             rs.getObject("created_at", OffsetDateTime.class)
         );
-    }
-
-    private String uniqueSeedNickname(String providerUserId) {
-        String suffix = providerUserId.replaceAll("[^A-Za-z0-9]", "");
-        if (suffix.length() > 10) {
-            suffix = suffix.substring(suffix.length() - 10);
-        }
-        String nickname = "kakao_" + suffix;
-        if (nickname.length() < 2 || existsNickname(nickname)) {
-            nickname = "kakao_" + System.nanoTime();
-        }
-        if (nickname.length() > 20) {
-            nickname = nickname.substring(0, 20);
-        }
-        return nickname;
     }
 
     public record AdminMemberRow(

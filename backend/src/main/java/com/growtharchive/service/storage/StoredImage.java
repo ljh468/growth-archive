@@ -5,6 +5,8 @@ public record StoredImage(
     String objectKey,
     String publicUrl,
     String mimeType,
-    Long sizeBytes
+    Long sizeBytes,
+    Integer width,
+    Integer height
 ) {
 }

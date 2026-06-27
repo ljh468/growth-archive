@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: growth_archive
       POSTGRES_PASSWORD: growth_archive
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - postgres18-data:/var/lib/postgresql
     healthcheck:
@@ -35,7 +35,8 @@ services:
       JWT_SECRET: local-development-jwt-secret-change-before-production
       JWT_SECURE_COOKIE: "false"
       KAKAO_MOCK_ENABLED: "true"
-      INITIAL_INVITE_CODE: local-dev-invite
+      INITIAL_INVITE_CODE: test
+      LOCAL_STORAGE_FALLBACK_ENABLED: "true"
     ports:
       - "8080:8080"
     healthcheck:

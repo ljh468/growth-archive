@@ -13,6 +13,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -34,6 +35,25 @@ public class MeetingRepository {
             summarySelect() + " WHERE mt.status IN ('SCHEDULED', 'HELD', 'CANCELED')" + typeFilter
                 + summaryGroupBy()
                 + " ORDER BY CASE WHEN mt.meeting_at >= now() THEN 0 ELSE 1 END, mt.meeting_at ASC LIMIT ? OFFSET ?",
+            (rs, rowNum) -> mapSummary(rs, previewImageUrls(rs.getLong("id"), 5)),
+            args
+        );
+    }
+
+    public List<MeetingSummary> findPublicInMonth(String type, OffsetDateTime startAt, OffsetDateTime endAt, boolean descending, int limit, int offset) {
+        String typeFilter = type == null || type.isBlank() ? "" : " AND mt.meeting_type = ?";
+        String orderBy = descending ? " ORDER BY mt.meeting_at DESC LIMIT ? OFFSET ?" : " ORDER BY mt.meeting_at ASC LIMIT ? OFFSET ?";
+        Object[] args = type == null || type.isBlank()
+            ? new Object[] { Timestamp.from(startAt.toInstant()), Timestamp.from(endAt.toInstant()), limit, offset }
+            : new Object[] { Timestamp.from(startAt.toInstant()), Timestamp.from(endAt.toInstant()), type, limit, offset };
+        return jdbcTemplate.query(
+            summarySelect() + """
+                WHERE mt.status IN ('SCHEDULED', 'HELD', 'CANCELED')
+                  AND mt.meeting_at >= ?
+                  AND mt.meeting_at < ?
+                """ + typeFilter
+                + summaryGroupBy()
+                + orderBy,
             (rs, rowNum) -> mapSummary(rs, previewImageUrls(rs.getLong("id"), 5)),
             args
         );
@@ -99,7 +119,6 @@ public class MeetingRepository {
                 JOIN members m ON m.id = ma.member_id
                 LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
                 WHERE ma.meeting_id = ? AND ma.status = 'JOINED'
-                  AND coalesce(profile_image.public_url, m.kakao_profile_image_url) IS NOT NULL
                 ORDER BY ma.created_at ASC
                 LIMIT ?
                 """,
@@ -283,6 +302,8 @@ public class MeetingRepository {
                 Date.valueOf(targetMonth)
             );
             return inserted != null && inserted == 1;
+        } catch (EmptyResultDataAccessException exception) {
+            return false;
         } catch (DuplicateKeyException exception) {
             return false;
         }
@@ -366,6 +387,7 @@ public class MeetingRepository {
             readNullableInteger(rs, "capacity"),
             rs.getInt("cost_amount"),
             rs.getString("cover_image_url"),
+            readNullableLong(rs, "cover_image_id"),
             hostMemberId,
             rs.getString("host_display_name"),
             rs.getString("status"),

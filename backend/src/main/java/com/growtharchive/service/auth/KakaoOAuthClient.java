@@ -32,6 +32,20 @@ public class KakaoOAuthClient {
             + "&state=" + encode(state);
     }
 
+    public String authorizationUrl(String state, String mockProviderUserId) {
+        if (properties.getKakao().isMockEnabled() && properties.getKakao().getClientId().isBlank()) {
+            return "/api/v1/auth/kakao/callback?code=mock-" + encode(mockProviderUserId) + "&state=" + encode(state);
+        }
+        if (properties.getKakao().getClientId().isBlank()) {
+            throw new ApiException(ErrorCode.KAKAO_NOT_CONFIGURED);
+        }
+        return "https://kauth.kakao.com/oauth/authorize"
+            + "?response_type=code"
+            + "&client_id=" + encode(properties.getKakao().getClientId())
+            + "&redirect_uri=" + encode(properties.getKakao().getRedirectUri())
+            + "&state=" + encode(state);
+    }
+
     public KakaoUserProfile fetchProfile(String code) {
         if (properties.getKakao().isMockEnabled() && code != null && code.startsWith("mock-")) {
             String id = code.substring("mock-".length());

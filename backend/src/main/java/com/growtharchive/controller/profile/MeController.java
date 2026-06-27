@@ -60,12 +60,13 @@ public class MeController {
         @NotBlank(message = "한 줄 소개를 입력해 주세요.")
         @Size(max = 80, message = "한 줄 소개는 80자 이하입니다.")
         String oneLineIntro,
-        @Size(max = 50, message = "실명은 50자 이하입니다.")
+        @NotBlank(message = "실명을 입력해 주세요.")
+        @Size(min = 2, max = 50, message = "실명은 2~50자여야 합니다.")
         String realName,
         @Pattern(regexp = "REAL_NAME|NICKNAME", message = "공개 표시 방식을 선택해 주세요.")
         String displayNameType,
-        @Size(max = 50, message = "직업은 50자 이하입니다.")
-        String job,
+        @DateTimeFormat(pattern = "yyyy-MM-dd")
+        LocalDate birthDate,
         @NotEmpty(message = "관심 분야를 1개 이상 선택해 주세요.")
         @Size(max = 5, message = "관심 분야는 최대 5개까지 선택해 주세요.")
         List<Long> interestTagIds,
@@ -86,7 +87,7 @@ public class MeController {
                 oneLineIntro,
                 realName,
                 displayNameType,
-                job,
+                birthDate,
                 interestTagIds,
                 futureMeAt50,
                 joinReason,

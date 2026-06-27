@@ -16,6 +16,7 @@ public enum ErrorCode {
     MEETING_NOT_FOUND(HttpStatus.NOT_FOUND, "모임을 찾을 수 없습니다."),
     MEETING_CAPACITY_FULL(HttpStatus.CONFLICT, "모임 정원이 마감되었습니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "모임 후기를 찾을 수 없습니다."),
+    IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."),
     REVIEW_IMAGE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "모임 후기 사진은 최대 10장까지 가능합니다."),
     KAKAO_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "카카오 로그인이 아직 설정되지 않았습니다."),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "입력값을 확인해 주세요."),

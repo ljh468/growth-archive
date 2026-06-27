@@ -4,6 +4,7 @@ import java.util.List;
 
 public record ProfileCard(
     Long memberId,
+    String role,
     String displayName,
     String profileImageUrl,
     String oneLineIntro,

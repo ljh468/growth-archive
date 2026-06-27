@@ -56,6 +56,24 @@ public class InterestTagRepository {
         );
     }
 
+    public List<InterestTagRow> findActive() {
+        return jdbcTemplate.query(
+            """
+                SELECT id, name, slug, display_order, is_active
+                FROM interest_tags
+                WHERE is_active = true
+                ORDER BY display_order ASC, id ASC
+                """,
+            (rs, rowNum) -> new InterestTagRow(
+                rs.getLong("id"),
+                rs.getString("name"),
+                rs.getString("slug"),
+                rs.getInt("display_order"),
+                rs.getBoolean("is_active")
+            )
+        );
+    }
+
     public Optional<InterestTagRow> findById(Long tagId) {
         return jdbcTemplate.query(
             """

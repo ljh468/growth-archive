@@ -17,7 +17,6 @@ public record ProfileDetail(
     MemberOnlyProfile memberOnly
 ) {
     public record MemberOnlyProfile(
-        String job,
         String joinReason,
         String currentConcern,
         String threeYearGoal,
