@@ -13,7 +13,7 @@ public class InviteCode extends CreatedAtEntity {
     @Column(name = "code_hash", nullable = false, length = 255)
     private String codeHash;
 
-    @Column(name = "code_preview", length = 30)
+    @Column(name = "code_preview", length = 100)
     private String codePreview;
 
     @Column(nullable = false, length = 20)

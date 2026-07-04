@@ -90,20 +90,36 @@ function AdminInterestTagsContent() {
                 >
                   <div
                     className={[
-                      "flex flex-wrap items-center justify-between gap-3 border bg-[var(--color-warm-white)] p-4 transition",
+                      "flex cursor-pointer flex-wrap items-center justify-between gap-3 border bg-[var(--color-warm-white)] p-4 transition hover:border-[rgba(31,77,58,0.28)] hover:bg-[rgba(47,90,67,0.035)]",
                       selected?.id === tag.id ? "border-[var(--color-deep-green)] shadow-[var(--shadow-soft)]" : "border-[var(--color-line)]",
                     ].join(" ")}
+                    onClick={() => choose(tag)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        choose(tag);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
-                    <button className="text-left" onClick={() => choose(tag)} type="button">
+                    <div className="min-w-0 text-left">
                       <div className="flex flex-wrap gap-2">
                         <Tag>{tag.active ? "ACTIVE" : "HIDDEN"}</Tag>
                         <Tag>#{tag.displayOrder}</Tag>
                       </div>
                       <p className="mt-3 font-normal">{tag.name}</p>
                       <p className="mt-1 text-sm text-[var(--color-charcoal)]">{tag.slug}</p>
-                    </button>
+                    </div>
                     {tag.active && (
-                      <button className="inline-flex min-h-10 items-center border border-[var(--color-line)] px-3 text-sm font-normal" onClick={() => deactivate(tag.id)} type="button">
+                      <button
+                        className="inline-flex min-h-10 items-center border border-[var(--color-line)] px-3 text-sm font-normal"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          deactivate(tag.id);
+                        }}
+                        type="button"
+                      >
                         비활성화
                       </button>
                     )}
