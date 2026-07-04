@@ -1,0 +1,7 @@
+{$FRONTEND_HOST:growth-archive.duckdns.org} {
+    reverse_proxy frontend:3000
+}
+
+{$BACKEND_HOST:api-growth-archive.duckdns.org} {
+    reverse_proxy backend:8080
+}

@@ -1,0 +1,56 @@
+name: Backend Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+      image:
+        description: Backend image to deploy
+        required: true
+      namespace:
+        description: Kubernetes namespace
+        required: true
+        default: growth-archive
+      deployment:
+        description: Kubernetes Deployment name
+        required: true
+        default: growth-archive-backend
+      container:
+        description: Kubernetes container name
+        required: true
+        default: backend
+
+concurrency:
+  group: backend-deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ vars.KUBE_CONFIG_DATA }}
+        run: |
+          test -n "$KUBE_CONFIG_DATA"
+          mkdir -p "$HOME/.kube"
+          echo "$KUBE_CONFIG_DATA" | base64 -d > "$HOME/.kube/config"
+
+      - name: Deploy backend image
+        run: |
+          kubectl -n "${{ inputs.namespace }}" set image deployment/${{ inputs.deployment }} ${{ inputs.container }}="${{ inputs.image }}"
+          kubectl -n "${{ inputs.namespace }}" rollout status deployment/${{ inputs.deployment }}

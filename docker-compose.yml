@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: growth_archive
       POSTGRES_PASSWORD: growth_archive
     ports:
-      - "15432:5432"
+      - "5432:5432"
     volumes:
       - postgres18-data:/var/lib/postgresql
     healthcheck:
@@ -34,9 +34,29 @@ services:
       FRONTEND_BASE_URL: http://localhost:3000
       JWT_SECRET: local-development-jwt-secret-change-before-production
       JWT_SECURE_COOKIE: "false"
-      KAKAO_MOCK_ENABLED: "true"
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      KAKAO_ADMIN_KEY: ${KAKAO_ADMIN_KEY:-}
+      KAKAO_WEBHOOK_SECRET: ${KAKAO_WEBHOOK_SECRET:-}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI:-http://localhost:8080/api/v1/auth/kakao/callback}
+      KAKAO_TOKEN_URI: ${KAKAO_TOKEN_URI:-https://kauth.kakao.com/oauth/token}
+      KAKAO_USER_INFO_URI: ${KAKAO_USER_INFO_URI:-https://kapi.kakao.com/v2/user/me}
+      KAKAO_UNLINK_URI: ${KAKAO_UNLINK_URI:-https://kapi.kakao.com/v1/user/unlink}
+      KAKAO_INITIAL_ADMIN_PROVIDER_IDS: ${KAKAO_INITIAL_ADMIN_PROVIDER_IDS:-}
+      KAKAO_BOOK_REST_API_KEY: ${KAKAO_BOOK_REST_API_KEY:-${KAKAO_REST_API_KEY:-}}
+      KAKAO_BOOK_SEARCH_ENDPOINT: ${KAKAO_BOOK_SEARCH_ENDPOINT:-https://dapi.kakao.com/v3/search/book}
       INITIAL_INVITE_CODE: test
-      LOCAL_STORAGE_FALLBACK_ENABLED: "true"
+      INITIAL_ADMIN_INVITE_CODE: admin
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-images}
+      SUPABASE_STORAGE_S3_ENDPOINT: ${SUPABASE_STORAGE_S3_ENDPOINT:-}
+      SUPABASE_STORAGE_S3_REGION: ${SUPABASE_STORAGE_S3_REGION:-ap-northeast-2}
+      SUPABASE_STORAGE_S3_ACCESS_KEY_ID: ${SUPABASE_STORAGE_S3_ACCESS_KEY_ID:-}
+      SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY: ${SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY:-}
+      SUPABASE_STORAGE_PUBLIC_BASE_URL: ${SUPABASE_STORAGE_PUBLIC_BASE_URL:-}
+      STORAGE_ENVIRONMENT_PREFIX: ${STORAGE_ENVIRONMENT_PREFIX:-local}
+      LOCAL_STORAGE_FALLBACK_ENABLED: ${LOCAL_STORAGE_FALLBACK_ENABLED:-true}
     ports:
       - "8080:8080"
     healthcheck:
