@@ -1,5 +1,7 @@
 package com.growtharchive.service.book;
 
+import java.time.LocalDate;
+
 public record RecommendedBookView(
     Long id,
     Long bookId,
@@ -8,6 +10,8 @@ public record RecommendedBookView(
     String publisher,
     String thumbnailUrl,
     String reason,
-    Integer displayOrder
+    Integer displayOrder,
+    LocalDate targetMonth,
+    String status
 ) {
 }

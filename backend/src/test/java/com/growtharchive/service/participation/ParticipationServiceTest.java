@@ -43,6 +43,7 @@ class ParticipationServiceTest {
             false,
             target,
             completed,
+            false,
             coffeeSupport,
             ParticipationRepository.COFFEE_SUPPORT_ITEM,
             null

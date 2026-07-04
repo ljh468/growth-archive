@@ -61,6 +61,7 @@ class AuthServiceTest {
             "카카오 사용자",
             "https://profile.example/image.png"
         );
+        Mockito.verify(memberRepository).updateKakaoProfileImageUrl(7L, "https://profile.example/image.png");
     }
 
     @Test

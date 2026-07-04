@@ -41,9 +41,25 @@ class ReadingRecordServiceTest {
 
         ReadingRecordService.ReadingRecordCommand command = new ReadingRecordService.ReadingRecordCommand(
             1L,
-            null,
+            5,
             "좋은 책",
             "not-a-url",
+            null
+        );
+
+        assertThatThrownBy(() -> service.create(null, command))
+            .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void rejectsMissingRating() {
+        Mockito.when(resolver.require(Mockito.isNull(), Mockito.eq(AccessLevel.MEMBER))).thenReturn(member());
+
+        ReadingRecordService.ReadingRecordCommand command = new ReadingRecordService.ReadingRecordCommand(
+            1L,
+            null,
+            "좋은 책",
+            "https://example.com/post",
             null
         );
 

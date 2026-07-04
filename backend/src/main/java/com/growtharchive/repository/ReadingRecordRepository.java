@@ -1,202 +1,180 @@
 package com.growtharchive.repository;
 
+import com.growtharchive.domain.book.QBook;
+import com.growtharchive.domain.image.QImageAsset;
+import com.growtharchive.domain.member.QMember;
+import com.growtharchive.domain.reading.QReadingRecord;
+import com.growtharchive.domain.reading.ReadingRecord;
 import com.growtharchive.service.reading.ReadingRecordDetail;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.StringExpression;
+import com.querydsl.jpa.impl.JPAQuery;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class ReadingRecordRepository {
 
-    private final JdbcTemplate jdbcTemplate;
+    private static final QReadingRecord readingRecord = QReadingRecord.readingRecord;
+    private static final QBook book = QBook.book;
+    private static final QMember member = QMember.member;
+    private static final QImageAsset recordImage = new QImageAsset("recordImage");
+    private static final QImageAsset profileImage = new QImageAsset("profileImage");
 
-    public ReadingRecordRepository(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    private final EntityManager entityManager;
+    private final JPAQueryFactory queryFactory;
+
+    public ReadingRecordRepository(EntityManager entityManager, JPAQueryFactory queryFactory) {
+        this.entityManager = entityManager;
+        this.queryFactory = queryFactory;
     }
 
     public Long create(Long memberId, Long bookId, Integer rating, String oneLineReview, String blogUrl, Long imageId) {
-        return jdbcTemplate.queryForObject(
-            """
-                INSERT INTO reading_records (
-                    member_id, book_id, rating, one_line_review, blog_url, representative_image_id,
-                    status, recorded_at, created_at, updated_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', now(), now(), now())
-                RETURNING id
-                """,
-            Long.class,
-            memberId,
-            bookId,
-            rating,
-            oneLineReview,
-            blogUrl,
-            imageId
-        );
+        ReadingRecord entity = new ReadingRecord(memberId, bookId, rating, oneLineReview, blogUrl, imageId);
+        entityManager.persist(entity);
+        entityManager.flush();
+        return entity.getId();
     }
 
     public void updateContent(Long recordId, Long memberId, Long bookId, Integer rating, String oneLineReview, String blogUrl, Long imageId) {
-        jdbcTemplate.update(
-            """
-                UPDATE reading_records
-                SET book_id = ?, rating = ?, one_line_review = ?, blog_url = ?, representative_image_id = ?, updated_at = now()
-                WHERE id = ? AND member_id = ? AND status <> 'DELETED'
-                """,
-            bookId,
-            rating,
-            oneLineReview,
-            blogUrl,
-            imageId,
-            recordId,
-            memberId
-        );
+        var update = queryFactory
+            .update(readingRecord)
+            .set(readingRecord.bookId, bookId)
+            .set(readingRecord.oneLineReview, oneLineReview)
+            .set(readingRecord.blogUrl, blogUrl)
+            .set(readingRecord.representativeImageId, imageId)
+            .set(readingRecord.updatedAt, OffsetDateTime.now());
+        if (rating == null) {
+            update.setNull(readingRecord.rating);
+        } else {
+            update.set(readingRecord.rating, rating.shortValue());
+        }
+        update
+            .where(readingRecord.id.eq(recordId), readingRecord.memberId.eq(memberId), readingRecord.status.ne("DELETED"))
+            .execute();
     }
 
     public void softDeleteByAuthor(Long recordId, Long memberId) {
-        jdbcTemplate.update(
-            """
-                UPDATE reading_records
-                SET status = 'DELETED', deleted_at = coalesce(deleted_at, now()), updated_at = now()
-                WHERE id = ? AND member_id = ? AND status <> 'DELETED'
-                """,
-            recordId,
-            memberId
-        );
+        queryFactory
+            .update(readingRecord)
+            .set(readingRecord.status, "DELETED")
+            .set(readingRecord.deletedAt, OffsetDateTime.now())
+            .set(readingRecord.updatedAt, OffsetDateTime.now())
+            .where(readingRecord.id.eq(recordId), readingRecord.memberId.eq(memberId), readingRecord.status.ne("DELETED"))
+            .execute();
     }
 
     public void hideByAdmin(Long recordId) {
-        jdbcTemplate.update(
-            """
-                UPDATE reading_records
-                SET status = 'HIDDEN', hidden_at = coalesce(hidden_at, now()), updated_at = now()
-                WHERE id = ? AND status <> 'DELETED'
-                """,
-            recordId
-        );
+        queryFactory
+            .update(readingRecord)
+            .set(readingRecord.status, "HIDDEN")
+            .set(readingRecord.hiddenAt, OffsetDateTime.now())
+            .set(readingRecord.updatedAt, OffsetDateTime.now())
+            .where(readingRecord.id.eq(recordId), readingRecord.status.ne("DELETED"))
+            .execute();
     }
 
     public void restoreByAdmin(Long recordId) {
-        jdbcTemplate.update(
-            """
-                UPDATE reading_records
-                SET status = 'ACTIVE', hidden_at = null, updated_at = now()
-                WHERE id = ? AND status = 'HIDDEN'
-                """,
-            recordId
-        );
+        queryFactory
+            .update(readingRecord)
+            .set(readingRecord.status, "ACTIVE")
+            .setNull(readingRecord.hiddenAt)
+            .set(readingRecord.updatedAt, OffsetDateTime.now())
+            .where(readingRecord.id.eq(recordId), readingRecord.status.eq("HIDDEN"))
+            .execute();
     }
 
     public void deleteByAdmin(Long recordId) {
-        jdbcTemplate.update(
-            """
-                UPDATE reading_records
-                SET status = 'DELETED', deleted_at = coalesce(deleted_at, now()), updated_at = now()
-                WHERE id = ? AND status <> 'DELETED'
-                """,
-            recordId
-        );
+        queryFactory
+            .update(readingRecord)
+            .set(readingRecord.status, "DELETED")
+            .set(readingRecord.deletedAt, OffsetDateTime.now())
+            .set(readingRecord.updatedAt, OffsetDateTime.now())
+            .where(readingRecord.id.eq(recordId), readingRecord.status.ne("DELETED"))
+            .execute();
     }
 
     public Optional<ReadingRecordDetail> findById(Long recordId, boolean publicOnly) {
-        String visibility = publicOnly ? "AND rr.status = 'ACTIVE'" : "";
-        return jdbcTemplate.query(
-            baseSelect() + " WHERE rr.id = ? " + visibility,
-            rs -> rs.next() ? Optional.of(mapDetail(rs)) : Optional.empty(),
-            recordId
-        );
+        BooleanBuilder where = new BooleanBuilder(readingRecord.id.eq(recordId));
+        if (publicOnly) {
+            where.and(readingRecord.status.eq("ACTIVE"));
+        }
+        return Optional.ofNullable(baseSelect().where(where).fetchOne());
     }
 
-    public List<ReadingRecordDetail> findPublic(Long bookId, Long memberId, int limit, int offset) {
-        StringBuilder sql = new StringBuilder(baseSelect())
-            .append(" WHERE rr.status = 'ACTIVE'");
-        List<Object> args = new ArrayList<>();
+    public List<ReadingRecordDetail> findPublic(Long bookId, Long memberId, OffsetDateTime monthStart, OffsetDateTime monthEnd, int limit, int offset) {
+        BooleanBuilder where = new BooleanBuilder(readingRecord.status.eq("ACTIVE"));
         if (bookId != null) {
-            sql.append(" AND rr.book_id = ?");
-            args.add(bookId);
+            where.and(readingRecord.bookId.eq(bookId));
         }
         if (memberId != null) {
-            sql.append(" AND rr.member_id = ?");
-            args.add(memberId);
+            where.and(readingRecord.memberId.eq(memberId));
         }
-        sql.append(" ORDER BY rr.recorded_at DESC LIMIT ? OFFSET ?");
-        args.add(limit);
-        args.add(offset);
-        return jdbcTemplate.query(
-            sql.toString(),
-            (rs, rowNum) -> mapDetail(rs),
-            args.toArray()
-        );
+        if (monthStart != null && monthEnd != null) {
+            where.and(readingRecord.recordedAt.goe(monthStart));
+            where.and(readingRecord.recordedAt.lt(monthEnd));
+        }
+        return baseSelect()
+            .where(where)
+            .orderBy(readingRecord.recordedAt.desc())
+            .limit(limit)
+            .offset(offset)
+            .fetch();
     }
 
     public List<ReadingRecordDetail> findRecentPublic(int limit) {
-        return jdbcTemplate.query(
-            baseSelect() + " WHERE rr.status = 'ACTIVE' ORDER BY rr.created_at DESC, rr.id DESC LIMIT ?",
-            (rs, rowNum) -> mapDetail(rs),
-            limit
-        );
+        return baseSelect()
+            .where(readingRecord.status.eq("ACTIVE"))
+            .orderBy(readingRecord.createdAt.desc(), readingRecord.id.desc())
+            .limit(limit)
+            .fetch();
     }
 
     public boolean existsById(Long recordId) {
-        Integer count = jdbcTemplate.queryForObject("SELECT count(*) FROM reading_records WHERE id = ?", Integer.class, recordId);
+        Long count = queryFactory.select(readingRecord.count()).from(readingRecord).where(readingRecord.id.eq(recordId)).fetchOne();
         return count != null && count > 0;
     }
 
     public boolean existsBook(Long bookId) {
-        Integer count = jdbcTemplate.queryForObject("SELECT count(*) FROM books WHERE id = ?", Integer.class, bookId);
+        Long count = queryFactory.select(book.count()).from(book).where(book.id.eq(bookId)).fetchOne();
         return count != null && count > 0;
     }
 
-    private String baseSelect() {
-        return """
-            SELECT rr.id, rr.member_id, rr.book_id, rr.rating, rr.one_line_review, rr.blog_url, rr.status,
-                   rr.recorded_at, rr.created_at, rr.representative_image_id,
-                   b.title AS book_title, b.authors_text, b.thumbnail_url AS book_thumbnail_url,
-                   m.nickname, m.real_name, m.display_type,
-                   coalesce(profile_image.public_url, m.kakao_profile_image_url) AS member_profile_image_url,
-                   ia.public_url AS record_image_url
-            FROM reading_records rr
-            JOIN books b ON b.id = rr.book_id
-            JOIN members m ON m.id = rr.member_id
-            LEFT JOIN image_assets ia ON ia.id = rr.representative_image_id
-            LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-            """;
-    }
-
-    private ReadingRecordDetail mapDetail(ResultSet rs) throws SQLException {
-        String displayType = rs.getString("display_type");
-        String realName = rs.getString("real_name");
-        String nickname = rs.getString("nickname");
-        return new ReadingRecordDetail(
-            rs.getLong("id"),
-            rs.getLong("member_id"),
-            "REAL_NAME".equals(displayType) && realName != null && !realName.isBlank() ? realName : nickname,
-            rs.getString("member_profile_image_url"),
-            rs.getLong("book_id"),
-            rs.getString("book_title"),
-            rs.getString("authors_text"),
-            rs.getString("book_thumbnail_url"),
-            readNullableInteger(rs, "rating"),
-            rs.getString("one_line_review"),
-            rs.getString("blog_url"),
-            readNullableLong(rs, "representative_image_id"),
-            rs.getString("record_image_url"),
-            rs.getString("status"),
-            rs.getObject("recorded_at", OffsetDateTime.class),
-            rs.getObject("created_at", OffsetDateTime.class)
-        );
-    }
-
-    private Integer readNullableInteger(ResultSet rs, String column) throws SQLException {
-        int value = rs.getInt(column);
-        return rs.wasNull() ? null : value;
-    }
-
-    private Long readNullableLong(ResultSet rs, String column) throws SQLException {
-        long value = rs.getLong(column);
-        return rs.wasNull() ? null : value;
+    private JPAQuery<ReadingRecordDetail> baseSelect() {
+        StringExpression displayName = new CaseBuilder()
+            .when(member.displayType.eq("REAL_NAME").and(member.realName.isNotNull()).and(member.realName.ne("")))
+            .then(member.realName)
+            .otherwise(member.nickname);
+        return queryFactory
+            .select(Projections.constructor(
+                ReadingRecordDetail.class,
+                readingRecord.id,
+                readingRecord.memberId,
+                displayName,
+                profileImage.publicUrl.coalesce(member.kakaoProfileImageUrl),
+                readingRecord.bookId,
+                book.title,
+                book.authorsText,
+                book.thumbnailUrl,
+                readingRecord.rating.intValue(),
+                readingRecord.oneLineReview,
+                readingRecord.blogUrl,
+                readingRecord.representativeImageId,
+                recordImage.publicUrl,
+                readingRecord.status,
+                readingRecord.recordedAt,
+                readingRecord.createdAt
+            ))
+            .from(readingRecord)
+            .join(book).on(book.id.eq(readingRecord.bookId))
+            .join(member).on(member.id.eq(readingRecord.memberId))
+            .leftJoin(recordImage).on(recordImage.id.eq(readingRecord.representativeImageId))
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId));
     }
 }

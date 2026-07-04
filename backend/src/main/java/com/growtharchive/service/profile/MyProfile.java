@@ -5,6 +5,7 @@ import java.util.List;
 
 public record MyProfile(
     Long memberId,
+    String role,
     String nickname,
     String realName,
     String displayNameType,

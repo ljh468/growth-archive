@@ -1,195 +1,167 @@
 package com.growtharchive.repository;
 
+import com.growtharchive.domain.admin.QParticipationAdminNote;
+import com.growtharchive.domain.book.QBook;
+import com.growtharchive.domain.image.QImageAsset;
+import com.growtharchive.domain.meeting.QMeeting;
+import com.growtharchive.domain.meeting.QMeetingReview;
+import com.growtharchive.domain.member.QInterestTag;
+import com.growtharchive.domain.member.QMember;
+import com.growtharchive.domain.member.QMemberInterestTag;
+import com.growtharchive.domain.monthly.QMonthlyActionPlan;
+import com.growtharchive.domain.monthly.QMonthlyReflection;
+import com.growtharchive.domain.reading.QReadingRecord;
 import com.growtharchive.service.profile.ActivitySummary;
 import com.growtharchive.service.profile.GrowthStats;
 import com.growtharchive.service.profile.MyDashboard;
 import com.growtharchive.service.profile.MyProfile;
+import com.growtharchive.service.profile.MonthlyActionPlanShowcase;
 import com.growtharchive.service.profile.ProfileCard;
 import com.growtharchive.service.profile.ProfileDetail;
 import com.growtharchive.service.reading.ReadingRecordDetail;
-import java.sql.Array;
-import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import com.growtharchive.support.KstDateTimes;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.jdbc.core.JdbcTemplate;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class ProfileRepository {
 
-    private final JdbcTemplate jdbcTemplate;
+    private static final QMember member = QMember.member;
+    private static final QImageAsset profileImage = new QImageAsset("profileImage");
+    private static final QImageAsset recordImage = new QImageAsset("recordImage");
+    private static final QMemberInterestTag memberInterestTag = QMemberInterestTag.memberInterestTag;
+    private static final QInterestTag interestTag = QInterestTag.interestTag;
+    private static final QReadingRecord readingRecord = QReadingRecord.readingRecord;
+    private static final QBook book = QBook.book;
+    private static final QMonthlyActionPlan actionPlan = QMonthlyActionPlan.monthlyActionPlan;
+    private static final QMonthlyReflection reflection = QMonthlyReflection.monthlyReflection;
+    private static final QMeetingReview meetingReview = QMeetingReview.meetingReview;
+    private static final QMeeting meeting = QMeeting.meeting;
+    private static final QParticipationAdminNote adminNote = QParticipationAdminNote.participationAdminNote;
 
-    public ProfileRepository(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    private final JPAQueryFactory queryFactory;
+
+    public ProfileRepository(JPAQueryFactory queryFactory) {
+        this.queryFactory = queryFactory;
     }
 
     public List<ProfileCard> findPeople(Long interestTagId, int limit, int offset, boolean revealPrivateProfile) {
-        String tagFilter = interestTagId == null ? "" : " AND EXISTS (SELECT 1 FROM member_interest_tags mit_filter WHERE mit_filter.member_id = m.id AND mit_filter.interest_tag_id = ?)";
-        Object[] args = interestTagId == null ? new Object[] {limit, offset} : new Object[] {interestTagId, limit, offset};
-        String displayNameSelect = revealPrivateProfile
-            ? "CASE WHEN m.real_name IS NOT NULL AND m.real_name <> '' THEN m.real_name ELSE m.nickname END"
-            : "m.nickname";
-        String profileImageSelect = revealPrivateProfile
-            ? "coalesce(profile_image.public_url, m.kakao_profile_image_url)"
-            : "null";
-        String sql = (
-            """
-                SELECT m.id, m.role, %s AS display_name, m.one_line_intro,
-                       %s AS profile_image_url,
-                       m.fifty_year_old_me,
-                       coalesce(array_agg(it.name ORDER BY it.display_order) FILTER (WHERE it.id IS NOT NULL), '{}') AS interest_tags,
-                       stats.reading_record_count, stats.action_plan_count, stats.monthly_reflection_count,
-                       stats.meeting_review_count, stats.small_meeting_created_count,
-                       latest.title AS latest_title, latest.href AS latest_href, latest.occurred_at AS latest_occurred_at
-                FROM members m
-                LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-                LEFT JOIN member_interest_tags mit ON mit.member_id = m.id
-                LEFT JOIN interest_tags it ON it.id = mit.interest_tag_id AND it.is_active
-                LEFT JOIN LATERAL (
-                    SELECT
-                        (SELECT count(*) FROM reading_records rr WHERE rr.member_id = m.id AND rr.status = 'ACTIVE') AS reading_record_count,
-                        (SELECT count(*) FROM monthly_action_plans map WHERE map.member_id = m.id AND map.status = 'ACTIVE') AS action_plan_count,
-                        (SELECT count(*) FROM monthly_reflections mr WHERE mr.member_id = m.id AND mr.status = 'ACTIVE') AS monthly_reflection_count,
-                        (SELECT count(*) FROM meeting_reviews mrv WHERE mrv.member_id = m.id AND mrv.status = 'ACTIVE') AS meeting_review_count,
-                        (SELECT count(*) FROM meetings mt WHERE mt.host_member_id = m.id AND mt.meeting_type = 'SMALL' AND mt.status <> 'DELETED') AS small_meeting_created_count
-                ) stats ON true
-                LEFT JOIN LATERAL (
-                    SELECT b.title, '/books/' || b.id AS href, rr.recorded_at AS occurred_at
-                    FROM reading_records rr
-                    JOIN books b ON b.id = rr.book_id
-                    WHERE rr.member_id = m.id AND rr.status = 'ACTIVE'
-                    ORDER BY rr.recorded_at DESC
-                    LIMIT 1
-                ) latest ON true
-                WHERE m.onboarding_completed_at IS NOT NULL
-                  AND m.deactivated_at IS NULL
-                """ + tagFilter + """
-                GROUP BY m.id, profile_image.public_url, stats.reading_record_count, stats.action_plan_count,
-                         stats.monthly_reflection_count, stats.meeting_review_count, stats.small_meeting_created_count,
-                         latest.title, latest.href, latest.occurred_at
-                ORDER BY latest.occurred_at DESC NULLS LAST, m.id DESC
-                LIMIT ? OFFSET ?
-                """
-        ).formatted(displayNameSelect, profileImageSelect);
-        return jdbcTemplate.query(
-            sql,
-            (rs, rowNum) -> new ProfileCard(
-                rs.getLong("id"),
-                rs.getString("role"),
-                rs.getString("display_name"),
-                rs.getString("profile_image_url"),
-                rs.getString("one_line_intro"),
-                readStringArray(rs, "interest_tags"),
-                summarize(rs.getString("fifty_year_old_me"), 90),
-                mapStats(rs),
-                mapActivity(rs, "READING_RECORD", "latest_title", "latest_href", "latest_occurred_at")
-            ),
-            args
-        );
+        BooleanBuilder where = activeMemberWhere();
+        if (interestTagId != null) {
+            where.and(JPAExpressions
+                .selectOne()
+                .from(memberInterestTag)
+                .where(
+                    memberInterestTag.id.memberId.eq(member.id),
+                    memberInterestTag.id.interestTagId.eq(interestTagId)
+                )
+                .exists());
+        }
+        return queryFactory
+            .select(member.id, member.role, member.nickname, member.realName, member.oneLineIntro, member.fiftyYearOldMe,
+                profileImage.publicUrl, member.kakaoProfileImageUrl)
+            .from(member)
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .where(where)
+            .orderBy(
+                new OrderSpecifier<>(
+                    Order.DESC,
+                    JPAExpressions
+                    .select(readingRecord.recordedAt.max())
+                    .from(readingRecord)
+                    .where(readingRecord.memberId.eq(member.id), readingRecord.status.eq("ACTIVE")),
+                    OrderSpecifier.NullHandling.NullsLast
+                ),
+                member.id.desc()
+            )
+            .limit(limit)
+            .offset(offset)
+            .fetch()
+            .stream()
+            .map(row -> toProfileCard(row, revealPrivateProfile))
+            .toList();
     }
 
     public Optional<ProfileDetail> findProfileDetail(Long memberId, boolean includeMemberOnly) {
-        String displayNameSelect = includeMemberOnly
-            ? "CASE WHEN m.real_name IS NOT NULL AND m.real_name <> '' THEN m.real_name ELSE m.nickname END"
-            : "m.nickname";
-        String profileImageSelect = includeMemberOnly
-            ? "coalesce(profile_image.public_url, m.kakao_profile_image_url)"
-            : "null";
-        return jdbcTemplate.query(
-            """
-                SELECT m.id, %s AS display_name, m.one_line_intro,
-                       m.join_reason, m.current_concern, m.three_year_goal,
-                       %s AS profile_image_url,
-                       m.fifty_year_old_me,
-                       coalesce(array_agg(it.name ORDER BY it.display_order) FILTER (WHERE it.id IS NOT NULL), '{}') AS interest_tags,
-                       stats.reading_record_count, stats.action_plan_count, stats.monthly_reflection_count,
-                       stats.meeting_review_count, stats.small_meeting_created_count
-                FROM members m
-                LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-                LEFT JOIN member_interest_tags mit ON mit.member_id = m.id
-                LEFT JOIN interest_tags it ON it.id = mit.interest_tag_id AND it.is_active
-                LEFT JOIN LATERAL (
-                    SELECT
-                        (SELECT count(*) FROM reading_records rr WHERE rr.member_id = m.id AND rr.status = 'ACTIVE') AS reading_record_count,
-                        (SELECT count(*) FROM monthly_action_plans map WHERE map.member_id = m.id AND map.status = 'ACTIVE') AS action_plan_count,
-                        (SELECT count(*) FROM monthly_reflections mr WHERE mr.member_id = m.id AND mr.status = 'ACTIVE') AS monthly_reflection_count,
-                        (SELECT count(*) FROM meeting_reviews mrv WHERE mrv.member_id = m.id AND mrv.status = 'ACTIVE') AS meeting_review_count,
-                        (SELECT count(*) FROM meetings mt WHERE mt.host_member_id = m.id AND mt.meeting_type = 'SMALL' AND mt.status <> 'DELETED') AS small_meeting_created_count
-                ) stats ON true
-                WHERE m.id = ? AND m.onboarding_completed_at IS NOT NULL AND m.deactivated_at IS NULL
-                GROUP BY m.id, profile_image.public_url, stats.reading_record_count, stats.action_plan_count,
-                         stats.monthly_reflection_count, stats.meeting_review_count, stats.small_meeting_created_count
-                """.formatted(displayNameSelect, profileImageSelect),
-            rs -> {
-                if (!rs.next()) {
-                    return Optional.empty();
-                }
-                ProfileDetail.MemberOnlyProfile memberOnly = includeMemberOnly
-                    ? new ProfileDetail.MemberOnlyProfile(
-                        rs.getString("join_reason"),
-                        rs.getString("current_concern"),
-                        rs.getString("three_year_goal"),
-                        findActionPlans(memberId, 3),
-                        findReflections(memberId, 3)
-                    )
-                    : null;
-                return Optional.of(new ProfileDetail(
-                    rs.getLong("id"),
-                    rs.getString("display_name"),
-                    rs.getString("profile_image_url"),
-                    rs.getString("one_line_intro"),
-                    readStringArray(rs, "interest_tags"),
-                    rs.getString("fifty_year_old_me"),
-                    mapStats(rs),
-                    findRecentReadingRecords(memberId, 3, includeMemberOnly),
-                    findMeetingReviews(memberId, 3),
-                    findPublicActivities(memberId, 5),
-                    memberOnly
-                ));
-            },
-            memberId
-        );
+        Tuple row = queryFactory
+            .select(member.id, member.nickname, member.realName, member.oneLineIntro, member.joinReason,
+                member.currentConcern, member.threeYearGoal, member.fiftyYearOldMe,
+                profileImage.publicUrl, member.kakaoProfileImageUrl)
+            .from(member)
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .where(member.id.eq(memberId), activeMemberWhere())
+            .fetchOne();
+        if (row == null) {
+            return Optional.empty();
+        }
+        ProfileDetail.MemberOnlyProfile memberOnly = includeMemberOnly
+            ? new ProfileDetail.MemberOnlyProfile(
+                row.get(member.joinReason),
+                row.get(member.currentConcern),
+                row.get(member.threeYearGoal),
+                findActionPlans(memberId, 3),
+                findReflections(memberId, 3)
+            )
+            : null;
+        return Optional.of(new ProfileDetail(
+            memberId,
+            displayName(row, includeMemberOnly),
+            includeMemberOnly ? coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)) : null,
+            row.get(member.oneLineIntro),
+            findInterestTagNames(memberId),
+            row.get(member.fiftyYearOldMe),
+            growthStats(memberId),
+            findRecentReadingRecords(memberId, 3, includeMemberOnly),
+            findMeetingReviews(memberId, 3),
+            findPublicActivities(memberId, 5),
+            memberOnly
+        ));
     }
 
     public Optional<MyProfile> findMyProfile(Long memberId) {
-        return jdbcTemplate.query(
-            """
-                SELECT m.id, m.nickname, m.real_name, m.display_type, m.one_line_intro, m.birth_date, m.profile_image_id,
-                       coalesce(profile_image.public_url, m.kakao_profile_image_url) AS profile_image_url,
-                       m.fifty_year_old_me, m.join_reason, m.current_concern, m.three_year_goal,
-                       coalesce(array_agg(it.id ORDER BY it.display_order) FILTER (WHERE it.id IS NOT NULL), '{}') AS interest_tag_ids
-                FROM members m
-                LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-                LEFT JOIN member_interest_tags mit ON mit.member_id = m.id
-                LEFT JOIN interest_tags it ON it.id = mit.interest_tag_id AND it.is_active
-                WHERE m.id = ?
-                GROUP BY m.id, profile_image.public_url
-                """,
-            rs -> rs.next() ? Optional.of(new MyProfile(
-                rs.getLong("id"),
-                rs.getString("nickname"),
-                rs.getString("real_name"),
-                rs.getString("display_type"),
-                displayName(rs),
-                rs.getString("profile_image_url"),
-                readNullableLong(rs, "profile_image_id"),
-                rs.getString("one_line_intro"),
-                readNullableDate(rs, "birth_date"),
-                readLongArray(rs, "interest_tag_ids"),
-                rs.getString("fifty_year_old_me"),
-                rs.getString("join_reason"),
-                rs.getString("current_concern"),
-                rs.getString("three_year_goal")
-            )) : Optional.empty(),
-            memberId
-        );
+        Tuple row = queryFactory
+            .select(member.id, member.role, member.nickname, member.realName, member.displayType, member.oneLineIntro,
+                member.birthDate, member.profileImageId, profileImage.publicUrl, member.kakaoProfileImageUrl,
+                member.fiftyYearOldMe, member.joinReason, member.currentConcern, member.threeYearGoal)
+            .from(member)
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .where(member.id.eq(memberId))
+            .fetchOne();
+        if (row == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new MyProfile(
+            memberId,
+            row.get(member.role),
+            row.get(member.nickname),
+            row.get(member.realName),
+            row.get(member.displayType),
+            myDisplayName(row),
+            coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)),
+            row.get(member.profileImageId),
+            row.get(member.oneLineIntro),
+            row.get(member.birthDate),
+            findInterestTagIds(memberId),
+            row.get(member.fiftyYearOldMe),
+            row.get(member.joinReason),
+            row.get(member.currentConcern),
+            row.get(member.threeYearGoal)
+        ));
     }
 
+    @Transactional
     public void updateMyProfile(
         Long memberId,
         String nickname,
@@ -203,26 +175,21 @@ public class ProfileRepository {
         String threeYearGoal,
         Long profileImageId
     ) {
-        jdbcTemplate.update(
-            """
-                UPDATE members
-                SET nickname = ?, one_line_intro = ?, display_type = ?, real_name = ?, birth_date = ?,
-                    fifty_year_old_me = ?, join_reason = ?, current_concern = ?, three_year_goal = ?,
-                    profile_image_id = ?, updated_at = now()
-                WHERE id = ?
-                """,
-            nickname,
-            oneLineIntro,
-            displayType,
-            realName,
-            birthDate == null ? null : Date.valueOf(birthDate),
-            futureMeAt50,
-            joinReason,
-            currentConcern,
-            threeYearGoal,
-            profileImageId,
-            memberId
-        );
+        queryFactory
+            .update(member)
+            .set(member.nickname, nickname)
+            .set(member.oneLineIntro, oneLineIntro)
+            .set(member.displayType, displayType)
+            .set(member.realName, realName)
+            .set(member.birthDate, birthDate)
+            .set(member.fiftyYearOldMe, futureMeAt50)
+            .set(member.joinReason, joinReason)
+            .set(member.currentConcern, currentConcern)
+            .set(member.threeYearGoal, threeYearGoal)
+            .set(member.profileImageId, profileImageId)
+            .set(member.updatedAt, OffsetDateTime.now())
+            .where(member.id.eq(memberId))
+            .execute();
     }
 
     public MyDashboard findDashboard(Long memberId, LocalDate month) {
@@ -230,215 +197,441 @@ public class ProfileRepository {
         Long readingRecordCount = countReadingRecordsForMonth(memberId, month);
         Long actionPlanCount = countActionPlansForMonth(memberId, month);
         boolean calculationTarget = isParticipationTarget(memberId, month);
-        boolean completed = calculationTarget && (readingRecordCount > 0 || actionPlanCount > 0);
+        boolean completed = calculationTarget && (readingRecordCount > 0 || actionPlanCount > 0 || hasManualCompletion(memberId, month));
         return new MyDashboard(
-            new MyDashboard.DashboardProfile(profile.memberId(), profile.displayName(), profile.profileImageUrl(), profile.oneLineIntro()),
-            new MyDashboard.DashboardParticipation(month.toString().substring(0, 7), readingRecordCount, actionPlanCount, completed, calculationTarget && !completed),
+            new MyDashboard.DashboardProfile(profile.memberId(), profile.role(), profile.displayName(), profile.profileImageUrl(), profile.oneLineIntro()),
+            new MyDashboard.DashboardParticipation(
+                month.toString().substring(0, 7),
+                readingRecordCount,
+                actionPlanCount,
+                completed,
+                calculationTarget && !completed
+            ),
+            findDashboardReadingRecord(memberId, month),
+            findDashboardReadingRecords(memberId, month),
+            findDashboardActionPlan(memberId, month),
             growthStats(memberId),
             findPublicActivities(memberId, 5)
         );
     }
 
-    private boolean isParticipationTarget(Long memberId, LocalDate month) {
-        Boolean target = jdbcTemplate.queryForObject(
-            "SELECT participation_start_month <= ? FROM members WHERE id = ? AND deactivated_at IS NULL",
-            Boolean.class,
-            Date.valueOf(month),
-            memberId
+    public List<MonthlyActionPlanShowcase> findMonthlyActionPlans(LocalDate month, int limit) {
+        return queryFactory
+            .select(actionPlan.id, actionPlan.memberId, member.nickname, member.realName, profileImage.publicUrl,
+                member.kakaoProfileImageUrl, actionPlan.targetMonth, actionPlan.title, actionPlan.content, actionPlan.updatedAt)
+            .from(actionPlan)
+            .join(member).on(member.id.eq(actionPlan.memberId))
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .where(actionPlan.targetMonth.eq(month), actionPlan.status.eq("ACTIVE"), activeMemberWhere())
+            .orderBy(actionPlan.updatedAt.desc(), actionPlan.id.desc())
+            .limit(limit)
+            .fetch()
+            .stream()
+            .map(row -> new MonthlyActionPlanShowcase(
+                row.get(actionPlan.id),
+                row.get(actionPlan.memberId),
+                displayName(row, true),
+                coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)),
+                row.get(actionPlan.targetMonth).toString().substring(0, 7),
+                row.get(actionPlan.title),
+                row.get(actionPlan.content),
+                row.get(actionPlan.updatedAt)
+            ))
+            .toList();
+    }
+
+    private ProfileCard toProfileCard(Tuple row, boolean revealPrivateProfile) {
+        Long memberId = row.get(member.id);
+        return new ProfileCard(
+            memberId,
+            row.get(member.role),
+            displayName(row, revealPrivateProfile),
+            revealPrivateProfile ? coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)) : null,
+            row.get(member.oneLineIntro),
+            findInterestTagNames(memberId),
+            summarize(row.get(member.fiftyYearOldMe), 90),
+            growthStats(memberId),
+            latestReadingActivity(memberId)
         );
-        return Boolean.TRUE.equals(target);
+    }
+
+    private boolean isParticipationTarget(Long memberId, LocalDate month) {
+        OffsetDateTime onboardingCompletedAt = queryFactory
+            .select(member.onboardingCompletedAt)
+            .from(member)
+            .where(member.id.eq(memberId), member.deactivatedAt.isNull())
+            .fetchOne();
+        if (onboardingCompletedAt == null) {
+            return false;
+        }
+        LocalDate joinedMonth = KstDateTimes.monthOf(onboardingCompletedAt);
+        return !joinedMonth.isAfter(month);
+    }
+
+    private boolean hasManualCompletion(Long memberId, LocalDate month) {
+        OffsetDateTime manuallyCompletedAt = queryFactory
+            .select(adminNote.manuallyCompletedAt)
+            .from(adminNote)
+            .where(
+                adminNote.memberId.eq(memberId),
+                adminNote.targetMonth.eq(month),
+                adminNote.manuallyCompletedAt.isNotNull()
+            )
+            .fetchOne();
+        return manuallyCompletedAt != null;
     }
 
     private Long countReadingRecordsForMonth(Long memberId, LocalDate month) {
-        LocalDate nextMonth = month.plusMonths(1);
-        Long count = jdbcTemplate.queryForObject(
-            """
-                SELECT count(*)
-                FROM reading_records
-                WHERE member_id = ? AND status = 'ACTIVE' AND recorded_at >= ? AND recorded_at < ?
-                """,
-            Long.class,
-            memberId,
-            Date.valueOf(month),
-            Date.valueOf(nextMonth)
-        );
-        return count == null ? 0 : count;
+        Long count = queryFactory
+            .select(readingRecord.count())
+            .from(readingRecord)
+            .where(
+                readingRecord.memberId.eq(memberId),
+                readingRecord.status.eq("ACTIVE"),
+                readingRecord.recordedAt.goe(KstDateTimes.startOfMonth(month)),
+                readingRecord.recordedAt.lt(KstDateTimes.startOfNextMonth(month))
+            )
+            .fetchOne();
+        return zeroIfNull(count);
     }
 
     private Long countActionPlansForMonth(Long memberId, LocalDate month) {
-        Long count = jdbcTemplate.queryForObject(
-            """
-                SELECT count(*)
-                FROM monthly_action_plans
-                WHERE member_id = ? AND status = 'ACTIVE' AND target_month = ?
-                """,
-            Long.class,
-            memberId,
-            Date.valueOf(month)
+        Long count = queryFactory
+            .select(actionPlan.count())
+            .from(actionPlan)
+            .where(actionPlan.memberId.eq(memberId), actionPlan.status.eq("ACTIVE"), actionPlan.targetMonth.eq(month))
+            .fetchOne();
+        return zeroIfNull(count);
+    }
+
+    private MyDashboard.DashboardReadingRecord findDashboardReadingRecord(Long memberId, LocalDate month) {
+        Tuple row = queryFactory
+            .select(readingRecord.id, readingRecord.bookId, book.title, readingRecord.oneLineReview, readingRecord.blogUrl, readingRecord.recordedAt)
+            .from(readingRecord)
+            .join(book).on(book.id.eq(readingRecord.bookId))
+            .where(
+                readingRecord.memberId.eq(memberId),
+                readingRecord.status.eq("ACTIVE"),
+                readingRecord.recordedAt.goe(KstDateTimes.startOfMonth(month)),
+                readingRecord.recordedAt.lt(KstDateTimes.startOfNextMonth(month))
+            )
+            .orderBy(readingRecord.recordedAt.desc(), readingRecord.id.desc())
+            .limit(1)
+            .fetchOne();
+        if (row == null) {
+            return null;
+        }
+        return new MyDashboard.DashboardReadingRecord(
+            row.get(readingRecord.id),
+            row.get(readingRecord.bookId),
+            row.get(book.title),
+            row.get(readingRecord.oneLineReview),
+            row.get(readingRecord.blogUrl),
+            row.get(readingRecord.recordedAt)
         );
-        return count == null ? 0 : count;
+    }
+
+    private List<MyDashboard.DashboardReadingRecord> findDashboardReadingRecords(Long memberId, LocalDate month) {
+        return queryFactory
+            .select(readingRecord.id, readingRecord.bookId, book.title, readingRecord.oneLineReview, readingRecord.blogUrl, readingRecord.recordedAt)
+            .from(readingRecord)
+            .join(book).on(book.id.eq(readingRecord.bookId))
+            .where(
+                readingRecord.memberId.eq(memberId),
+                readingRecord.status.eq("ACTIVE"),
+                readingRecord.recordedAt.goe(KstDateTimes.startOfMonth(month)),
+                readingRecord.recordedAt.lt(KstDateTimes.startOfNextMonth(month))
+            )
+            .orderBy(readingRecord.recordedAt.desc(), readingRecord.id.desc())
+            .fetch()
+            .stream()
+            .map(row -> new MyDashboard.DashboardReadingRecord(
+                row.get(readingRecord.id),
+                row.get(readingRecord.bookId),
+                row.get(book.title),
+                row.get(readingRecord.oneLineReview),
+                row.get(readingRecord.blogUrl),
+                row.get(readingRecord.recordedAt)
+            ))
+            .toList();
+    }
+
+    private MyDashboard.DashboardActionPlan findDashboardActionPlan(Long memberId, LocalDate month) {
+        Tuple row = queryFactory
+            .select(actionPlan.id, actionPlan.targetMonth, actionPlan.title, actionPlan.content, actionPlan.updatedAt)
+            .from(actionPlan)
+            .where(actionPlan.memberId.eq(memberId), actionPlan.status.eq("ACTIVE"), actionPlan.targetMonth.eq(month))
+            .fetchOne();
+        if (row == null) {
+            return null;
+        }
+        return new MyDashboard.DashboardActionPlan(
+            row.get(actionPlan.id),
+            row.get(actionPlan.targetMonth).toString().substring(0, 7),
+            row.get(actionPlan.title),
+            row.get(actionPlan.content),
+            row.get(actionPlan.updatedAt)
+        );
     }
 
     private GrowthStats growthStats(Long memberId) {
-        return jdbcTemplate.queryForObject(
-            """
-                SELECT
-                  (SELECT count(*) FROM reading_records WHERE member_id = ? AND status = 'ACTIVE') AS reading_record_count,
-                  (SELECT count(*) FROM monthly_action_plans WHERE member_id = ? AND status = 'ACTIVE') AS action_plan_count,
-                  (SELECT count(*) FROM monthly_reflections WHERE member_id = ? AND status = 'ACTIVE') AS monthly_reflection_count,
-                  (SELECT count(*) FROM meeting_reviews WHERE member_id = ? AND status = 'ACTIVE') AS meeting_review_count,
-                  (SELECT count(*) FROM meetings WHERE host_member_id = ? AND meeting_type = 'SMALL' AND status <> 'DELETED') AS small_meeting_created_count
-                """,
-            (rs, rowNum) -> mapStats(rs),
-            memberId,
-            memberId,
-            memberId,
-            memberId,
-            memberId
+        return new GrowthStats(
+            countReadingRecords(memberId),
+            countActionPlans(memberId),
+            countReflections(memberId),
+            countMeetingReviews(memberId),
+            countSmallMeetings(memberId)
         );
     }
 
     private List<ReadingRecordDetail> findRecentReadingRecords(Long memberId, int limit, boolean includeMemberOnly) {
-        String displayNameSelect = includeMemberOnly
-            ? "CASE WHEN m.real_name IS NOT NULL AND m.real_name <> '' THEN m.real_name ELSE m.nickname END"
-            : "m.nickname";
-        String profileImageSelect = includeMemberOnly
-            ? "coalesce(profile_image.public_url, m.kakao_profile_image_url)"
-            : "null";
-        return jdbcTemplate.query(
-            """
-                SELECT rr.id, rr.member_id, rr.book_id, rr.rating, rr.one_line_review, rr.blog_url, rr.status,
-                       rr.recorded_at, rr.created_at, rr.representative_image_id,
-                       b.title AS book_title, b.authors_text, b.thumbnail_url AS book_thumbnail_url,
-                       %s AS member_display_name,
-                       %s AS member_profile_image_url,
-                       ia.public_url AS record_image_url
-                FROM reading_records rr
-                JOIN books b ON b.id = rr.book_id
-                JOIN members m ON m.id = rr.member_id
-                LEFT JOIN image_assets ia ON ia.id = rr.representative_image_id
-                LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-                WHERE rr.member_id = ? AND rr.status = 'ACTIVE'
-                ORDER BY rr.recorded_at DESC
-                LIMIT ?
-                """.formatted(displayNameSelect, profileImageSelect),
-            (rs, rowNum) -> new ReadingRecordDetail(
-                rs.getLong("id"),
-                rs.getLong("member_id"),
-                rs.getString("member_display_name"),
-                rs.getString("member_profile_image_url"),
-                rs.getLong("book_id"),
-                rs.getString("book_title"),
-                rs.getString("authors_text"),
-                rs.getString("book_thumbnail_url"),
-                readNullableInteger(rs, "rating"),
-                rs.getString("one_line_review"),
-                rs.getString("blog_url"),
-                readNullableLong(rs, "representative_image_id"),
-                rs.getString("record_image_url"),
-                rs.getString("status"),
-                rs.getObject("recorded_at", OffsetDateTime.class),
-                rs.getObject("created_at", OffsetDateTime.class)
-            ),
-            memberId,
-            limit
-        );
+        return queryFactory
+            .select(
+                readingRecord.id,
+                readingRecord.memberId,
+                member.nickname,
+                member.realName,
+                profileImage.publicUrl,
+                member.kakaoProfileImageUrl,
+                readingRecord.bookId,
+                book.title,
+                book.authorsText,
+                book.thumbnailUrl,
+                readingRecord.rating,
+                readingRecord.oneLineReview,
+                readingRecord.blogUrl,
+                readingRecord.representativeImageId,
+                recordImage.publicUrl,
+                readingRecord.status,
+                readingRecord.recordedAt,
+                readingRecord.createdAt
+            )
+            .from(readingRecord)
+            .join(book).on(book.id.eq(readingRecord.bookId))
+            .join(member).on(member.id.eq(readingRecord.memberId))
+            .leftJoin(recordImage).on(recordImage.id.eq(readingRecord.representativeImageId))
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .where(readingRecord.memberId.eq(memberId), readingRecord.status.eq("ACTIVE"))
+            .orderBy(readingRecord.recordedAt.desc())
+            .limit(limit)
+            .fetch()
+            .stream()
+            .map(row -> new ReadingRecordDetail(
+                row.get(readingRecord.id),
+                row.get(readingRecord.memberId),
+                displayName(row, includeMemberOnly),
+                includeMemberOnly ? coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)) : null,
+                row.get(readingRecord.bookId),
+                row.get(book.title),
+                row.get(book.authorsText),
+                row.get(book.thumbnailUrl),
+                row.get(readingRecord.rating) == null ? null : row.get(readingRecord.rating).intValue(),
+                row.get(readingRecord.oneLineReview),
+                row.get(readingRecord.blogUrl),
+                row.get(readingRecord.representativeImageId),
+                row.get(recordImage.publicUrl),
+                row.get(readingRecord.status),
+                row.get(readingRecord.recordedAt),
+                row.get(readingRecord.createdAt)
+            ))
+            .toList();
     }
 
     private List<ActivitySummary> findMeetingReviews(Long memberId, int limit) {
-        return jdbcTemplate.query(
-            """
-                SELECT id, title, created_at
-                FROM meeting_reviews
-                WHERE member_id = ? AND status = 'ACTIVE'
-                ORDER BY created_at DESC
-                LIMIT ?
-                """,
-            (rs, rowNum) -> new ActivitySummary("MEETING_REVIEW", rs.getString("title"), "/reviews/" + rs.getLong("id"), rs.getObject("created_at", OffsetDateTime.class)),
-            memberId,
-            limit
-        );
+        return queryFactory
+            .select(meetingReview.id, meetingReview.title, meetingReview.createdAt)
+            .from(meetingReview)
+            .where(meetingReview.memberId.eq(memberId), meetingReview.status.eq("ACTIVE"))
+            .orderBy(meetingReview.createdAt.desc())
+            .limit(limit)
+            .fetch()
+            .stream()
+            .map(row -> new ActivitySummary(
+                "MEETING_REVIEW",
+                row.get(meetingReview.title),
+                "/reviews/" + row.get(meetingReview.id),
+                row.get(meetingReview.createdAt)
+            ))
+            .toList();
     }
 
     private List<ActivitySummary> findActionPlans(Long memberId, int limit) {
-        return jdbcTemplate.query(
-            """
-                SELECT id, coalesce(title, to_char(target_month, 'YYYY-MM') || ' 액션플랜') AS title, created_at
-                FROM monthly_action_plans
-                WHERE member_id = ? AND status = 'ACTIVE'
-                ORDER BY target_month DESC
-                LIMIT ?
-                """,
-            (rs, rowNum) -> new ActivitySummary("ACTION_PLAN", rs.getString("title"), "/mypage/action-plans", rs.getObject("created_at", OffsetDateTime.class)),
-            memberId,
-            limit
-        );
+        return queryFactory
+            .select(actionPlan.title, actionPlan.targetMonth, actionPlan.createdAt)
+            .from(actionPlan)
+            .where(actionPlan.memberId.eq(memberId), actionPlan.status.eq("ACTIVE"))
+            .orderBy(actionPlan.targetMonth.desc())
+            .limit(limit)
+            .fetch()
+            .stream()
+            .map(row -> {
+                String title = row.get(actionPlan.title);
+                LocalDate targetMonth = row.get(actionPlan.targetMonth);
+                return new ActivitySummary(
+                    "ACTION_PLAN",
+                    title == null || title.isBlank() ? targetMonth.toString().substring(0, 7) + " 액션플랜" : title,
+                    "/mypage/action-plans",
+                    row.get(actionPlan.createdAt)
+                );
+            })
+            .toList();
     }
 
     private List<ActivitySummary> findReflections(Long memberId, int limit) {
-        return jdbcTemplate.query(
-            """
-                SELECT id, to_char(target_month, 'YYYY-MM') || ' 회고' AS title, created_at
-                FROM monthly_reflections
-                WHERE member_id = ? AND status = 'ACTIVE'
-                ORDER BY target_month DESC
-                LIMIT ?
-                """,
-            (rs, rowNum) -> new ActivitySummary("MONTHLY_REFLECTION", rs.getString("title"), "/mypage/reflections", rs.getObject("created_at", OffsetDateTime.class)),
-            memberId,
-            limit
-        );
+        return queryFactory
+            .select(reflection.targetMonth, reflection.createdAt)
+            .from(reflection)
+            .where(reflection.memberId.eq(memberId), reflection.status.eq("ACTIVE"))
+            .orderBy(reflection.targetMonth.desc())
+            .limit(limit)
+            .fetch()
+            .stream()
+            .map(row -> new ActivitySummary(
+                "MONTHLY_REFLECTION",
+                row.get(reflection.targetMonth).toString().substring(0, 7) + " 회고",
+                "/mypage/reflections",
+                row.get(reflection.createdAt)
+            ))
+            .toList();
     }
 
     private List<ActivitySummary> findPublicActivities(Long memberId, int limit) {
-        return jdbcTemplate.query(
-            """
-                SELECT 'READING_RECORD' AS type, b.title AS title, '/books/' || b.id AS href, rr.recorded_at AS occurred_at
-                FROM reading_records rr
-                JOIN books b ON b.id = rr.book_id
-                WHERE rr.member_id = ? AND rr.status = 'ACTIVE'
-                UNION ALL
-                SELECT 'MEETING_REVIEW' AS type, mrv.title AS title, '/reviews/' || mrv.id AS href, mrv.created_at AS occurred_at
-                FROM meeting_reviews mrv
-                WHERE mrv.member_id = ? AND mrv.status = 'ACTIVE'
-                ORDER BY occurred_at DESC
-                LIMIT ?
-                """,
-            (rs, rowNum) -> new ActivitySummary(
-                rs.getString("type"),
-                rs.getString("title"),
-                rs.getString("href"),
-                rs.getObject("occurred_at", OffsetDateTime.class)
-            ),
-            memberId,
-            memberId,
-            limit
-        );
+        List<ActivitySummary> readingActivities = queryFactory
+            .select(readingRecord.bookId, book.title, readingRecord.recordedAt)
+            .from(readingRecord)
+            .join(book).on(book.id.eq(readingRecord.bookId))
+            .where(readingRecord.memberId.eq(memberId), readingRecord.status.eq("ACTIVE"))
+            .fetch()
+            .stream()
+            .map(row -> new ActivitySummary(
+                "READING_RECORD",
+                row.get(book.title),
+                "/books/" + row.get(readingRecord.bookId),
+                row.get(readingRecord.recordedAt)
+            ))
+            .toList();
+        List<ActivitySummary> reviewActivities = queryFactory
+            .select(meetingReview.id, meetingReview.title, meetingReview.createdAt)
+            .from(meetingReview)
+            .where(meetingReview.memberId.eq(memberId), meetingReview.status.eq("ACTIVE"))
+            .fetch()
+            .stream()
+            .map(row -> new ActivitySummary(
+                "MEETING_REVIEW",
+                row.get(meetingReview.title),
+                "/reviews/" + row.get(meetingReview.id),
+                row.get(meetingReview.createdAt)
+            ))
+            .toList();
+        return Stream.concat(readingActivities.stream(), reviewActivities.stream())
+            .sorted(Comparator.comparing(ActivitySummary::occurredAt).reversed())
+            .limit(limit)
+            .toList();
     }
 
-    private GrowthStats mapStats(ResultSet rs) throws SQLException {
-        return new GrowthStats(
-            readLong(rs, "reading_record_count"),
-            readLong(rs, "action_plan_count"),
-            readLong(rs, "monthly_reflection_count"),
-            readLong(rs, "meeting_review_count"),
-            readLong(rs, "small_meeting_created_count")
-        );
-    }
-
-    private ActivitySummary mapActivity(ResultSet rs, String type, String titleColumn, String hrefColumn, String occurredAtColumn) throws SQLException {
-        OffsetDateTime occurredAt = rs.getObject(occurredAtColumn, OffsetDateTime.class);
-        if (occurredAt == null) {
+    private ActivitySummary latestReadingActivity(Long memberId) {
+        Tuple row = queryFactory
+            .select(readingRecord.bookId, book.title, readingRecord.recordedAt)
+            .from(readingRecord)
+            .join(book).on(book.id.eq(readingRecord.bookId))
+            .where(readingRecord.memberId.eq(memberId), readingRecord.status.eq("ACTIVE"))
+            .orderBy(readingRecord.recordedAt.desc())
+            .limit(1)
+            .fetchOne();
+        if (row == null) {
             return null;
         }
-        return new ActivitySummary(type, rs.getString(titleColumn), rs.getString(hrefColumn), occurredAt);
+        return new ActivitySummary(
+            "READING_RECORD",
+            row.get(book.title),
+            "/books/" + row.get(readingRecord.bookId),
+            row.get(readingRecord.recordedAt)
+        );
     }
 
-    private String displayName(ResultSet rs) throws SQLException {
-        String realName = rs.getString("real_name");
-        return "REAL_NAME".equals(rs.getString("display_type")) && realName != null && !realName.isBlank()
+    private List<String> findInterestTagNames(Long memberId) {
+        return queryFactory
+            .select(interestTag.name)
+            .from(memberInterestTag)
+            .join(interestTag).on(interestTag.id.eq(memberInterestTag.id.interestTagId))
+            .where(memberInterestTag.id.memberId.eq(memberId), interestTag.active.isTrue())
+            .orderBy(interestTag.displayOrder.asc())
+            .fetch();
+    }
+
+    private List<Long> findInterestTagIds(Long memberId) {
+        return queryFactory
+            .select(interestTag.id)
+            .from(memberInterestTag)
+            .join(interestTag).on(interestTag.id.eq(memberInterestTag.id.interestTagId))
+            .where(memberInterestTag.id.memberId.eq(memberId), interestTag.active.isTrue())
+            .orderBy(interestTag.displayOrder.asc())
+            .fetch();
+    }
+
+    private Long countReadingRecords(Long memberId) {
+        Long count = queryFactory
+            .select(readingRecord.count())
+            .from(readingRecord)
+            .where(readingRecord.memberId.eq(memberId), readingRecord.status.eq("ACTIVE"))
+            .fetchOne();
+        return zeroIfNull(count);
+    }
+
+    private Long countActionPlans(Long memberId) {
+        Long count = queryFactory
+            .select(actionPlan.count())
+            .from(actionPlan)
+            .where(actionPlan.memberId.eq(memberId), actionPlan.status.eq("ACTIVE"))
+            .fetchOne();
+        return zeroIfNull(count);
+    }
+
+    private Long countReflections(Long memberId) {
+        Long count = queryFactory
+            .select(reflection.count())
+            .from(reflection)
+            .where(reflection.memberId.eq(memberId), reflection.status.eq("ACTIVE"))
+            .fetchOne();
+        return zeroIfNull(count);
+    }
+
+    private Long countMeetingReviews(Long memberId) {
+        Long count = queryFactory
+            .select(meetingReview.count())
+            .from(meetingReview)
+            .where(meetingReview.memberId.eq(memberId), meetingReview.status.eq("ACTIVE"))
+            .fetchOne();
+        return zeroIfNull(count);
+    }
+
+    private Long countSmallMeetings(Long memberId) {
+        Long count = queryFactory
+            .select(meeting.count())
+            .from(meeting)
+            .where(meeting.hostMemberId.eq(memberId), meeting.meetingType.eq("SMALL"), meeting.status.ne("DELETED"))
+            .fetchOne();
+        return zeroIfNull(count);
+    }
+
+    private BooleanBuilder activeMemberWhere() {
+        return new BooleanBuilder(member.onboardingCompletedAt.isNotNull())
+            .and(member.deactivatedAt.isNull());
+    }
+
+    private String displayName(Tuple row, boolean revealPrivateProfile) {
+        if (!revealPrivateProfile) {
+            return row.get(member.nickname);
+        }
+        String realName = row.get(member.realName);
+        return realName != null && !realName.isBlank() ? realName : row.get(member.nickname);
+    }
+
+    private String myDisplayName(Tuple row) {
+        String realName = row.get(member.realName);
+        return "REAL_NAME".equals(row.get(member.displayType)) && realName != null && !realName.isBlank()
             ? realName
-            : rs.getString("nickname");
+            : row.get(member.nickname);
     }
 
     private String summarize(String value, int maxLength) {
@@ -448,39 +641,11 @@ public class ProfileRepository {
         return value.substring(0, maxLength);
     }
 
-    private List<String> readStringArray(ResultSet rs, String column) throws SQLException {
-        Array array = rs.getArray(column);
-        if (array == null) {
-            return List.of();
-        }
-        return Arrays.stream((Object[]) array.getArray()).map(String.class::cast).toList();
+    private Long zeroIfNull(Long count) {
+        return count == null ? 0 : count;
     }
 
-    private List<Long> readLongArray(ResultSet rs, String column) throws SQLException {
-        Array array = rs.getArray(column);
-        if (array == null) {
-            return List.of();
-        }
-        return Arrays.stream((Object[]) array.getArray()).map(value -> ((Number) value).longValue()).toList();
-    }
-
-    private Long readLong(ResultSet rs, String column) throws SQLException {
-        long value = rs.getLong(column);
-        return rs.wasNull() ? 0 : value;
-    }
-
-    private Integer readNullableInteger(ResultSet rs, String column) throws SQLException {
-        int value = rs.getInt(column);
-        return rs.wasNull() ? null : value;
-    }
-
-    private Long readNullableLong(ResultSet rs, String column) throws SQLException {
-        long value = rs.getLong(column);
-        return rs.wasNull() ? null : value;
-    }
-
-    private LocalDate readNullableDate(ResultSet rs, String column) throws SQLException {
-        Date value = rs.getDate(column);
-        return value == null ? null : value.toLocalDate();
+    private String coalesce(String first, String second) {
+        return first == null || first.isBlank() ? second : first;
     }
 }

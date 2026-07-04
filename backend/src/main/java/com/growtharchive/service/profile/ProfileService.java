@@ -10,6 +10,7 @@ import com.growtharchive.security.AccessLevel;
 import com.growtharchive.security.AccessLevelCalculator;
 import com.growtharchive.security.CurrentMemberResolver;
 import com.growtharchive.security.MemberPrincipal;
+import com.growtharchive.support.KstDateTimes;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.util.List;
@@ -58,9 +59,15 @@ public class ProfileService {
             .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
     }
 
+    public List<MonthlyActionPlanShowcase> getMonthlyActionPlans(HttpServletRequest request, LocalDate month) {
+        currentMemberResolver.require(request, AccessLevel.MEMBER);
+        LocalDate targetMonth = month == null ? KstDateTimes.currentMonth() : month.withDayOfMonth(1);
+        return profileRepository.findMonthlyActionPlans(targetMonth, 50);
+    }
+
     public MyDashboard getDashboard(HttpServletRequest request, LocalDate month) {
         MemberPrincipal member = currentMemberResolver.require(request, AccessLevel.MEMBER);
-        LocalDate targetMonth = month == null ? LocalDate.now().withDayOfMonth(1) : month.withDayOfMonth(1);
+        LocalDate targetMonth = month == null ? KstDateTimes.currentMonth() : month.withDayOfMonth(1);
         return profileRepository.findDashboard(member.memberId(), targetMonth);
     }
 
@@ -89,7 +96,7 @@ public class ProfileService {
         if (interestTagRepository.countActiveIds(command.interestTagIds()) != command.interestTagIds().size()) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "선택할 수 없는 관심 분야가 포함되어 있습니다.");
         }
-        if (command.birthDate() != null && command.birthDate().isAfter(LocalDate.now())) {
+        if (command.birthDate() != null && command.birthDate().isAfter(KstDateTimes.today())) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "생년월일을 다시 확인해 주세요.");
         }
         if (!imageAssetRepository.isOwnedImage(member.memberId(), command.profileImageId(), "PROFILE")) {

@@ -71,6 +71,18 @@ public class ParticipationService {
         participationRepository.saveNote(admin.memberId(), memberId, targetMonth.withDayOfMonth(1), note == null ? "" : note.trim());
     }
 
+    @Transactional
+    public void markManualCompletion(HttpServletRequest request, Long memberId, LocalDate targetMonth) {
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
+        participationRepository.markManualCompletion(admin.memberId(), memberId, targetMonth.withDayOfMonth(1));
+    }
+
+    @Transactional
+    public void clearManualCompletion(HttpServletRequest request, Long memberId, LocalDate targetMonth) {
+        currentMemberResolver.require(request, AccessLevel.ADMIN);
+        participationRepository.clearManualCompletion(memberId, targetMonth.withDayOfMonth(1));
+    }
+
     private String csvEscape(String value) {
         if (value == null) {
             return "";

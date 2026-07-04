@@ -1,31 +1,42 @@
 package com.growtharchive.repository;
 
+import com.growtharchive.domain.image.ImageAsset;
+import com.growtharchive.domain.image.QImageAsset;
+import com.growtharchive.domain.book.QBook;
+import com.growtharchive.domain.meeting.QMeeting;
+import com.growtharchive.domain.meeting.QMeetingReview;
+import com.growtharchive.domain.meeting.QMeetingReviewImage;
+import com.growtharchive.domain.member.QMember;
+import com.growtharchive.domain.reading.QReadingRecord;
 import com.growtharchive.service.storage.StoredImage;
-import java.util.ArrayList;
+import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
+import java.time.OffsetDateTime;
 import java.util.List;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class ImageAssetRepository {
 
-    private final JdbcTemplate jdbcTemplate;
+    private static final QImageAsset imageAsset = QImageAsset.imageAsset;
+    private static final QMember member = QMember.member;
+    private static final QReadingRecord readingRecord = QReadingRecord.readingRecord;
+    private static final QMeeting meeting = QMeeting.meeting;
+    private static final QMeetingReview meetingReview = QMeetingReview.meetingReview;
+    private static final QMeetingReviewImage meetingReviewImage = QMeetingReviewImage.meetingReviewImage;
+    private static final QBook book = QBook.book;
 
-    public ImageAssetRepository(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    private final EntityManager entityManager;
+    private final JPAQueryFactory queryFactory;
+
+    public ImageAssetRepository(EntityManager entityManager, JPAQueryFactory queryFactory) {
+        this.entityManager = entityManager;
+        this.queryFactory = queryFactory;
     }
 
     public Long create(Long memberId, String imageType, StoredImage image) {
-        return jdbcTemplate.queryForObject(
-            """
-                INSERT INTO image_assets (
-                    owner_member_id, bucket, object_key, public_url, image_type,
-                    mime_type, width, height, size_bytes, created_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, now())
-                RETURNING id
-                """,
-            Long.class,
+        ImageAsset asset = new ImageAsset(
             memberId,
             image.bucket(),
             image.objectKey(),
@@ -36,23 +47,24 @@ public class ImageAssetRepository {
             image.height(),
             image.sizeBytes()
         );
+        entityManager.persist(asset);
+        entityManager.flush();
+        return asset.getId();
     }
 
     public boolean isOwnedImage(Long memberId, Long imageId, String imageType) {
         if (imageId == null) {
             return true;
         }
-        Integer count = jdbcTemplate.queryForObject(
-            """
-                SELECT count(*)
-                FROM image_assets
-                WHERE owner_member_id = ? AND id = ? AND image_type = ?
-                """,
-            Integer.class,
-            memberId,
-            imageId,
-            imageType
-        );
+        Long count = queryFactory
+            .select(imageAsset.count())
+            .from(imageAsset)
+            .where(
+                imageAsset.ownerMemberId.eq(memberId),
+                imageAsset.id.eq(imageId),
+                imageAsset.imageType.eq(imageType)
+            )
+            .fetchOne();
         return count != null && count > 0;
     }
 
@@ -60,16 +72,15 @@ public class ImageAssetRepository {
         if (imageId == null) {
             return true;
         }
-        Integer count = jdbcTemplate.queryForObject(
-            """
-                SELECT count(*)
-                FROM image_assets
-                WHERE owner_member_id IS NULL AND id = ? AND image_type = ?
-                """,
-            Integer.class,
-            imageId,
-            imageType
-        );
+        Long count = queryFactory
+            .select(imageAsset.count())
+            .from(imageAsset)
+            .where(
+                imageAsset.ownerMemberId.isNull(),
+                imageAsset.id.eq(imageId),
+                imageAsset.imageType.eq(imageType)
+            )
+            .fetchOne();
         return count != null && count > 0;
     }
 
@@ -77,35 +88,57 @@ public class ImageAssetRepository {
         if (imageId == null) {
             return;
         }
-        jdbcTemplate.update(
-            """
-                UPDATE image_assets
-                SET owner_member_id = ?
-                WHERE id = ? AND owner_member_id IS NULL
-                """,
-            memberId,
-            imageId
-        );
+        queryFactory
+            .update(imageAsset)
+            .set(imageAsset.ownerMemberId, memberId)
+            .where(imageAsset.id.eq(imageId), imageAsset.ownerMemberId.isNull())
+            .execute();
     }
 
     public int countOwnedImages(Long memberId, List<Long> imageIds, String imageType) {
         if (imageIds == null || imageIds.isEmpty()) {
             return 0;
         }
-        String placeholders = String.join(",", imageIds.stream().map(id -> "?").toList());
-        List<Object> args = new ArrayList<>();
-        args.add(memberId);
-        args.add(imageType);
-        args.addAll(imageIds);
-        Integer count = jdbcTemplate.queryForObject(
-            """
-                SELECT count(*)
-                FROM image_assets
-                WHERE owner_member_id = ? AND image_type = ? AND id IN (%s)
-                """.formatted(placeholders),
-            Integer.class,
-            args.toArray()
-        );
-        return count == null ? 0 : count;
+        Long count = queryFactory
+            .select(imageAsset.count())
+            .from(imageAsset)
+            .where(
+                imageAsset.ownerMemberId.eq(memberId),
+                imageAsset.imageType.eq(imageType),
+                imageAsset.id.in(imageIds)
+            )
+            .fetchOne();
+        return count == null ? 0 : count.intValue();
+    }
+
+    public List<OrphanImageAsset> findUnlinkedImagesCreatedBefore(OffsetDateTime threshold, int limit) {
+        return queryFactory
+            .select(imageAsset.id, imageAsset.bucket, imageAsset.objectKey)
+            .from(imageAsset)
+            .where(
+                imageAsset.createdAt.lt(threshold),
+                JPAExpressions.selectOne().from(member).where(member.profileImageId.eq(imageAsset.id)).notExists(),
+                JPAExpressions.selectOne().from(readingRecord).where(readingRecord.representativeImageId.eq(imageAsset.id)).notExists(),
+                JPAExpressions.selectOne().from(meeting).where(meeting.coverImageId.eq(imageAsset.id)).notExists(),
+                JPAExpressions.selectOne().from(meetingReview).where(meetingReview.representativeImageId.eq(imageAsset.id)).notExists(),
+                JPAExpressions.selectOne().from(meetingReviewImage).where(meetingReviewImage.imageAssetId.eq(imageAsset.id)).notExists(),
+                JPAExpressions.selectOne().from(book).where(book.thumbnailUrl.eq(imageAsset.publicUrl)).notExists()
+            )
+            .orderBy(imageAsset.id.asc())
+            .limit(limit)
+            .fetch()
+            .stream()
+            .map(row -> new OrphanImageAsset(row.get(imageAsset.id), row.get(imageAsset.bucket), row.get(imageAsset.objectKey)))
+            .toList();
+    }
+
+    public void delete(Long imageId) {
+        queryFactory
+            .delete(imageAsset)
+            .where(imageAsset.id.eq(imageId))
+            .execute();
+    }
+
+    public record OrphanImageAsset(Long id, String bucket, String objectKey) {
     }
 }

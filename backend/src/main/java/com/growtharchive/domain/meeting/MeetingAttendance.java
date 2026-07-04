@@ -24,4 +24,12 @@ public class MeetingAttendance {
 
     protected MeetingAttendance() {
     }
+
+    public MeetingAttendance(Long meetingId, Long memberId) {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.id = new MeetingAttendanceId(meetingId, memberId);
+        this.status = "JOINED";
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
 }

@@ -109,8 +109,13 @@ public class AppProperties {
     public static class Kakao {
         private String clientId = "";
         private String clientSecret = "";
-        private String redirectUri = "http://localhost:8080/api/v1/auth/kakao/callback";
-        private boolean mockEnabled = true;
+        private String adminKey = "";
+        private String webhookSecret = "";
+        private String redirectUri = "";
+        private String authorizationUri = "";
+        private String tokenUri = "";
+        private String userInfoUri = "";
+        private String unlinkUri = "";
         private List<String> initialAdminProviderIds = new ArrayList<>();
 
         public String getClientId() {
@@ -129,6 +134,22 @@ public class AppProperties {
             this.clientSecret = clientSecret;
         }
 
+        public String getAdminKey() {
+            return adminKey;
+        }
+
+        public void setAdminKey(String adminKey) {
+            this.adminKey = adminKey;
+        }
+
+        public String getWebhookSecret() {
+            return webhookSecret;
+        }
+
+        public void setWebhookSecret(String webhookSecret) {
+            this.webhookSecret = webhookSecret;
+        }
+
         public String getRedirectUri() {
             return redirectUri;
         }
@@ -137,12 +158,36 @@ public class AppProperties {
             this.redirectUri = redirectUri;
         }
 
-        public boolean isMockEnabled() {
-            return mockEnabled;
+        public String getAuthorizationUri() {
+            return authorizationUri;
         }
 
-        public void setMockEnabled(boolean mockEnabled) {
-            this.mockEnabled = mockEnabled;
+        public void setAuthorizationUri(String authorizationUri) {
+            this.authorizationUri = authorizationUri;
+        }
+
+        public String getTokenUri() {
+            return tokenUri;
+        }
+
+        public void setTokenUri(String tokenUri) {
+            this.tokenUri = tokenUri;
+        }
+
+        public String getUserInfoUri() {
+            return userInfoUri;
+        }
+
+        public void setUserInfoUri(String userInfoUri) {
+            this.userInfoUri = userInfoUri;
+        }
+
+        public String getUnlinkUri() {
+            return unlinkUri;
+        }
+
+        public void setUnlinkUri(String unlinkUri) {
+            this.unlinkUri = unlinkUri;
         }
 
         public List<String> getInitialAdminProviderIds() {
@@ -156,6 +201,7 @@ public class AppProperties {
 
     public static class Invite {
         private String initialCode = "";
+        private String adminInitialCode = "";
 
         public String getInitialCode() {
             return initialCode;
@@ -163,6 +209,14 @@ public class AppProperties {
 
         public void setInitialCode(String initialCode) {
             this.initialCode = initialCode;
+        }
+
+        public String getAdminInitialCode() {
+            return adminInitialCode;
+        }
+
+        public void setAdminInitialCode(String adminInitialCode) {
+            this.adminInitialCode = adminInitialCode;
         }
     }
 
@@ -176,10 +230,19 @@ public class AppProperties {
 
     public static class Storage {
         private final Supabase supabase = new Supabase();
+        private String environmentPrefix = "local";
         private boolean localFallbackEnabled = true;
 
         public Supabase getSupabase() {
             return supabase;
+        }
+
+        public String getEnvironmentPrefix() {
+            return environmentPrefix;
+        }
+
+        public void setEnvironmentPrefix(String environmentPrefix) {
+            this.environmentPrefix = environmentPrefix;
         }
 
         public boolean isLocalFallbackEnabled() {
@@ -194,7 +257,12 @@ public class AppProperties {
     public static class Supabase {
         private String url = "";
         private String serviceRoleKey = "";
-        private String bucket = "growth-archive";
+        private String bucket = "images";
+        private String s3Endpoint = "";
+        private String s3Region = "ap-northeast-2";
+        private String s3AccessKeyId = "";
+        private String s3SecretAccessKey = "";
+        private String publicBaseUrl = "";
 
         public String getUrl() {
             return url;
@@ -218,6 +286,46 @@ public class AppProperties {
 
         public void setBucket(String bucket) {
             this.bucket = bucket;
+        }
+
+        public String getS3Endpoint() {
+            return s3Endpoint;
+        }
+
+        public void setS3Endpoint(String s3Endpoint) {
+            this.s3Endpoint = s3Endpoint;
+        }
+
+        public String getS3Region() {
+            return s3Region;
+        }
+
+        public void setS3Region(String s3Region) {
+            this.s3Region = s3Region;
+        }
+
+        public String getS3AccessKeyId() {
+            return s3AccessKeyId;
+        }
+
+        public void setS3AccessKeyId(String s3AccessKeyId) {
+            this.s3AccessKeyId = s3AccessKeyId;
+        }
+
+        public String getS3SecretAccessKey() {
+            return s3SecretAccessKey;
+        }
+
+        public void setS3SecretAccessKey(String s3SecretAccessKey) {
+            this.s3SecretAccessKey = s3SecretAccessKey;
+        }
+
+        public String getPublicBaseUrl() {
+            return publicBaseUrl;
+        }
+
+        public void setPublicBaseUrl(String publicBaseUrl) {
+            this.publicBaseUrl = publicBaseUrl;
         }
     }
 

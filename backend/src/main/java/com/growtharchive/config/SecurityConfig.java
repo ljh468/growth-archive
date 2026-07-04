@@ -104,6 +104,9 @@ public class SecurityConfig {
         }
 
         private boolean isAllowed(HttpServletRequest request) {
+            if ("/api/v1/auth/kakao/unlink-webhook".equals(request.getRequestURI())) {
+                return true;
+            }
             String origin = request.getHeader("Origin");
             if (origin != null && allowedOrigins.contains(origin)) {
                 return true;

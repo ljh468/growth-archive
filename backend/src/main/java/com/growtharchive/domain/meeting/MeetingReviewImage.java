@@ -20,4 +20,10 @@ public class MeetingReviewImage extends CreatedAtEntity {
 
     protected MeetingReviewImage() {
     }
+
+    public MeetingReviewImage(Long meetingReviewId, Long imageAssetId, int displayOrder) {
+        this.meetingReviewId = meetingReviewId;
+        this.imageAssetId = imageAssetId;
+        this.displayOrder = displayOrder;
+    }
 }

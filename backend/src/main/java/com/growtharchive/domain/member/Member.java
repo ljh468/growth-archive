@@ -1,6 +1,7 @@
 package com.growtharchive.domain.member;
 
 import com.growtharchive.domain.common.BaseEntity;
+import com.growtharchive.support.KstDateTimes;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -19,6 +20,9 @@ public class Member extends BaseEntity {
 
     @Column(name = "real_name", length = 50)
     private String realName;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
     @Column(nullable = false, length = 20)
     private String nickname;
@@ -65,6 +69,46 @@ public class Member extends BaseEntity {
     @Column(name = "deactivated_at")
     private OffsetDateTime deactivatedAt;
 
+    @Column(name = "withdrawn_at")
+    private OffsetDateTime withdrawnAt;
+
+    @Column(name = "personal_data_redacted_at")
+    private OffsetDateTime personalDataRedactedAt;
+
     protected Member() {
+    }
+
+    public Member(
+        String role,
+        String nickname,
+        String oneLineIntro,
+        String displayType,
+        String realName,
+        LocalDate birthDate,
+        Long profileImageId,
+        String kakaoProfileImageUrl,
+        String fiftyYearOldMe,
+        String joinReason,
+        String currentConcern,
+        String threeYearGoal
+    ) {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.role = role;
+        this.displayType = displayType;
+        this.realName = realName;
+        this.birthDate = birthDate;
+        this.nickname = nickname;
+        this.oneLineIntro = oneLineIntro;
+        this.profileImageId = profileImageId;
+        this.kakaoProfileImageUrl = kakaoProfileImageUrl;
+        this.fiftyYearOldMe = fiftyYearOldMe;
+        this.joinReason = joinReason;
+        this.currentConcern = currentConcern;
+        this.threeYearGoal = threeYearGoal;
+        this.participationStartMonth = KstDateTimes.currentMonth().plusMonths(1);
+        this.inviteVerifiedAt = now;
+        this.termsAgreedAt = now;
+        this.privacyAgreedAt = now;
+        this.onboardingCompletedAt = now;
     }
 }

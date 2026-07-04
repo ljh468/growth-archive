@@ -26,14 +26,14 @@ public class InitialDataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        String initialCode = properties.getInvite().getInitialCode();
-        if (initialCode == null || initialCode.isBlank() || inviteCodeRepository.findActiveHash().isPresent()) {
+        seedInitialCode("MEMBER", properties.getInvite().getInitialCode());
+        seedInitialCode("ADMIN", properties.getInvite().getAdminInitialCode());
+    }
+
+    private void seedInitialCode(String role, String code) {
+        if (code == null || code.isBlank() || inviteCodeRepository.findActiveHash(role).isPresent()) {
             return;
         }
-        inviteCodeRepository.replaceActiveCode(
-            codeHashService.hashInviteCode(initialCode),
-            codeHashService.preview(initialCode),
-            null
-        );
+        inviteCodeRepository.replaceActiveCode(role, codeHashService.hashInviteCode(code), codeHashService.preview(code), null);
     }
 }

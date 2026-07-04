@@ -26,7 +26,7 @@ public class RegularMeetingService {
         int created = 0;
         if (meetingRepository.createRegularIfMissing(
             "REGULAR_READING",
-            month.getMonthValue() + "월 독서기록 모임",
+            month.getMonthValue() + "월 독서기록모임",
             meetingAt(month, 2),
             "온라인 또는 추후 공지",
             "이번 달 독서기록을 함께 나누는 정기 모임입니다.",
@@ -36,7 +36,7 @@ public class RegularMeetingService {
         }
         if (meetingRepository.createRegularIfMissing(
             "REGULAR_ACTION",
-            month.getMonthValue() + "월 실행계획 모임",
+            month.getMonthValue() + "월 실행수다모임",
             meetingAt(month, 4),
             "온라인 또는 추후 공지",
             "월초에 정한 실행목표를 함께 이야기하고 편하게 수다 나누는 정기 모임입니다.",

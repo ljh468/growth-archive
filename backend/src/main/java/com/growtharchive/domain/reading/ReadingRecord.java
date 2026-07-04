@@ -42,4 +42,15 @@ public class ReadingRecord extends BaseEntity {
 
     protected ReadingRecord() {
     }
+
+    public ReadingRecord(Long memberId, Long bookId, Integer rating, String oneLineReview, String blogUrl, Long representativeImageId) {
+        this.memberId = memberId;
+        this.bookId = bookId;
+        this.rating = rating == null ? null : rating.shortValue();
+        this.oneLineReview = oneLineReview;
+        this.blogUrl = blogUrl;
+        this.representativeImageId = representativeImageId;
+        this.status = "ACTIVE";
+        this.recordedAt = OffsetDateTime.now();
+    }
 }

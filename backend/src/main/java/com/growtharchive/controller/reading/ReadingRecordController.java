@@ -35,10 +35,11 @@ public class ReadingRecordController {
     public ApiResponse<List<ReadingRecordDetail>> list(
         @RequestParam(required = false) Long bookId,
         @RequestParam(required = false) Long memberId,
+        @RequestParam(required = false) String month,
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.success(readingRecordService.getPublic(bookId, memberId, page, size));
+        return ApiResponse.success(readingRecordService.getPublic(bookId, memberId, month, page, size));
     }
 
     @PostMapping
@@ -67,6 +68,7 @@ public class ReadingRecordController {
     public record ReadingRecordRequest(
         @NotNull(message = "책을 선택해 주세요.")
         Long bookId,
+        @NotNull(message = "평점을 선택해 주세요.")
         @Min(value = 1, message = "평점은 1~5 정수만 입력할 수 있습니다.")
         @Max(value = 5, message = "평점은 1~5 정수만 입력할 수 있습니다.")
         Integer rating,

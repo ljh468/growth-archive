@@ -17,6 +17,11 @@ public class MemberInterestTagId implements Serializable {
     protected MemberInterestTagId() {
     }
 
+    public MemberInterestTagId(Long memberId, Long interestTagId) {
+        this.memberId = memberId;
+        this.interestTagId = interestTagId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

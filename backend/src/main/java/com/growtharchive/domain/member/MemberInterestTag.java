@@ -18,4 +18,9 @@ public class MemberInterestTag {
 
     protected MemberInterestTag() {
     }
+
+    public MemberInterestTag(Long memberId, Long interestTagId) {
+        this.id = new MemberInterestTagId(memberId, interestTagId);
+        this.createdAt = OffsetDateTime.now();
+    }
 }

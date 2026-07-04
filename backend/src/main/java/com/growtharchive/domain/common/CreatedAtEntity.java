@@ -6,6 +6,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.CreationTimestamp;
 
 @MappedSuperclass
 public abstract class CreatedAtEntity {
@@ -15,6 +16,7 @@ public abstract class CreatedAtEntity {
     private Long id;
 
     @Column(name = "created_at", nullable = false)
+    @CreationTimestamp
     private OffsetDateTime createdAt;
 
     public Long getId() {

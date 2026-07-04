@@ -16,6 +16,9 @@ public class InviteCode extends CreatedAtEntity {
     @Column(name = "code_preview", length = 30)
     private String codePreview;
 
+    @Column(nullable = false, length = 20)
+    private String role;
+
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
@@ -26,5 +29,13 @@ public class InviteCode extends CreatedAtEntity {
     private OffsetDateTime deactivatedAt;
 
     protected InviteCode() {
+    }
+
+    public InviteCode(String codeHash, String codePreview, String role, Long createdByMemberId) {
+        this.codeHash = codeHash;
+        this.codePreview = codePreview;
+        this.role = role;
+        this.active = true;
+        this.createdByMemberId = createdByMemberId;
     }
 }

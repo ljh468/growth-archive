@@ -5,6 +5,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.growtharchive.repository.MeetingRepository;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -22,15 +24,43 @@ class RegularMeetingServiceTest {
     @Test
     void ensureRegularMeetingsUsesRepositoryIdempotentCreates() {
         MeetingRepository repository = Mockito.mock(MeetingRepository.class);
-        when(repository.createRegularIfMissing(Mockito.eq("REGULAR_READING"), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+        when(repository.createRegularIfMissing(
+            Mockito.eq("REGULAR_READING"),
+            Mockito.eq("7월 독서기록모임"),
+            Mockito.eq(OffsetDateTime.parse("2026-07-12T10:00:00+09:00")),
+            Mockito.eq("온라인 또는 추후 공지"),
+            Mockito.any(),
+            Mockito.eq(LocalDate.of(2026, 7, 1))
+        ))
             .thenReturn(true);
-        when(repository.createRegularIfMissing(Mockito.eq("REGULAR_ACTION"), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+        when(repository.createRegularIfMissing(
+            Mockito.eq("REGULAR_ACTION"),
+            Mockito.eq("7월 실행수다모임"),
+            Mockito.eq(OffsetDateTime.parse("2026-07-26T10:00:00+09:00")),
+            Mockito.eq("온라인 또는 추후 공지"),
+            Mockito.any(),
+            Mockito.eq(LocalDate.of(2026, 7, 1))
+        ))
             .thenReturn(false);
 
         int created = new RegularMeetingService(repository).ensureRegularMeetingsForMonth(YearMonth.of(2026, 7));
 
         assertThat(created).isEqualTo(1);
-        verify(repository).createRegularIfMissing(Mockito.eq("REGULAR_READING"), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
-        verify(repository).createRegularIfMissing(Mockito.eq("REGULAR_ACTION"), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+        verify(repository).createRegularIfMissing(
+            Mockito.eq("REGULAR_READING"),
+            Mockito.eq("7월 독서기록모임"),
+            Mockito.eq(OffsetDateTime.parse("2026-07-12T10:00:00+09:00")),
+            Mockito.eq("온라인 또는 추후 공지"),
+            Mockito.any(),
+            Mockito.eq(LocalDate.of(2026, 7, 1))
+        );
+        verify(repository).createRegularIfMissing(
+            Mockito.eq("REGULAR_ACTION"),
+            Mockito.eq("7월 실행수다모임"),
+            Mockito.eq(OffsetDateTime.parse("2026-07-26T10:00:00+09:00")),
+            Mockito.eq("온라인 또는 추후 공지"),
+            Mockito.any(),
+            Mockito.eq(LocalDate.of(2026, 7, 1))
+        );
     }
 }

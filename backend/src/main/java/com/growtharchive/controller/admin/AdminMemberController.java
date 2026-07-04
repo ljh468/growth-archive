@@ -72,6 +72,15 @@ public class AdminMemberController {
         ));
     }
 
+    @PutMapping("/members/{memberId}/role")
+    public ApiResponse<AdminMemberService.MemberSummary> updateRole(
+        HttpServletRequest request,
+        @PathVariable Long memberId,
+        @Valid @RequestBody UpdateRoleRequest body
+    ) {
+        return ApiResponse.success(adminMemberService.updateRole(request, memberId, body.role()));
+    }
+
     @GetMapping("/invite-code")
     public ApiResponse<AdminMemberService.InviteCodeResponse> activeInviteCode(HttpServletRequest request) {
         return ApiResponse.success(adminMemberService.activeInviteCode(request));
@@ -82,11 +91,13 @@ public class AdminMemberController {
         HttpServletRequest request,
         @Valid @RequestBody UpdateInviteCodeRequest body
     ) {
-        adminMemberService.updateInviteCode(request, body.code());
+        adminMemberService.updateInviteCode(request, body.role(), body.code());
         return new ApiResponse<>(true, null, "초대코드가 변경되었습니다.", null);
     }
 
     public record UpdateInviteCodeRequest(
+        @Pattern(regexp = "MEMBER|ADMIN", message = "초대코드 권한을 선택해 주세요.")
+        String role,
         @NotBlank(message = "초대코드를 입력해 주세요.")
         String code
     ) {
@@ -96,6 +107,12 @@ public class AdminMemberController {
         @NotBlank(message = "참여 시작월을 입력해 주세요.")
         @Pattern(regexp = "\\d{4}-\\d{2}", message = "참여 시작월은 YYYY-MM 형식입니다.")
         String participationStartMonth
+    ) {
+    }
+
+    public record UpdateRoleRequest(
+        @Pattern(regexp = "MEMBER|ADMIN", message = "회원 권한을 선택해 주세요.")
+        String role
     ) {
     }
 }

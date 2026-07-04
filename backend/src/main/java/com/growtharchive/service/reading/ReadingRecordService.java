@@ -9,12 +9,18 @@ import com.growtharchive.security.CurrentMemberResolver;
 import com.growtharchive.security.MemberPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
+import java.time.DateTimeException;
+import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReadingRecordService {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final CurrentMemberResolver currentMemberResolver;
     private final ReadingRecordRepository readingRecordRepository;
@@ -30,10 +36,11 @@ public class ReadingRecordService {
         this.imageAssetRepository = imageAssetRepository;
     }
 
-    public List<ReadingRecordDetail> getPublic(Long bookId, Long memberId, int page, int size) {
+    public List<ReadingRecordDetail> getPublic(Long bookId, Long memberId, String month, int page, int size) {
         int safeSize = Math.min(Math.max(size, 1), 50);
         int offset = Math.max(page, 0) * safeSize;
-        return readingRecordRepository.findPublic(bookId, memberId, safeSize, offset);
+        MonthRange monthRange = parseMonth(month);
+        return readingRecordRepository.findPublic(bookId, memberId, monthRange.start(), monthRange.end(), safeSize, offset);
     }
 
     @Transactional
@@ -124,7 +131,10 @@ public class ReadingRecordService {
         if (command.bookId() == null) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "책을 선택해 주세요.");
         }
-        if (command.rating() != null && (command.rating() < 1 || command.rating() > 5)) {
+        if (command.rating() == null) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "평점을 선택해 주세요.");
+        }
+        if (command.rating() < 1 || command.rating() > 5) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "평점은 1~5 정수만 입력할 수 있습니다.");
         }
         if (command.oneLineReview() == null || command.oneLineReview().isBlank() || command.oneLineReview().length() > 300) {
@@ -149,12 +159,33 @@ public class ReadingRecordService {
         }
     }
 
+    private MonthRange parseMonth(String month) {
+        if (month == null || month.isBlank()) {
+            return new MonthRange(null, null);
+        }
+        try {
+            YearMonth yearMonth = YearMonth.parse(month.trim());
+            return new MonthRange(
+                yearMonth.atDay(1).atStartOfDay(KST).toOffsetDateTime(),
+                yearMonth.plusMonths(1).atDay(1).atStartOfDay(KST).toOffsetDateTime()
+            );
+        } catch (DateTimeException exception) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "조회 월은 YYYY-MM 형식이어야 합니다.");
+        }
+    }
+
     public record ReadingRecordCommand(
         Long bookId,
         Integer rating,
         String oneLineReview,
         String blogUrl,
         Long imageId
+    ) {
+    }
+
+    private record MonthRange(
+        OffsetDateTime start,
+        OffsetDateTime end
     ) {
     }
 }

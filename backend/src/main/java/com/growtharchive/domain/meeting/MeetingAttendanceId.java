@@ -17,6 +17,11 @@ public class MeetingAttendanceId implements Serializable {
     protected MeetingAttendanceId() {
     }
 
+    public MeetingAttendanceId(Long meetingId, Long memberId) {
+        this.meetingId = meetingId;
+        this.memberId = memberId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

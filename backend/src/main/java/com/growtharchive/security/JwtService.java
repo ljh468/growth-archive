@@ -68,6 +68,7 @@ public class JwtService {
         payload.put("nickname", signupToken.nickname());
         payload.put("profileImageUrl", signupToken.profileImageUrl());
         payload.put("inviteVerified", signupToken.inviteVerified());
+        payload.put("inviteRole", signupToken.inviteRole());
         payload.put("termsAgreed", signupToken.termsAgreed());
         payload.put("privacyAgreed", signupToken.privacyAgreed());
         payload.put("iat", now);
@@ -142,6 +143,7 @@ public class JwtService {
                 readText(payload, "nickname"),
                 readText(payload, "profileImageUrl"),
                 Boolean.TRUE.equals(payload.get("inviteVerified")),
+                readText(payload, "inviteRole") == null ? "MEMBER" : readText(payload, "inviteRole"),
                 Boolean.TRUE.equals(payload.get("termsAgreed")),
                 Boolean.TRUE.equals(payload.get("privacyAgreed"))
             );
@@ -181,6 +183,7 @@ public class JwtService {
         String nickname,
         String profileImageUrl,
         boolean inviteVerified,
+        String inviteRole,
         boolean termsAgreed,
         boolean privacyAgreed
     ) {

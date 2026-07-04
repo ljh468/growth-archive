@@ -33,8 +33,11 @@ public class AdminRecommendedBookController {
     @GetMapping
     public ApiResponse<List<RecommendedBookView>> list(
         HttpServletRequest request,
-        @RequestParam String month
+        @RequestParam(required = false) String month
     ) {
+        if (month == null || month.isBlank()) {
+            return ApiResponse.success(bookService.getRecommendedForAdminDisplay(request));
+        }
         return ApiResponse.success(bookService.getRecommendedForAdmin(request, LocalDate.parse(month + "-01")));
     }
 
@@ -70,6 +73,18 @@ public class AdminRecommendedBookController {
     @DeleteMapping("/{recommendedBookId}")
     public ApiResponse<Void> delete(HttpServletRequest request, @PathVariable Long recommendedBookId) {
         bookService.deleteRecommended(request, recommendedBookId);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/{recommendedBookId}/hide")
+    public ApiResponse<Void> hide(HttpServletRequest request, @PathVariable Long recommendedBookId) {
+        bookService.hideRecommended(request, recommendedBookId);
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/{recommendedBookId}/restore")
+    public ApiResponse<Void> restore(HttpServletRequest request, @PathVariable Long recommendedBookId) {
+        bookService.restoreRecommended(request, recommendedBookId);
         return ApiResponse.success(null);
     }
 

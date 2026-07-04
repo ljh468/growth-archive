@@ -36,4 +36,13 @@ public class MeetingReview extends BaseEntity {
 
     protected MeetingReview() {
     }
+
+    public MeetingReview(Long meetingId, Long memberId, String title, String content, Long representativeImageId) {
+        this.meetingId = meetingId;
+        this.memberId = memberId;
+        this.title = title;
+        this.content = content;
+        this.representativeImageId = representativeImageId;
+        this.status = "ACTIVE";
+    }
 }

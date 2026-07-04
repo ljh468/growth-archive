@@ -33,4 +33,22 @@ public class OauthAccount extends CreatedAtEntity {
 
     protected OauthAccount() {
     }
+
+    public OauthAccount(
+        String provider,
+        String providerUserId,
+        Long memberId,
+        String email,
+        String profileNickname,
+        String profileImageUrl,
+        OffsetDateTime lastLoginAt
+    ) {
+        this.provider = provider;
+        this.providerUserId = providerUserId;
+        this.memberId = memberId;
+        this.email = email;
+        this.profileNickname = profileNickname;
+        this.profileImageUrl = profileImageUrl;
+        this.lastLoginAt = lastLoginAt;
+    }
 }

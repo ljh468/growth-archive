@@ -57,9 +57,15 @@ public class AdminMemberService {
     @Transactional
     public void deactivate(HttpServletRequest request, Long memberId) {
         MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
+        if (admin.memberId().equals(memberId)) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "자기 자신은 비활성화할 수 없습니다.");
+        }
         MemberSummary before = memberRepository.findAdminMemberById(memberId)
             .map(this::toSummary)
             .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+        if ("ADMIN".equals(before.role()) && memberRepository.countOtherActiveAdmins(memberId) == 0) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "마지막 운영진은 비활성화할 수 없습니다.");
+        }
         memberRepository.deactivate(memberId);
         adminAuditLogRepository.record(
             admin.memberId(),
@@ -107,15 +113,46 @@ public class AdminMemberService {
         return detail(request, memberId);
     }
 
-    public InviteCodeResponse activeInviteCode(HttpServletRequest request) {
-        currentMemberResolver.require(request, AccessLevel.ADMIN);
-        return new InviteCodeResponse(inviteCodeRepository.findActivePreview().orElse(null));
+    @Transactional
+    public MemberSummary updateRole(HttpServletRequest request, Long memberId, String role) {
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
+        String normalizedRole = normalizeInviteRole(role);
+        MemberSummary before = memberRepository.findAdminMemberById(memberId)
+            .map(this::toSummary)
+            .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+        if (admin.memberId().equals(memberId)) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "자기 자신의 권한은 변경할 수 없습니다.");
+        }
+        if (before.deactivatedAt() != null || before.onboardingCompletedAt() == null) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "활성 회원만 권한을 변경할 수 있습니다.");
+        }
+        if ("ADMIN".equals(before.role()) && "MEMBER".equals(normalizedRole) && memberRepository.countOtherActiveAdmins(memberId) == 0) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "마지막 운영진은 일반 회원으로 변경할 수 없습니다.");
+        }
+        memberRepository.updateRole(memberId, normalizedRole);
+        adminAuditLogRepository.record(
+            admin.memberId(),
+            "UPDATE_MEMBER_ROLE",
+            "MEMBER",
+            memberId,
+            "{\"role\":\"" + before.role() + "\"}",
+            "{\"role\":\"" + normalizedRole + "\"}"
+        );
+        return detail(request, memberId);
     }
 
-    public void updateInviteCode(HttpServletRequest request, String code) {
+    public InviteCodeResponse activeInviteCode(HttpServletRequest request) {
+        currentMemberResolver.require(request, AccessLevel.ADMIN);
+        InviteCodeRepository.ActiveInviteCodePreviews previews = inviteCodeRepository.findActivePreviews();
+        return new InviteCodeResponse(previews.memberCodePreview(), previews.adminCodePreview());
+    }
+
+    public void updateInviteCode(HttpServletRequest request, String role, String code) {
         MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
-        String previousPreview = inviteCodeRepository.findActivePreview().orElse(null);
+        String normalizedRole = normalizeInviteRole(role);
+        String previousPreview = inviteCodeRepository.findActivePreview(normalizedRole).orElse(null);
         inviteCodeRepository.replaceActiveCode(
+            normalizedRole,
             codeHashService.hashInviteCode(code),
             codeHashService.preview(code),
             admin.memberId()
@@ -125,9 +162,16 @@ public class AdminMemberService {
             "UPDATE_INVITE_CODE",
             "INVITE_CODE",
             null,
-            "{\"codePreview\":\"" + nullSafe(previousPreview) + "\"}",
-            "{\"codePreview\":\"" + codeHashService.preview(code) + "\"}"
+            "{\"role\":\"" + normalizedRole + "\",\"codePreview\":\"" + nullSafe(previousPreview) + "\"}",
+            "{\"role\":\"" + normalizedRole + "\",\"codePreview\":\"" + codeHashService.preview(code) + "\"}"
         );
+    }
+
+    private String normalizeInviteRole(String role) {
+        if ("ADMIN".equals(role) || "MEMBER".equals(role)) {
+            return role;
+        }
+        throw new ApiException(ErrorCode.VALIDATION_ERROR, "초대코드 권한을 선택해 주세요.");
     }
 
     private MemberSummary toSummary(MemberRepository.AdminMemberRow row) {
@@ -147,6 +191,7 @@ public class AdminMemberService {
             row.privacyAgreedAt(),
             row.onboardingCompletedAt(),
             row.deactivatedAt(),
+            row.withdrawnAt(),
             row.createdAt()
         );
     }
@@ -162,7 +207,7 @@ public class AdminMemberService {
         return value == null ? "" : value.toString();
     }
 
-    public record InviteCodeResponse(String codePreview) {
+    public record InviteCodeResponse(String memberCodePreview, String adminCodePreview) {
     }
 
     public record MemberSummary(
@@ -181,6 +226,7 @@ public class AdminMemberService {
         OffsetDateTime privacyAgreedAt,
         OffsetDateTime onboardingCompletedAt,
         OffsetDateTime deactivatedAt,
+        OffsetDateTime withdrawnAt,
         OffsetDateTime createdAt
     ) {
     }

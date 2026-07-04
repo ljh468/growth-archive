@@ -33,4 +33,21 @@ public class ActivityEvent extends CreatedAtEntity {
 
     protected ActivityEvent() {
     }
+
+    public ActivityEvent(
+        Long memberId,
+        String eventType,
+        String referenceType,
+        Long referenceId,
+        String visibility,
+        String summary
+    ) {
+        this.memberId = memberId;
+        this.eventType = eventType;
+        this.referenceType = referenceType;
+        this.referenceId = referenceId;
+        this.visibility = visibility;
+        this.summary = summary;
+        this.happenedAt = OffsetDateTime.now();
+    }
 }

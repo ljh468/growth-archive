@@ -38,4 +38,26 @@ public class ImageAsset extends CreatedAtEntity {
 
     protected ImageAsset() {
     }
+
+    public ImageAsset(
+        Long ownerMemberId,
+        String bucket,
+        String objectKey,
+        String publicUrl,
+        String imageType,
+        String mimeType,
+        Integer width,
+        Integer height,
+        Long sizeBytes
+    ) {
+        this.ownerMemberId = ownerMemberId;
+        this.bucket = bucket;
+        this.objectKey = objectKey;
+        this.publicUrl = publicUrl;
+        this.imageType = imageType;
+        this.mimeType = mimeType;
+        this.width = width;
+        this.height = height;
+        this.sizeBytes = sizeBytes;
+    }
 }

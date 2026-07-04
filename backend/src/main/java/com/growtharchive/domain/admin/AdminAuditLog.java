@@ -4,6 +4,8 @@ import com.growtharchive.domain.common.CreatedAtEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "admin_audit_logs")
@@ -22,9 +24,11 @@ public class AdminAuditLog extends CreatedAtEntity {
     private Long entityId;
 
     @Column(name = "before_data", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String beforeData;
 
     @Column(name = "after_data", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String afterData;
 
     protected AdminAuditLog() {

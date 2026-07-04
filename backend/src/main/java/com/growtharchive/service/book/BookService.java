@@ -60,7 +60,7 @@ public class BookService {
     public BookDetailResponse getDetail(Long bookId) {
         BookDetail detail = bookRepository.findDetailById(bookId)
             .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
-        List<ReadingRecordDetail> records = readingRecordRepository.findPublic(bookId, null, 50, 0);
+        List<ReadingRecordDetail> records = readingRecordRepository.findPublic(bookId, null, null, null, 50, 0);
         return new BookDetailResponse(detail, records);
     }
 
@@ -87,9 +87,8 @@ public class BookService {
     }
 
     public LibraryResponse getLibrary() {
-        LocalDate targetMonth = LocalDate.now().withDayOfMonth(1);
         return new LibraryResponse(
-            recommendedBookRepository.findActiveForMonth(targetMonth),
+            recommendedBookRepository.findActiveForDisplay(),
             bookRepository.findPopularBooks(5),
             readingRecordRepository.findRecentPublic(20)
         );
@@ -116,16 +115,18 @@ public class BookService {
             null,
             "{\"bookId\":" + command.bookId() + ",\"targetMonth\":\"" + command.targetMonth().withDayOfMonth(1) + "\"}"
         );
-        return recommendedBookRepository.findActiveForMonth(command.targetMonth().withDayOfMonth(1))
-            .stream()
-            .filter(book -> book.id().equals(id))
-            .findFirst()
+        return recommendedBookRepository.findById(id)
             .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
     }
 
     public List<RecommendedBookView> getRecommendedForAdmin(HttpServletRequest request, LocalDate targetMonth) {
         currentMemberResolver.require(request, AccessLevel.ADMIN);
         return recommendedBookRepository.findActiveForMonth(targetMonth.withDayOfMonth(1));
+    }
+
+    public List<RecommendedBookView> getRecommendedForAdminDisplay(HttpServletRequest request) {
+        currentMemberResolver.require(request, AccessLevel.ADMIN);
+        return recommendedBookRepository.findForAdminDisplay();
     }
 
     public List<BookSummary> getAdminBooks(HttpServletRequest request, String verificationStatus, int page, int size) {
@@ -219,6 +220,38 @@ public class BookService {
         );
     }
 
+    @Transactional
+    public void hideRecommended(HttpServletRequest request, Long recommendedBookId) {
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
+        recommendedBookRepository.findById(recommendedBookId)
+            .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
+        recommendedBookRepository.hide(recommendedBookId);
+        adminAuditLogRepository.record(
+            admin.memberId(),
+            "HIDE_RECOMMENDED_BOOK",
+            "RECOMMENDED_BOOK",
+            recommendedBookId,
+            null,
+            "{\"status\":\"HIDDEN\"}"
+        );
+    }
+
+    @Transactional
+    public void restoreRecommended(HttpServletRequest request, Long recommendedBookId) {
+        MemberPrincipal admin = currentMemberResolver.require(request, AccessLevel.ADMIN);
+        recommendedBookRepository.findById(recommendedBookId)
+            .orElseThrow(() -> new ApiException(ErrorCode.BOOK_NOT_FOUND));
+        recommendedBookRepository.restore(recommendedBookId);
+        adminAuditLogRepository.record(
+            admin.memberId(),
+            "RESTORE_RECOMMENDED_BOOK",
+            "RECOMMENDED_BOOK",
+            recommendedBookId,
+            null,
+            "{\"status\":\"ACTIVE\"}"
+        );
+    }
+
     private void validateSearchResult(BookSearchResult result) {
         required(result.title(), "책 제목을 확인해 주세요.");
         required(result.authorsText(), "저자를 확인해 주세요.");
@@ -228,8 +261,8 @@ public class BookService {
     }
 
     private void validateQuery(String query) {
-        if (query == null || query.trim().length() < 2) {
-            throw new ApiException(ErrorCode.VALIDATION_ERROR, "검색어는 2자 이상 입력해 주세요.");
+        if (query == null || query.trim().isEmpty()) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "검색어는 1자 이상 입력해 주세요.");
         }
     }
 

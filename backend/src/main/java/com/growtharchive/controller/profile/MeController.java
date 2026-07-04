@@ -1,10 +1,12 @@
 package com.growtharchive.controller.profile;
 
 import com.growtharchive.dto.ApiResponse;
+import com.growtharchive.service.auth.AccountWithdrawalService;
 import com.growtharchive.service.profile.MyDashboard;
 import com.growtharchive.service.profile.MyProfile;
 import com.growtharchive.service.profile.ProfileService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -14,6 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,9 +28,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class MeController {
 
     private final ProfileService profileService;
+    private final AccountWithdrawalService accountWithdrawalService;
 
-    public MeController(ProfileService profileService) {
+    public MeController(ProfileService profileService, AccountWithdrawalService accountWithdrawalService) {
         this.profileService = profileService;
+        this.accountWithdrawalService = accountWithdrawalService;
     }
 
     @GetMapping("/dashboard")
@@ -51,6 +56,12 @@ public class MeController {
         @Valid @RequestBody UpdateProfileRequest body
     ) {
         return ApiResponse.success(profileService.updateMyProfile(request, body.toCommand()));
+    }
+
+    @PostMapping("/withdraw")
+    public ApiResponse<Void> withdraw(HttpServletRequest request, HttpServletResponse response) {
+        accountWithdrawalService.withdrawSelf(request, response);
+        return new ApiResponse<>(true, null, "탈퇴 처리가 완료되었습니다.", null);
     }
 
     public record UpdateProfileRequest(

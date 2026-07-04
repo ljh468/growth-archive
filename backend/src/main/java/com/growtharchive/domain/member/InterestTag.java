@@ -23,4 +23,11 @@ public class InterestTag extends CreatedAtEntity {
 
     protected InterestTag() {
     }
+
+    public InterestTag(String name, String slug, int displayOrder) {
+        this.name = name;
+        this.slug = slug;
+        this.displayOrder = displayOrder;
+        this.active = true;
+    }
 }

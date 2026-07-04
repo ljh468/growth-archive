@@ -31,4 +31,12 @@ public class MonthlyActionPlan extends BaseEntity {
 
     protected MonthlyActionPlan() {
     }
+
+    public MonthlyActionPlan(Long memberId, LocalDate targetMonth, String title, String content) {
+        this.memberId = memberId;
+        this.targetMonth = targetMonth;
+        this.title = title;
+        this.content = content;
+        this.status = "ACTIVE";
+    }
 }

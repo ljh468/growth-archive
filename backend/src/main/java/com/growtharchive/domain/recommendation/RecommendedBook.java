@@ -30,4 +30,13 @@ public class RecommendedBook extends BaseEntity {
 
     protected RecommendedBook() {
     }
+
+    public RecommendedBook(Long bookId, LocalDate targetMonth, String reason, Long recommendedByMemberId, int displayOrder) {
+        this.bookId = bookId;
+        this.targetMonth = targetMonth;
+        this.reason = reason;
+        this.recommendedByMemberId = recommendedByMemberId;
+        this.displayOrder = displayOrder;
+        this.status = "ACTIVE";
+    }
 }

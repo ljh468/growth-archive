@@ -1,67 +1,140 @@
 package com.growtharchive.repository;
 
-import java.sql.Date;
+import com.growtharchive.domain.book.QBook;
+import com.growtharchive.domain.meeting.QMeeting;
+import com.growtharchive.domain.meeting.QMeetingReview;
+import com.growtharchive.domain.member.QMember;
+import com.growtharchive.domain.monthly.QMonthlyActionPlan;
+import com.growtharchive.domain.reading.QReadingRecord;
+import com.growtharchive.domain.admin.QParticipationAdminNote;
+import com.growtharchive.support.KstDateTimes;
+import com.querydsl.core.Tuple;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
-import org.springframework.jdbc.core.JdbcTemplate;
+import java.time.OffsetDateTime;
+import java.util.List;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class AdminDashboardRepository {
 
-    private final JdbcTemplate jdbcTemplate;
+    private static final QMember member = QMember.member;
+    private static final QReadingRecord readingRecord = QReadingRecord.readingRecord;
+    private static final QMeeting meeting = QMeeting.meeting;
+    private static final QMeetingReview meetingReview = QMeetingReview.meetingReview;
+    private static final QBook book = QBook.book;
+    private static final QMonthlyActionPlan monthlyActionPlan = QMonthlyActionPlan.monthlyActionPlan;
+    private static final QParticipationAdminNote adminNote = QParticipationAdminNote.participationAdminNote;
 
-    public AdminDashboardRepository(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    private final JPAQueryFactory queryFactory;
+
+    public AdminDashboardRepository(JPAQueryFactory queryFactory) {
+        this.queryFactory = queryFactory;
     }
 
     public AdminDashboardCounts counts(LocalDate targetMonth) {
-        LocalDate nextMonth = targetMonth.plusMonths(1);
-        return jdbcTemplate.queryForObject(
-            """
-                SELECT
-                    (SELECT count(*) FROM members WHERE onboarding_completed_at IS NOT NULL AND deactivated_at IS NULL) AS active_member_count,
-                    (SELECT count(*) FROM reading_records WHERE status = 'ACTIVE') AS active_reading_record_count,
-                    (SELECT count(*) FROM meetings WHERE status <> 'DELETED') AS meeting_count,
-                    (SELECT count(*) FROM meeting_reviews WHERE status = 'ACTIVE') AS active_review_count,
-                    (SELECT count(*) FROM books WHERE status = 'UNVERIFIED') AS unverified_book_count,
-                    (SELECT count(*)
-                     FROM members m
-                     WHERE m.onboarding_completed_at IS NOT NULL
-                       AND m.deactivated_at IS NULL
-                       AND m.participation_start_month <= ?) AS participation_target_count,
-                    (SELECT count(*)
-                     FROM members m
-                     WHERE m.onboarding_completed_at IS NOT NULL
-                       AND m.deactivated_at IS NULL
-                       AND m.participation_start_month <= ?
-                       AND (
-                         EXISTS (
-                           SELECT 1 FROM reading_records rr
-                           WHERE rr.member_id = m.id AND rr.status = 'ACTIVE'
-                             AND rr.recorded_at >= ? AND rr.recorded_at < ?
-                         )
-                         OR EXISTS (
-                           SELECT 1 FROM monthly_action_plans map
-                           WHERE map.member_id = m.id AND map.status = 'ACTIVE'
-                             AND map.target_month = ?
-                         )
-                       )) AS participation_completed_count
-                """,
-            (rs, rowNum) -> new AdminDashboardCounts(
-                rs.getLong("active_member_count"),
-                rs.getLong("active_reading_record_count"),
-                rs.getLong("meeting_count"),
-                rs.getLong("active_review_count"),
-                rs.getLong("unverified_book_count"),
-                rs.getLong("participation_target_count"),
-                rs.getLong("participation_completed_count")
-            ),
-            Date.valueOf(targetMonth),
-            Date.valueOf(targetMonth),
-            Date.valueOf(targetMonth),
-            Date.valueOf(nextMonth),
-            Date.valueOf(targetMonth)
+        long activeMemberCount = count(queryFactory
+            .select(member.count())
+            .from(member)
+            .where(member.onboardingCompletedAt.isNotNull(), member.deactivatedAt.isNull())
+            .fetchOne());
+        long activeReadingRecordCount = count(queryFactory
+            .select(readingRecord.count())
+            .from(readingRecord)
+            .where(readingRecord.status.eq("ACTIVE"))
+            .fetchOne());
+        long meetingCount = count(queryFactory
+            .select(meeting.count())
+            .from(meeting)
+            .where(meeting.status.ne("DELETED"))
+            .fetchOne());
+        long activeReviewCount = count(queryFactory
+            .select(meetingReview.count())
+            .from(meetingReview)
+            .where(meetingReview.status.eq("ACTIVE"))
+            .fetchOne());
+        long unverifiedBookCount = count(queryFactory
+            .select(book.count())
+            .from(book)
+            .where(book.status.eq("UNVERIFIED"))
+            .fetchOne());
+        List<Long> participationTargetMemberIds = participationTargetMemberIds(targetMonth);
+        long participationTargetCount = participationTargetMemberIds.size();
+        long participationCompletedCount = participationTargetMemberIds.stream()
+            .filter(memberId -> hasReadingRecord(memberId, targetMonth)
+                || hasActionPlan(memberId, targetMonth)
+                || hasManualCompletion(memberId, targetMonth))
+            .count();
+        return new AdminDashboardCounts(
+            activeMemberCount,
+            activeReadingRecordCount,
+            meetingCount,
+            activeReviewCount,
+            unverifiedBookCount,
+            participationTargetCount,
+            participationCompletedCount
         );
+    }
+
+    private long count(Long value) {
+        return value == null ? 0 : value;
+    }
+
+    private List<Long> participationTargetMemberIds(LocalDate targetMonth) {
+        return queryFactory
+            .select(member.id, member.onboardingCompletedAt)
+            .from(member)
+            .where(member.onboardingCompletedAt.isNotNull(), member.deactivatedAt.isNull())
+            .fetch()
+            .stream()
+            .filter(row -> isCalculationTarget(row.get(member.onboardingCompletedAt), targetMonth))
+            .map(row -> row.get(member.id))
+            .toList();
+    }
+
+    private boolean hasReadingRecord(Long memberId, LocalDate targetMonth) {
+        Long count = queryFactory
+            .select(readingRecord.count())
+            .from(readingRecord)
+            .where(
+                readingRecord.memberId.eq(memberId),
+                readingRecord.status.eq("ACTIVE"),
+                readingRecord.recordedAt.goe(KstDateTimes.startOfMonth(targetMonth)),
+                readingRecord.recordedAt.lt(KstDateTimes.startOfNextMonth(targetMonth))
+            )
+            .fetchOne();
+        return count != null && count > 0;
+    }
+
+    private boolean hasActionPlan(Long memberId, LocalDate targetMonth) {
+        Long count = queryFactory
+            .select(monthlyActionPlan.count())
+            .from(monthlyActionPlan)
+            .where(
+                monthlyActionPlan.memberId.eq(memberId),
+                monthlyActionPlan.status.eq("ACTIVE"),
+                monthlyActionPlan.targetMonth.eq(targetMonth)
+            )
+            .fetchOne();
+        return count != null && count > 0;
+    }
+
+    private boolean hasManualCompletion(Long memberId, LocalDate targetMonth) {
+        OffsetDateTime manuallyCompletedAt = queryFactory
+            .select(adminNote.manuallyCompletedAt)
+            .from(adminNote)
+            .where(
+                adminNote.memberId.eq(memberId),
+                adminNote.targetMonth.eq(targetMonth),
+                adminNote.manuallyCompletedAt.isNotNull()
+            )
+            .fetchOne();
+        return manuallyCompletedAt != null;
+    }
+
+    private boolean isCalculationTarget(OffsetDateTime onboardingCompletedAt, LocalDate targetMonth) {
+        LocalDate joinedMonth = KstDateTimes.monthOf(onboardingCompletedAt);
+        return !joinedMonth.isAfter(targetMonth);
     }
 
     public record AdminDashboardCounts(

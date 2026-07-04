@@ -9,6 +9,7 @@ public record AdminParticipationMemberView(
     boolean hasActionPlan,
     boolean calculationTarget,
     boolean completed,
+    boolean manuallyCompleted,
     boolean coffeeSupportTarget,
     String coffeeSupportItem,
     String adminMemo

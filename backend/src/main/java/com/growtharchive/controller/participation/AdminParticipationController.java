@@ -10,9 +10,11 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -54,6 +56,26 @@ public class AdminParticipationController {
     ) {
         participationService.saveAdminNote(request, memberId, LocalDate.parse(month + "-01"), body.note());
         return ApiResponse.success(null);
+    }
+
+    @PostMapping("/participation/{month}/members/{memberId}/manual-completion")
+    public ApiResponse<Void> markManualCompletion(
+        HttpServletRequest request,
+        @PathVariable String month,
+        @PathVariable Long memberId
+    ) {
+        participationService.markManualCompletion(request, memberId, LocalDate.parse(month + "-01"));
+        return new ApiResponse<>(true, null, "참여 처리되었습니다.", null);
+    }
+
+    @DeleteMapping("/participation/{month}/members/{memberId}/manual-completion")
+    public ApiResponse<Void> clearManualCompletion(
+        HttpServletRequest request,
+        @PathVariable String month,
+        @PathVariable Long memberId
+    ) {
+        participationService.clearManualCompletion(request, memberId, LocalDate.parse(month + "-01"));
+        return new ApiResponse<>(true, null, "참여 처리가 취소되었습니다.", null);
     }
 
     public record ParticipationNoteRequest(String note) {

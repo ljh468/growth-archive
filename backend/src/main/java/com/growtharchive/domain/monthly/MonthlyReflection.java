@@ -34,4 +34,13 @@ public class MonthlyReflection extends BaseEntity {
 
     protected MonthlyReflection() {
     }
+
+    public MonthlyReflection(Long memberId, LocalDate targetMonth, String wellDone, String regret, String nextFocus) {
+        this.memberId = memberId;
+        this.targetMonth = targetMonth;
+        this.wellDone = wellDone;
+        this.regret = regret;
+        this.nextFocus = nextFocus;
+        this.status = "ACTIVE";
+    }
 }

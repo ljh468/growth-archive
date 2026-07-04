@@ -1,87 +1,92 @@
 package com.growtharchive.repository;
 
+import com.growtharchive.domain.image.QImageAsset;
+import com.growtharchive.domain.meeting.Meeting;
+import com.growtharchive.domain.meeting.MeetingAttendance;
+import com.growtharchive.domain.meeting.QMeeting;
+import com.growtharchive.domain.meeting.QMeetingAttendance;
+import com.growtharchive.domain.member.QMember;
 import com.growtharchive.service.meeting.MeetingAttendee;
 import com.growtharchive.service.meeting.MeetingCommand;
 import com.growtharchive.service.meeting.MeetingDetail;
 import com.growtharchive.service.meeting.MeetingSummary;
-import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class MeetingRepository {
 
-    private final JdbcTemplate jdbcTemplate;
+    private static final QMeeting meeting = QMeeting.meeting;
+    private static final QMeetingAttendance attendance = QMeetingAttendance.meetingAttendance;
+    private static final QImageAsset coverImage = new QImageAsset("coverImage");
+    private static final QImageAsset profileImage = new QImageAsset("profileImage");
+    private static final QMember host = new QMember("host");
+    private static final QMember attendee = new QMember("attendee");
 
-    public MeetingRepository(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    private final JPAQueryFactory queryFactory;
+    private final EntityManager entityManager;
+
+    public MeetingRepository(JPAQueryFactory queryFactory, EntityManager entityManager) {
+        this.queryFactory = queryFactory;
+        this.entityManager = entityManager;
     }
 
     public List<MeetingSummary> findPublic(String type, int limit, int offset) {
-        String typeFilter = type == null || type.isBlank() ? "" : " AND mt.meeting_type = ?";
-        Object[] args = type == null || type.isBlank()
-            ? new Object[] { limit, offset }
-            : new Object[] { type, limit, offset };
-        return jdbcTemplate.query(
-            summarySelect() + " WHERE mt.status IN ('SCHEDULED', 'HELD', 'CANCELED')" + typeFilter
-                + summaryGroupBy()
-                + " ORDER BY CASE WHEN mt.meeting_at >= now() THEN 0 ELSE 1 END, mt.meeting_at ASC LIMIT ? OFFSET ?",
-            (rs, rowNum) -> mapSummary(rs, previewImageUrls(rs.getLong("id"), 5)),
-            args
-        );
+        BooleanBuilder where = publicMeetingWhere(type)
+            .and(meeting.status.in("SCHEDULED", "HELD", "CANCELED"));
+        OrderSpecifier<Integer> upcomingFirst = new CaseBuilder()
+            .when(meeting.meetingAt.goe(OffsetDateTime.now()))
+            .then(0)
+            .otherwise(1)
+            .asc();
+        return findSummaries(where, limit, offset, upcomingFirst, meeting.meetingAt.asc());
     }
 
-    public List<MeetingSummary> findPublicInMonth(String type, OffsetDateTime startAt, OffsetDateTime endAt, boolean descending, int limit, int offset) {
-        String typeFilter = type == null || type.isBlank() ? "" : " AND mt.meeting_type = ?";
-        String orderBy = descending ? " ORDER BY mt.meeting_at DESC LIMIT ? OFFSET ?" : " ORDER BY mt.meeting_at ASC LIMIT ? OFFSET ?";
-        Object[] args = type == null || type.isBlank()
-            ? new Object[] { Timestamp.from(startAt.toInstant()), Timestamp.from(endAt.toInstant()), limit, offset }
-            : new Object[] { Timestamp.from(startAt.toInstant()), Timestamp.from(endAt.toInstant()), type, limit, offset };
-        return jdbcTemplate.query(
-            summarySelect() + """
-                WHERE mt.status IN ('SCHEDULED', 'HELD', 'CANCELED')
-                  AND mt.meeting_at >= ?
-                  AND mt.meeting_at < ?
-                """ + typeFilter
-                + summaryGroupBy()
-                + orderBy,
-            (rs, rowNum) -> mapSummary(rs, previewImageUrls(rs.getLong("id"), 5)),
-            args
-        );
+    public List<MeetingSummary> findPublicInMonth(
+        String type,
+        OffsetDateTime startAt,
+        OffsetDateTime endAt,
+        boolean descending,
+        int limit,
+        int offset
+    ) {
+        BooleanBuilder where = publicMeetingWhere(type)
+            .and(meeting.status.in("SCHEDULED", "HELD", "CANCELED"))
+            .and(meeting.meetingAt.goe(startAt))
+            .and(meeting.meetingAt.lt(endAt));
+        return findSummaries(where, limit, offset, descending ? meeting.meetingAt.desc() : meeting.meetingAt.asc());
     }
 
     public List<MeetingSummary> findAdmin(String type, int limit, int offset) {
-        String typeFilter = type == null || type.isBlank() ? "" : " AND mt.meeting_type = ?";
-        Object[] args = type == null || type.isBlank()
-            ? new Object[] { limit, offset }
-            : new Object[] { type, limit, offset };
-        return jdbcTemplate.query(
-            summarySelect() + " WHERE mt.status <> 'DELETED'" + typeFilter
-                + summaryGroupBy()
-                + " ORDER BY mt.meeting_at DESC LIMIT ? OFFSET ?",
-            (rs, rowNum) -> mapSummary(rs, previewImageUrls(rs.getLong("id"), 5)),
-            args
-        );
+        BooleanBuilder where = publicMeetingWhere(type).and(meeting.status.ne("DELETED"));
+        return findSummaries(where, limit, offset, meeting.meetingAt.desc());
     }
 
     public Optional<MeetingDetail> findById(Long meetingId, boolean publicOnly, Long viewerMemberId) {
-        String visibility = publicOnly ? " AND mt.status IN ('SCHEDULED', 'HELD', 'CANCELED')" : " AND mt.status <> 'DELETED'";
-        return jdbcTemplate.query(
-            detailSelect() + " WHERE mt.id = ?" + visibility + detailGroupBy(),
-            rs -> rs.next()
-                ? Optional.of(mapDetail(rs, viewerMemberId, previewImageUrls(meetingId, 5), List.of()))
-                : Optional.empty(),
-            meetingId
-        );
+        BooleanBuilder where = new BooleanBuilder(meeting.id.eq(meetingId));
+        if (publicOnly) {
+            where.and(meeting.status.in("SCHEDULED", "HELD", "CANCELED"));
+        } else {
+            where.and(meeting.status.ne("DELETED"));
+        }
+        Tuple row = queryFactory
+            .select(detailFields())
+            .from(meeting)
+            .leftJoin(coverImage).on(coverImage.id.eq(meeting.coverImageId))
+            .leftJoin(host).on(host.id.eq(meeting.hostMemberId))
+            .where(where)
+            .fetchOne();
+        return row == null ? Optional.empty() : Optional.of(mapDetail(row, viewerMemberId, List.of()));
     }
 
     public Optional<MeetingDetail> findEditableById(Long meetingId) {
@@ -89,186 +94,178 @@ public class MeetingRepository {
     }
 
     public List<MeetingAttendee> findAttendees(Long meetingId) {
-        return jdbcTemplate.query(
-            """
-                SELECT m.id AS member_id,
-                       CASE WHEN m.display_type = 'REAL_NAME' AND m.real_name IS NOT NULL AND m.real_name <> ''
-                            THEN m.real_name ELSE m.nickname END AS display_name,
-                       coalesce(profile_image.public_url, m.kakao_profile_image_url) AS profile_image_url
-                FROM meeting_attendances ma
-                JOIN members m ON m.id = ma.member_id
-                LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-                WHERE ma.meeting_id = ? AND ma.status = 'JOINED'
-                ORDER BY ma.created_at ASC
-                """,
-            (rs, rowNum) -> new MeetingAttendee(
-                rs.getLong("member_id"),
-                rs.getString("display_name"),
-                rs.getString("profile_image_url"),
-                "/people/" + rs.getLong("member_id")
-            ),
-            meetingId
-        );
+        return queryFactory
+            .select(attendee.id, attendee.displayType, attendee.realName, attendee.nickname, profileImage.publicUrl, attendee.kakaoProfileImageUrl)
+            .from(attendance)
+            .join(attendee).on(attendee.id.eq(attendance.id.memberId))
+            .leftJoin(profileImage).on(profileImage.id.eq(attendee.profileImageId))
+            .where(attendance.id.meetingId.eq(meetingId), attendance.status.eq("JOINED"))
+            .orderBy(attendance.createdAt.asc())
+            .fetch()
+            .stream()
+            .map(row -> new MeetingAttendee(
+                row.get(attendee.id),
+                displayName(row, attendee),
+                coalesce(row.get(profileImage.publicUrl), row.get(attendee.kakaoProfileImageUrl)),
+                "/people/" + row.get(attendee.id)
+            ))
+            .toList();
     }
 
     public List<String> previewImageUrls(Long meetingId, int limit) {
-        return jdbcTemplate.query(
-            """
-                SELECT coalesce(profile_image.public_url, m.kakao_profile_image_url) AS profile_image_url
-                FROM meeting_attendances ma
-                JOIN members m ON m.id = ma.member_id
-                LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-                WHERE ma.meeting_id = ? AND ma.status = 'JOINED'
-                ORDER BY ma.created_at ASC
-                LIMIT ?
-                """,
-            (rs, rowNum) -> rs.getString("profile_image_url"),
-            meetingId,
-            limit
-        );
+        return queryFactory
+            .select(profileImage.publicUrl, attendee.kakaoProfileImageUrl)
+            .from(attendance)
+            .join(attendee).on(attendee.id.eq(attendance.id.memberId))
+            .leftJoin(profileImage).on(profileImage.id.eq(attendee.profileImageId))
+            .where(attendance.id.meetingId.eq(meetingId), attendance.status.eq("JOINED"))
+            .orderBy(attendance.createdAt.asc())
+            .limit(limit)
+            .fetch()
+            .stream()
+            .map(row -> coalesce(row.get(profileImage.publicUrl), row.get(attendee.kakaoProfileImageUrl)))
+            .toList();
     }
 
+    @Transactional
     public Long createSmall(Long memberId, MeetingCommand command) {
-        return jdbcTemplate.queryForObject(
-            """
-                INSERT INTO meetings (
-                    meeting_type, title, description, meeting_at, region_text, detail_address, capacity,
-                    cost_amount, cover_image_id, host_member_id, status, is_auto_generated, created_at, updated_at
-                )
-                VALUES ('SMALL', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SCHEDULED', false, now(), now())
-                RETURNING id
-                """,
-            Long.class,
+        Meeting created = new Meeting(
+            "SMALL",
             command.title(),
             command.description(),
-            Timestamp.from(command.meetingAt().toInstant()),
+            command.meetingAt(),
             command.locationRegion(),
             command.exactLocation(),
             command.capacity(),
             command.feeAmount(),
             command.thumbnailImageId(),
-            memberId
+            memberId,
+            null,
+            false
         );
+        entityManager.persist(created);
+        entityManager.flush();
+        return created.getId();
     }
 
+    @Transactional
     public void updateSmall(Long meetingId, MeetingCommand command) {
-        jdbcTemplate.update(
-            """
-                UPDATE meetings
-                SET title = ?, description = ?, meeting_at = ?, region_text = ?, detail_address = ?,
-                    capacity = ?, cost_amount = ?, cover_image_id = ?, updated_at = now()
-                WHERE id = ? AND meeting_type = 'SMALL' AND status <> 'DELETED'
-                """,
-            command.title(),
-            command.description(),
-            Timestamp.from(command.meetingAt().toInstant()),
-            command.locationRegion(),
-            command.exactLocation(),
-            command.capacity(),
-            command.feeAmount(),
-            command.thumbnailImageId(),
-            meetingId
-        );
+        queryFactory
+            .update(meeting)
+            .set(meeting.title, command.title())
+            .set(meeting.description, command.description())
+            .set(meeting.meetingAt, command.meetingAt())
+            .set(meeting.regionText, command.locationRegion())
+            .set(meeting.detailAddress, command.exactLocation())
+            .set(meeting.capacity, command.capacity())
+            .set(meeting.costAmount, command.feeAmount())
+            .set(meeting.coverImageId, command.thumbnailImageId())
+            .set(meeting.updatedAt, OffsetDateTime.now())
+            .where(meeting.id.eq(meetingId), meeting.meetingType.eq("SMALL"), meeting.status.ne("DELETED"))
+            .execute();
     }
 
+    @Transactional
     public void updateRegular(Long meetingId, MeetingCommand command) {
-        jdbcTemplate.update(
-            """
-                UPDATE meetings
-                SET title = ?, description = ?, meeting_at = ?, region_text = ?, detail_address = ?,
-                    capacity = ?, cost_amount = ?, cover_image_id = ?, status = ?, updated_at = now()
-                WHERE id = ? AND meeting_type IN ('REGULAR_READING', 'REGULAR_ACTION') AND status <> 'DELETED'
-                """,
-            command.title(),
-            command.description(),
-            Timestamp.from(command.meetingAt().toInstant()),
-            command.locationRegion(),
-            command.exactLocation(),
-            command.capacity(),
-            command.feeAmount(),
-            command.thumbnailImageId(),
-            command.status(),
-            meetingId
-        );
+        queryFactory
+            .update(meeting)
+            .set(meeting.title, command.title())
+            .set(meeting.description, command.description())
+            .set(meeting.meetingAt, command.meetingAt())
+            .set(meeting.regionText, command.locationRegion())
+            .set(meeting.detailAddress, command.exactLocation())
+            .set(meeting.capacity, command.capacity())
+            .set(meeting.costAmount, command.feeAmount())
+            .set(meeting.coverImageId, command.thumbnailImageId())
+            .set(meeting.status, command.status())
+            .set(meeting.updatedAt, OffsetDateTime.now())
+            .where(
+                meeting.id.eq(meetingId),
+                meeting.meetingType.in("REGULAR_READING", "REGULAR_ACTION"),
+                meeting.status.ne("DELETED")
+            )
+            .execute();
     }
 
+    @Transactional
     public void hide(Long meetingId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meetings
-                SET status = 'HIDDEN', updated_at = now()
-                WHERE id = ? AND status <> 'DELETED'
-                """,
-            meetingId
-        );
+        queryFactory
+            .update(meeting)
+            .set(meeting.status, "HIDDEN")
+            .set(meeting.updatedAt, OffsetDateTime.now())
+            .where(meeting.id.eq(meetingId), meeting.status.ne("DELETED"))
+            .execute();
     }
 
+    @Transactional
     public void restore(Long meetingId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meetings
-                SET status = 'SCHEDULED', updated_at = now()
-                WHERE id = ? AND status = 'HIDDEN'
-                """,
-            meetingId
-        );
+        queryFactory
+            .update(meeting)
+            .set(meeting.status, "SCHEDULED")
+            .set(meeting.updatedAt, OffsetDateTime.now())
+            .where(meeting.id.eq(meetingId), meeting.status.eq("HIDDEN"))
+            .execute();
     }
 
+    @Transactional
     public void delete(Long meetingId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meetings
-                SET status = 'DELETED', deleted_at = coalesce(deleted_at, now()), updated_at = now()
-                WHERE id = ? AND status <> 'DELETED'
-                """,
-            meetingId
-        );
+        OffsetDateTime now = OffsetDateTime.now();
+        queryFactory
+            .update(meeting)
+            .set(meeting.status, "DELETED")
+            .set(meeting.deletedAt, now)
+            .set(meeting.updatedAt, now)
+            .where(meeting.id.eq(meetingId), meeting.status.ne("DELETED"))
+            .execute();
     }
 
+    @Transactional
     public void join(Long meetingId, Long memberId) {
-        jdbcTemplate.update(
-            """
-                INSERT INTO meeting_attendances (meeting_id, member_id, status, created_at, updated_at)
-                VALUES (?, ?, 'JOINED', now(), now())
-                ON CONFLICT (meeting_id, member_id)
-                DO UPDATE SET status = 'JOINED', updated_at = now()
-                """,
-            meetingId,
-            memberId
-        );
+        if (attendanceExists(meetingId, memberId)) {
+            queryFactory
+                .update(attendance)
+                .set(attendance.status, "JOINED")
+                .set(attendance.updatedAt, OffsetDateTime.now())
+                .where(attendance.id.meetingId.eq(meetingId), attendance.id.memberId.eq(memberId))
+                .execute();
+            return;
+        }
+        entityManager.persist(new MeetingAttendance(meetingId, memberId));
     }
 
+    @Transactional
     public void cancel(Long meetingId, Long memberId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meeting_attendances
-                SET status = 'CANCELED', updated_at = now()
-                WHERE meeting_id = ? AND member_id = ?
-                """,
-            meetingId,
-            memberId
-        );
+        queryFactory
+            .update(attendance)
+            .set(attendance.status, "CANCELED")
+            .set(attendance.updatedAt, OffsetDateTime.now())
+            .where(attendance.id.meetingId.eq(meetingId), attendance.id.memberId.eq(memberId))
+            .execute();
     }
 
     public boolean isJoined(Long meetingId, Long memberId) {
-        Integer count = jdbcTemplate.queryForObject(
-            "SELECT count(*) FROM meeting_attendances WHERE meeting_id = ? AND member_id = ? AND status = 'JOINED'",
-            Integer.class,
-            meetingId,
-            memberId
-        );
+        Long count = queryFactory
+            .select(attendance.count())
+            .from(attendance)
+            .where(
+                attendance.id.meetingId.eq(meetingId),
+                attendance.id.memberId.eq(memberId),
+                attendance.status.eq("JOINED")
+            )
+            .fetchOne();
         return count != null && count > 0;
     }
 
     public int joinedCount(Long meetingId) {
-        Integer count = jdbcTemplate.queryForObject(
-            "SELECT count(*) FROM meeting_attendances WHERE meeting_id = ? AND status = 'JOINED'",
-            Integer.class,
-            meetingId
-        );
-        return count == null ? 0 : count;
+        Long count = queryFactory
+            .select(attendance.count())
+            .from(attendance)
+            .where(attendance.id.meetingId.eq(meetingId), attendance.status.eq("JOINED"))
+            .fetchOne();
+        return count == null ? 0 : count.intValue();
     }
 
+    @Transactional
     public boolean createRegularIfMissing(
         String meetingType,
         String title,
@@ -277,137 +274,156 @@ public class MeetingRepository {
         String description,
         LocalDate targetMonth
     ) {
-        try {
-            Integer inserted = jdbcTemplate.queryForObject(
-                """
-                    INSERT INTO meetings (
-                        meeting_type, title, description, meeting_at, region_text, detail_address,
-                        capacity, cost_amount, status, target_month, is_auto_generated, created_at, updated_at
-                    )
-                    SELECT ?, ?, ?, ?, ?, null, null, 0, 'SCHEDULED', ?, true, now(), now()
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM meetings
-                        WHERE meeting_type = ? AND target_month = ? AND status <> 'DELETED'
-                    )
-                    RETURNING 1
-                    """,
-                Integer.class,
-                meetingType,
-                title,
-                description,
-                Timestamp.from(meetingAt.toInstant()),
-                regionText,
-                Date.valueOf(targetMonth),
-                meetingType,
-                Date.valueOf(targetMonth)
-            );
-            return inserted != null && inserted == 1;
-        } catch (EmptyResultDataAccessException exception) {
-            return false;
-        } catch (DuplicateKeyException exception) {
+        Long existing = queryFactory
+            .select(meeting.count())
+            .from(meeting)
+            .where(meeting.meetingType.eq(meetingType), meeting.targetMonth.eq(targetMonth), meeting.status.ne("DELETED"))
+            .fetchOne();
+        if (existing != null && existing > 0) {
             return false;
         }
+        entityManager.persist(new Meeting(
+            meetingType,
+            title,
+            description,
+            meetingAt,
+            regionText,
+            null,
+            null,
+            0,
+            null,
+            null,
+            targetMonth,
+            true
+        ));
+        return true;
     }
 
-    private String summarySelect() {
-        return """
-            SELECT mt.id, mt.meeting_type, mt.title, mt.description, mt.meeting_at, mt.region_text,
-                   mt.capacity, mt.cost_amount, mt.status, cover.public_url AS cover_image_url,
-                   count(ma.member_id) FILTER (WHERE ma.status = 'JOINED') AS attendee_count
-            FROM meetings mt
-            LEFT JOIN meeting_attendances ma ON ma.meeting_id = mt.id
-            LEFT JOIN image_assets cover ON cover.id = mt.cover_image_id
-            """;
+    private List<MeetingSummary> findSummaries(BooleanBuilder where, int limit, int offset, OrderSpecifier<?>... orderSpecifiers) {
+        return queryFactory
+            .select(summaryFields())
+            .from(meeting)
+            .leftJoin(coverImage).on(coverImage.id.eq(meeting.coverImageId))
+            .where(where)
+            .orderBy(orderSpecifiers)
+            .limit(limit)
+            .offset(offset)
+            .fetch()
+            .stream()
+            .map(this::mapSummary)
+            .toList();
     }
 
-    private String summaryGroupBy() {
-        return """
-            GROUP BY mt.id, mt.meeting_type, mt.title, mt.description, mt.meeting_at, mt.region_text,
-                     mt.capacity, mt.cost_amount, mt.status, cover.public_url
-            """;
+    private BooleanBuilder publicMeetingWhere(String type) {
+        BooleanBuilder where = new BooleanBuilder();
+        if (type != null && !type.isBlank()) {
+            where.and(meeting.meetingType.eq(type));
+        }
+        return where;
     }
 
-    private String detailSelect() {
-        return """
-            SELECT mt.id, mt.meeting_type, mt.title, mt.description, mt.meeting_at, mt.region_text,
-                   mt.detail_address, mt.capacity, mt.cost_amount, mt.cover_image_id, cover.public_url AS cover_image_url,
-                   mt.host_member_id,
-                   CASE WHEN host.display_type = 'REAL_NAME' AND host.real_name IS NOT NULL AND host.real_name <> ''
-                        THEN host.real_name ELSE host.nickname END AS host_display_name,
-                   mt.status, mt.target_month, mt.is_auto_generated,
-                   count(ma.member_id) FILTER (WHERE ma.status = 'JOINED') AS attendee_count
-            FROM meetings mt
-            LEFT JOIN meeting_attendances ma ON ma.meeting_id = mt.id
-            LEFT JOIN image_assets cover ON cover.id = mt.cover_image_id
-            LEFT JOIN members host ON host.id = mt.host_member_id
-            """;
+    private com.querydsl.core.types.Expression<?>[] summaryFields() {
+        return new com.querydsl.core.types.Expression<?>[] {
+            meeting.id,
+            meeting.meetingType,
+            meeting.title,
+            meeting.description,
+            meeting.meetingAt,
+            meeting.regionText,
+            meeting.capacity,
+            meeting.costAmount,
+            meeting.status,
+            coverImage.publicUrl
+        };
     }
 
-    private String detailGroupBy() {
-        return """
-            GROUP BY mt.id, mt.meeting_type, mt.title, mt.description, mt.meeting_at, mt.region_text,
-                     mt.detail_address, mt.capacity, mt.cost_amount, mt.cover_image_id, cover.public_url,
-                     mt.host_member_id, host.display_type, host.real_name, host.nickname,
-                     mt.status, mt.target_month, mt.is_auto_generated
-            """;
+    private com.querydsl.core.types.Expression<?>[] detailFields() {
+        return new com.querydsl.core.types.Expression<?>[] {
+            meeting.id,
+            meeting.meetingType,
+            meeting.title,
+            meeting.description,
+            meeting.meetingAt,
+            meeting.regionText,
+            meeting.detailAddress,
+            meeting.capacity,
+            meeting.costAmount,
+            meeting.coverImageId,
+            coverImage.publicUrl,
+            meeting.hostMemberId,
+            host.displayType,
+            host.realName,
+            host.nickname,
+            meeting.status,
+            meeting.targetMonth,
+            meeting.autoGenerated
+        };
     }
 
-    private MeetingSummary mapSummary(ResultSet rs, List<String> previewImageUrls) throws SQLException {
+    private MeetingSummary mapSummary(Tuple row) {
+        Long meetingId = row.get(meeting.id);
         return new MeetingSummary(
-            rs.getLong("id"),
-            rs.getString("meeting_type"),
-            rs.getString("title"),
-            rs.getString("description"),
-            rs.getObject("meeting_at", OffsetDateTime.class),
-            rs.getString("region_text"),
-            readNullableInteger(rs, "capacity"),
-            rs.getInt("cost_amount"),
-            rs.getString("cover_image_url"),
-            rs.getString("status"),
-            rs.getInt("attendee_count"),
-            previewImageUrls
+            meetingId,
+            row.get(meeting.meetingType),
+            row.get(meeting.title),
+            row.get(meeting.description),
+            row.get(meeting.meetingAt),
+            row.get(meeting.regionText),
+            row.get(meeting.capacity),
+            row.get(meeting.costAmount),
+            row.get(coverImage.publicUrl),
+            row.get(meeting.status),
+            joinedCount(meetingId),
+            previewImageUrls(meetingId, 5)
         );
     }
 
-    private MeetingDetail mapDetail(
-        ResultSet rs,
-        Long viewerMemberId,
-        List<String> previewImageUrls,
-        List<MeetingAttendee> attendees
-    ) throws SQLException {
-        Long hostMemberId = readNullableLong(rs, "host_member_id");
+    private MeetingDetail mapDetail(Tuple row, Long viewerMemberId, List<MeetingAttendee> attendees) {
+        Long meetingId = row.get(meeting.id);
+        Long hostMemberId = row.get(meeting.hostMemberId);
         return new MeetingDetail(
-            rs.getLong("id"),
-            rs.getString("meeting_type"),
-            rs.getString("title"),
-            rs.getString("description"),
-            rs.getObject("meeting_at", OffsetDateTime.class),
-            rs.getString("region_text"),
-            rs.getString("detail_address"),
-            readNullableInteger(rs, "capacity"),
-            rs.getInt("cost_amount"),
-            rs.getString("cover_image_url"),
-            readNullableLong(rs, "cover_image_id"),
+            meetingId,
+            row.get(meeting.meetingType),
+            row.get(meeting.title),
+            row.get(meeting.description),
+            row.get(meeting.meetingAt),
+            row.get(meeting.regionText),
+            row.get(meeting.detailAddress),
+            row.get(meeting.capacity),
+            row.get(meeting.costAmount),
+            row.get(coverImage.publicUrl),
+            row.get(meeting.coverImageId),
             hostMemberId,
-            rs.getString("host_display_name"),
-            rs.getString("status"),
-            rs.getObject("target_month", LocalDate.class),
-            rs.getBoolean("is_auto_generated"),
-            rs.getInt("attendee_count"),
-            viewerMemberId != null && isJoined(rs.getLong("id"), viewerMemberId),
+            displayName(row, host),
+            row.get(meeting.status),
+            row.get(meeting.targetMonth),
+            Boolean.TRUE.equals(row.get(meeting.autoGenerated)),
+            joinedCount(meetingId),
+            viewerMemberId != null && isJoined(meetingId, viewerMemberId),
             hostMemberId != null && hostMemberId.equals(viewerMemberId),
-            previewImageUrls,
+            previewImageUrls(meetingId, 5),
             attendees
         );
     }
 
-    private Integer readNullableInteger(ResultSet rs, String column) throws SQLException {
-        int value = rs.getInt(column);
-        return rs.wasNull() ? null : value;
+    private boolean attendanceExists(Long meetingId, Long memberId) {
+        Long count = queryFactory
+            .select(attendance.count())
+            .from(attendance)
+            .where(attendance.id.meetingId.eq(meetingId), attendance.id.memberId.eq(memberId))
+            .fetchOne();
+        return count != null && count > 0;
     }
 
-    private Long readNullableLong(ResultSet rs, String column) throws SQLException {
-        long value = rs.getLong(column);
-        return rs.wasNull() ? null : value;
+    private String displayName(Tuple row, QMember memberAlias) {
+        String realName = row.get(memberAlias.realName);
+        String nickname = row.get(memberAlias.nickname);
+        return "REAL_NAME".equals(row.get(memberAlias.displayType)) && realName != null && !realName.isBlank()
+            ? realName
+            : nickname;
+    }
+
+    private String coalesce(String first, String second) {
+        return first == null || first.isBlank() ? second : first;
     }
 }

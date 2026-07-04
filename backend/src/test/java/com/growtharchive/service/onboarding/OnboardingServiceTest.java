@@ -1,6 +1,7 @@
 package com.growtharchive.service.onboarding;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.growtharchive.config.properties.AppProperties;
 import com.growtharchive.exception.ApiException;
@@ -28,6 +29,7 @@ class OnboardingServiceTest {
         "카카오 사용자",
         "https://profile.example/image.png",
         false,
+        null,
         false,
         false
     );
@@ -38,6 +40,7 @@ class OnboardingServiceTest {
         "카카오 사용자",
         "https://profile.example/image.png",
         true,
+        "MEMBER",
         true,
         true
     );
@@ -66,7 +69,7 @@ class OnboardingServiceTest {
     @Test
     void rejectsInvalidInviteCode() {
         mockSignup(SIGNUP_TOKEN);
-        Mockito.when(inviteCodeRepository.findActiveHash()).thenReturn(Optional.of(codeHashService.hashInviteCode("right-code")));
+        Mockito.when(inviteCodeRepository.findActiveRoleByHash(codeHashService.hashInviteCode("wrong-code"))).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.verifyInviteCode(null, Mockito.mock(HttpServletResponse.class), "wrong-code"))
             .isInstanceOf(ApiException.class);
@@ -156,7 +159,7 @@ class OnboardingServiceTest {
             Mockito.eq("꾸준히 읽고 실행합니다."),
             Mockito.eq("REAL_NAME"),
             Mockito.eq("김민준"),
-            Mockito.isNull(),
+            Mockito.eq(LocalDate.of(1990, 1, 1)),
             Mockito.isNull(),
             Mockito.eq("https://profile.example/image.png"),
             Mockito.eq("오래 지속하는 사람"),
@@ -171,7 +174,7 @@ class OnboardingServiceTest {
             "꾸준히 읽고 실행합니다.",
             null,
             "김민준",
-            null,
+            LocalDate.of(1990, 1, 1),
             null,
             List.of(1L),
             "오래 지속하는 사람",
@@ -180,6 +183,98 @@ class OnboardingServiceTest {
             null
         ));
 
+        Mockito.verify(authCookieService).addAuthCookies(response, "auth-token", "auth-token");
+    }
+
+    @Test
+    void rejectsProfileWithoutBirthDate() {
+        mockSignup(READY_SIGNUP_TOKEN);
+        Mockito.when(oauthAccountRepository.findMemberId("KAKAO", "kakao-123")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.completeProfile(null, Mockito.mock(HttpServletResponse.class), new OnboardingService.CompleteProfileCommand(
+            "민준",
+            "꾸준히 읽고 실행합니다.",
+            "NICKNAME",
+            "김민준",
+            null,
+            null,
+            List.of(1L),
+            "오래 지속하는 사람",
+            null,
+            null,
+            null
+        ))).isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void prefillWithdrawnMemberProfileDraftButClearsRealNameAndBirthDate() {
+        mockSignup(READY_SIGNUP_TOKEN);
+        Mockito.when(oauthAccountRepository.findMemberId("KAKAO", "kakao-123")).thenReturn(Optional.of(7L));
+        Mockito.when(memberRepository.isWithdrawn(7L)).thenReturn(true);
+        Mockito.when(memberRepository.findWithdrawnOnboardingDraft(7L)).thenReturn(Optional.of(new MemberRepository.OnboardingDraftRow(
+            "민준",
+            "꾸준히 읽고 실행합니다.",
+            "NICKNAME",
+            "오래 지속하는 사람",
+            "함께 성장",
+            "꾸준함",
+            "좋은 제품",
+            List.of(1L, 3L)
+        )));
+
+        OnboardingService.ProfileDraft draft = service.getProfileDraft(null);
+
+        assertThat(draft.nickname()).isEqualTo("민준");
+        assertThat(draft.oneLineIntro()).isEqualTo("꾸준히 읽고 실행합니다.");
+        assertThat(draft.displayNameType()).isEqualTo("NICKNAME");
+        assertThat(draft.realName()).isNull();
+        assertThat(draft.birthDate()).isNull();
+        assertThat(draft.profileImageId()).isNull();
+        assertThat(draft.futureMeAt50()).isEqualTo("오래 지속하는 사람");
+        assertThat(draft.interestTagIds()).containsExactly(1L, 3L);
+    }
+
+    @Test
+    void rejoiningWithdrawnMemberCanReuseOwnNickname() {
+        HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+        mockSignup(READY_SIGNUP_TOKEN);
+        Mockito.when(oauthAccountRepository.findMemberId("KAKAO", "kakao-123")).thenReturn(Optional.of(7L));
+        Mockito.when(memberRepository.isWithdrawn(7L)).thenReturn(true);
+        Mockito.when(memberRepository.existsNicknameForOtherMember("민준", 7L)).thenReturn(false);
+        Mockito.when(interestTagRepository.countActiveIds(List.of(1L))).thenReturn(1);
+        Mockito.when(imageAssetRepository.isUnownedImage(null, "PROFILE")).thenReturn(true);
+        Mockito.when(jwtService.issue(Mockito.eq(7L), Mockito.any())).thenReturn("auth-token");
+
+        service.completeProfile(null, response, new OnboardingService.CompleteProfileCommand(
+            "민준",
+            "꾸준히 읽고 실행합니다.",
+            "NICKNAME",
+            "김민준",
+            LocalDate.of(1990, 1, 1),
+            null,
+            List.of(1L),
+            "오래 지속하는 사람",
+            "함께 성장",
+            "꾸준함",
+            "좋은 제품"
+        ));
+
+        Mockito.verify(memberRepository, Mockito.never()).existsNickname("민준");
+        Mockito.verify(memberRepository).reactivateWithdrawnMember(
+            Mockito.eq(7L),
+            Mockito.eq("MEMBER"),
+            Mockito.eq("민준"),
+            Mockito.eq("꾸준히 읽고 실행합니다."),
+            Mockito.eq("NICKNAME"),
+            Mockito.eq("김민준"),
+            Mockito.eq(LocalDate.of(1990, 1, 1)),
+            Mockito.isNull(),
+            Mockito.eq("https://profile.example/image.png"),
+            Mockito.eq("오래 지속하는 사람"),
+            Mockito.eq("함께 성장"),
+            Mockito.eq("꾸준함"),
+            Mockito.eq("좋은 제품")
+        );
         Mockito.verify(authCookieService).addAuthCookies(response, "auth-token", "auth-token");
     }
 

@@ -1,156 +1,185 @@
 package com.growtharchive.repository;
 
+import com.growtharchive.domain.activity.ActivityEvent;
+import com.growtharchive.domain.image.ImageAsset;
+import com.growtharchive.domain.image.QImageAsset;
+import com.growtharchive.domain.meeting.MeetingReview;
+import com.growtharchive.domain.meeting.MeetingReviewImage;
+import com.growtharchive.domain.meeting.QMeeting;
+import com.growtharchive.domain.meeting.QMeetingReview;
+import com.growtharchive.domain.meeting.QMeetingReviewImage;
+import com.growtharchive.domain.member.QMember;
 import com.growtharchive.service.review.MeetingReviewDetail;
 import com.growtharchive.service.review.MeetingReviewSummary;
 import com.growtharchive.service.review.ReviewImageView;
 import com.growtharchive.service.storage.StoredImage;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.Tuple;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class MeetingReviewRepository {
 
-    private final JdbcTemplate jdbcTemplate;
+    private static final QMeetingReview review = QMeetingReview.meetingReview;
+    private static final QMeeting meeting = QMeeting.meeting;
+    private static final QMember member = QMember.member;
+    private static final QImageAsset profileImage = new QImageAsset("profileImage");
+    private static final QImageAsset representativeImage = new QImageAsset("representativeImage");
+    private static final QImageAsset reviewImageAsset = new QImageAsset("reviewImageAsset");
+    private static final QMeetingReviewImage reviewImage = QMeetingReviewImage.meetingReviewImage;
 
-    public MeetingReviewRepository(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    private final JPAQueryFactory queryFactory;
+    private final EntityManager entityManager;
+
+    public MeetingReviewRepository(JPAQueryFactory queryFactory, EntityManager entityManager) {
+        this.queryFactory = queryFactory;
+        this.entityManager = entityManager;
     }
 
     public List<MeetingReviewSummary> findPublic(Long meetingId, int limit, int offset) {
-        StringBuilder sql = new StringBuilder(summarySelect()).append(" WHERE mr.status = 'ACTIVE'");
-        List<Object> args = new ArrayList<>();
+        BooleanBuilder where = new BooleanBuilder(review.status.eq("ACTIVE"));
         if (meetingId != null) {
-            sql.append(" AND mr.meeting_id = ?");
-            args.add(meetingId);
+            where.and(review.meetingId.eq(meetingId));
         }
-        sql.append(" ORDER BY mr.created_at DESC LIMIT ? OFFSET ?");
-        args.add(limit);
-        args.add(offset);
-        return jdbcTemplate.query(sql.toString(), (rs, rowNum) -> mapSummary(rs), args.toArray());
+        return queryFactory
+            .select(summaryFields())
+            .from(review)
+            .join(meeting).on(meeting.id.eq(review.meetingId))
+            .join(member).on(member.id.eq(review.memberId))
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .leftJoin(representativeImage).on(representativeImage.id.eq(review.representativeImageId))
+            .where(where)
+            .orderBy(review.createdAt.desc())
+            .limit(limit)
+            .offset(offset)
+            .fetch()
+            .stream()
+            .map(this::mapSummary)
+            .toList();
     }
 
     public List<MeetingReviewSummary> findAdmin(int limit, int offset) {
-        return jdbcTemplate.query(
-            summarySelect() + " WHERE mr.status <> 'DELETED' ORDER BY mr.created_at DESC LIMIT ? OFFSET ?",
-            (rs, rowNum) -> mapSummary(rs),
-            limit,
-            offset
-        );
+        return queryFactory
+            .select(summaryFields())
+            .from(review)
+            .join(meeting).on(meeting.id.eq(review.meetingId))
+            .join(member).on(member.id.eq(review.memberId))
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .leftJoin(representativeImage).on(representativeImage.id.eq(review.representativeImageId))
+            .where(review.status.ne("DELETED"))
+            .orderBy(review.createdAt.desc())
+            .limit(limit)
+            .offset(offset)
+            .fetch()
+            .stream()
+            .map(this::mapSummary)
+            .toList();
     }
 
     public Optional<MeetingReviewDetail> findById(Long reviewId, boolean publicOnly, Long viewerMemberId) {
-        String visibility = publicOnly ? " AND mr.status = 'ACTIVE'" : " AND mr.status <> 'DELETED'";
-        return jdbcTemplate.query(
-            detailSelect() + " WHERE mr.id = ?" + visibility,
-            rs -> rs.next() ? Optional.of(mapDetail(rs, viewerMemberId, findImages(reviewId))) : Optional.empty(),
-            reviewId
-        );
+        BooleanBuilder where = new BooleanBuilder(review.id.eq(reviewId));
+        where.and(publicOnly ? review.status.eq("ACTIVE") : review.status.ne("DELETED"));
+        Tuple row = queryFactory
+            .select(detailFields())
+            .from(review)
+            .join(meeting).on(meeting.id.eq(review.meetingId))
+            .join(member).on(member.id.eq(review.memberId))
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .where(where)
+            .fetchOne();
+        return row == null ? Optional.empty() : Optional.of(mapDetail(row, viewerMemberId, findImages(reviewId)));
     }
 
+    @Transactional
     public Long create(Long memberId, Long meetingId, String title, String content, Long representativeImageId) {
-        return jdbcTemplate.queryForObject(
-            """
-                INSERT INTO meeting_reviews (
-                    meeting_id, member_id, title, content, representative_image_id, status, created_at, updated_at
-                )
-                VALUES (?, ?, ?, ?, ?, 'ACTIVE', now(), now())
-                RETURNING id
-                """,
-            Long.class,
-            meetingId,
-            memberId,
-            title,
-            content,
-            representativeImageId
-        );
+        MeetingReview created = new MeetingReview(meetingId, memberId, title, content, representativeImageId);
+        entityManager.persist(created);
+        entityManager.flush();
+        return created.getId();
     }
 
+    @Transactional
     public void update(Long reviewId, String title, String content, Long representativeImageId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meeting_reviews
-                SET title = ?, content = ?, representative_image_id = ?, updated_at = now()
-                WHERE id = ? AND status <> 'DELETED'
-                """,
-            title,
-            content,
-            representativeImageId,
-            reviewId
-        );
+        queryFactory
+            .update(review)
+            .set(review.title, title)
+            .set(review.content, content)
+            .set(review.representativeImageId, representativeImageId)
+            .set(review.updatedAt, OffsetDateTime.now())
+            .where(review.id.eq(reviewId), review.status.ne("DELETED"))
+            .execute();
     }
 
+    @Transactional
     public void replaceImages(Long reviewId, List<Long> imageIds) {
-        jdbcTemplate.update("DELETE FROM meeting_review_images WHERE meeting_review_id = ?", reviewId);
+        queryFactory
+            .delete(reviewImage)
+            .where(reviewImage.meetingReviewId.eq(reviewId))
+            .execute();
         for (int i = 0; i < imageIds.size(); i++) {
-            jdbcTemplate.update(
-                """
-                    INSERT INTO meeting_review_images (meeting_review_id, image_asset_id, display_order, created_at)
-                    VALUES (?, ?, ?, now())
-                    """,
-                reviewId,
-                imageIds.get(i),
-                i + 1
-            );
+            entityManager.persist(new MeetingReviewImage(reviewId, imageIds.get(i), i + 1));
         }
     }
 
+    @Transactional
     public void deleteByAuthor(Long reviewId, Long memberId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meeting_reviews
-                SET status = 'DELETED', deleted_at = coalesce(deleted_at, now()), updated_at = now()
-                WHERE id = ? AND member_id = ? AND status <> 'DELETED'
-                """,
-            reviewId,
-            memberId
-        );
+        OffsetDateTime now = OffsetDateTime.now();
+        queryFactory
+            .update(review)
+            .set(review.status, "DELETED")
+            .set(review.deletedAt, now)
+            .set(review.updatedAt, now)
+            .where(review.id.eq(reviewId), review.memberId.eq(memberId), review.status.ne("DELETED"))
+            .execute();
     }
 
+    @Transactional
     public void hide(Long reviewId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meeting_reviews
-                SET status = 'HIDDEN', hidden_at = coalesce(hidden_at, now()), updated_at = now()
-                WHERE id = ? AND status <> 'DELETED'
-                """,
-            reviewId
-        );
+        OffsetDateTime now = OffsetDateTime.now();
+        queryFactory
+            .update(review)
+            .set(review.status, "HIDDEN")
+            .set(review.hiddenAt, now)
+            .set(review.updatedAt, now)
+            .where(review.id.eq(reviewId), review.status.ne("DELETED"))
+            .execute();
     }
 
+    @Transactional
     public void restore(Long reviewId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meeting_reviews
-                SET status = 'ACTIVE', hidden_at = null, updated_at = now()
-                WHERE id = ? AND status = 'HIDDEN'
-                """,
-            reviewId
-        );
+        queryFactory
+            .update(review)
+            .set(review.status, "ACTIVE")
+            .setNull(review.hiddenAt)
+            .set(review.updatedAt, OffsetDateTime.now())
+            .where(review.id.eq(reviewId), review.status.eq("HIDDEN"))
+            .execute();
     }
 
+    @Transactional
     public void deleteByAdmin(Long reviewId) {
-        jdbcTemplate.update(
-            """
-                UPDATE meeting_reviews
-                SET status = 'DELETED', deleted_at = coalesce(deleted_at, now()), updated_at = now()
-                WHERE id = ? AND status <> 'DELETED'
-                """,
-            reviewId
-        );
+        OffsetDateTime now = OffsetDateTime.now();
+        queryFactory
+            .update(review)
+            .set(review.status, "DELETED")
+            .set(review.deletedAt, now)
+            .set(review.updatedAt, now)
+            .where(review.id.eq(reviewId), review.status.ne("DELETED"))
+            .execute();
     }
 
     public boolean meetingCanReceiveReview(Long meetingId) {
-        Integer count = jdbcTemplate.queryForObject(
-            "SELECT count(*) FROM meetings WHERE id = ? AND status IN ('SCHEDULED', 'HELD')",
-            Integer.class,
-            meetingId
-        );
+        Long count = queryFactory
+            .select(meeting.count())
+            .from(meeting)
+            .where(meeting.id.eq(meetingId), meeting.status.in("SCHEDULED", "HELD"))
+            .fetchOne();
         return count != null && count > 0;
     }
 
@@ -158,136 +187,154 @@ public class MeetingReviewRepository {
         if (imageIds.isEmpty()) {
             return 0;
         }
-        String placeholders = String.join(",", imageIds.stream().map(id -> "?").toList());
-        List<Object> args = new ArrayList<>();
-        args.add(memberId);
-        args.addAll(imageIds);
-        Integer count = jdbcTemplate.queryForObject(
-            """
-                SELECT count(*)
-                FROM image_assets
-                WHERE owner_member_id = ? AND image_type = 'MEETING_REVIEW' AND id IN (%s)
-                """.formatted(placeholders),
-            Integer.class,
-            args.toArray()
-        );
-        return count == null ? 0 : count;
+        Long count = queryFactory
+            .select(reviewImageAsset.count())
+            .from(reviewImageAsset)
+            .where(
+                reviewImageAsset.ownerMemberId.eq(memberId),
+                reviewImageAsset.imageType.eq("MEETING_REVIEW"),
+                reviewImageAsset.id.in(imageIds)
+            )
+            .fetchOne();
+        return count == null ? 0 : count.intValue();
     }
 
+    @Transactional
     public Long createImageAsset(Long memberId, StoredImage image) {
-        return jdbcTemplate.queryForObject(
-            """
-                INSERT INTO image_assets (
-                    owner_member_id, bucket, object_key, public_url, image_type, mime_type, size_bytes, created_at
-                )
-                VALUES (?, ?, ?, ?, 'MEETING_REVIEW', ?, ?, now())
-                RETURNING id
-                """,
-            Long.class,
+        ImageAsset created = new ImageAsset(
             memberId,
             image.bucket(),
             image.objectKey(),
             image.publicUrl(),
+            "MEETING_REVIEW",
             image.mimeType(),
+            null,
+            null,
             image.sizeBytes()
         );
+        entityManager.persist(created);
+        entityManager.flush();
+        return created.getId();
     }
 
+    @Transactional
     public void insertActivityEvent(Long memberId, Long reviewId, String title) {
-        jdbcTemplate.update(
-            """
-                INSERT INTO activity_events (
-                    member_id, event_type, reference_type, reference_id, visibility, summary, happened_at, created_at
-                )
-                VALUES (?, 'MEETING_REVIEW_CREATED', 'MEETING_REVIEW', ?, 'PUBLIC', ?, now(), now())
-                """,
+        entityManager.persist(new ActivityEvent(
             memberId,
+            "MEETING_REVIEW_CREATED",
+            "MEETING_REVIEW",
             reviewId,
+            "PUBLIC",
             title
-        );
+        ));
     }
 
     public List<ReviewImageView> findImages(Long reviewId) {
-        return jdbcTemplate.query(
-            """
-                SELECT mri.image_asset_id, ia.public_url, mri.display_order
-                FROM meeting_review_images mri
-                JOIN image_assets ia ON ia.id = mri.image_asset_id
-                WHERE mri.meeting_review_id = ?
-                ORDER BY mri.display_order ASC
-                """,
-            (rs, rowNum) -> new ReviewImageView(
-                rs.getLong("image_asset_id"),
-                rs.getString("public_url"),
-                rs.getInt("display_order")
-            ),
-            reviewId
-        );
+        return queryFactory
+            .select(reviewImage.imageAssetId, reviewImageAsset.publicUrl, reviewImage.displayOrder)
+            .from(reviewImage)
+            .join(reviewImageAsset).on(reviewImageAsset.id.eq(reviewImage.imageAssetId))
+            .where(reviewImage.meetingReviewId.eq(reviewId))
+            .orderBy(reviewImage.displayOrder.asc())
+            .fetch()
+            .stream()
+            .map(row -> new ReviewImageView(
+                row.get(reviewImage.imageAssetId),
+                row.get(reviewImageAsset.publicUrl),
+                row.get(reviewImage.displayOrder)
+            ))
+            .toList();
     }
 
-    private String summarySelect() {
-        return """
-            SELECT mr.id, mr.meeting_id, mt.title AS meeting_title, mr.member_id,
-                   CASE WHEN m.display_type = 'REAL_NAME' AND m.real_name IS NOT NULL AND m.real_name <> ''
-                        THEN m.real_name ELSE m.nickname END AS member_display_name,
-                   coalesce(profile_image.public_url, m.kakao_profile_image_url) AS member_profile_image_url,
-                   mr.title, left(mr.content, 120) AS content_summary,
-                   representative.public_url AS representative_image_url,
-                   mr.status, mr.created_at
-            FROM meeting_reviews mr
-            JOIN meetings mt ON mt.id = mr.meeting_id
-            JOIN members m ON m.id = mr.member_id
-            LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-            LEFT JOIN image_assets representative ON representative.id = mr.representative_image_id
-            """;
+    private com.querydsl.core.types.Expression<?>[] summaryFields() {
+        return new com.querydsl.core.types.Expression<?>[] {
+            review.id,
+            review.meetingId,
+            meeting.title,
+            review.memberId,
+            member.displayType,
+            member.realName,
+            member.nickname,
+            profileImage.publicUrl,
+            member.kakaoProfileImageUrl,
+            review.title,
+            review.content,
+            representativeImage.publicUrl,
+            review.status,
+            review.createdAt
+        };
     }
 
-    private String detailSelect() {
-        return """
-            SELECT mr.id, mr.meeting_id, mt.title AS meeting_title, mr.member_id,
-                   CASE WHEN m.display_type = 'REAL_NAME' AND m.real_name IS NOT NULL AND m.real_name <> ''
-                        THEN m.real_name ELSE m.nickname END AS member_display_name,
-                   coalesce(profile_image.public_url, m.kakao_profile_image_url) AS member_profile_image_url,
-                   mr.title, mr.content, mr.status, mr.created_at, mr.updated_at
-            FROM meeting_reviews mr
-            JOIN meetings mt ON mt.id = mr.meeting_id
-            JOIN members m ON m.id = mr.member_id
-            LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-            """;
+    private com.querydsl.core.types.Expression<?>[] detailFields() {
+        return new com.querydsl.core.types.Expression<?>[] {
+            review.id,
+            review.meetingId,
+            meeting.title,
+            review.memberId,
+            member.displayType,
+            member.realName,
+            member.nickname,
+            profileImage.publicUrl,
+            member.kakaoProfileImageUrl,
+            review.title,
+            review.content,
+            review.status,
+            review.createdAt,
+            review.updatedAt
+        };
     }
 
-    private MeetingReviewSummary mapSummary(ResultSet rs) throws SQLException {
+    private MeetingReviewSummary mapSummary(Tuple row) {
         return new MeetingReviewSummary(
-            rs.getLong("id"),
-            rs.getLong("meeting_id"),
-            rs.getString("meeting_title"),
-            rs.getLong("member_id"),
-            rs.getString("member_display_name"),
-            rs.getString("member_profile_image_url"),
-            rs.getString("title"),
-            rs.getString("content_summary"),
-            rs.getString("representative_image_url"),
-            rs.getString("status"),
-            rs.getObject("created_at", OffsetDateTime.class)
+            row.get(review.id),
+            row.get(review.meetingId),
+            row.get(meeting.title),
+            row.get(review.memberId),
+            displayName(row),
+            coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)),
+            row.get(review.title),
+            contentSummary(row.get(review.content)),
+            row.get(representativeImage.publicUrl),
+            row.get(review.status),
+            row.get(review.createdAt)
         );
     }
 
-    private MeetingReviewDetail mapDetail(ResultSet rs, Long viewerMemberId, List<ReviewImageView> images) throws SQLException {
-        Long memberId = rs.getLong("member_id");
+    private MeetingReviewDetail mapDetail(Tuple row, Long viewerMemberId, List<ReviewImageView> images) {
+        Long memberId = row.get(review.memberId);
         return new MeetingReviewDetail(
-            rs.getLong("id"),
-            rs.getLong("meeting_id"),
-            rs.getString("meeting_title"),
+            row.get(review.id),
+            row.get(review.meetingId),
+            row.get(meeting.title),
             memberId,
-            rs.getString("member_display_name"),
-            rs.getString("member_profile_image_url"),
-            rs.getString("title"),
-            rs.getString("content"),
-            rs.getString("status"),
-            rs.getObject("created_at", OffsetDateTime.class),
-            rs.getObject("updated_at", OffsetDateTime.class),
+            displayName(row),
+            coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)),
+            row.get(review.title),
+            row.get(review.content),
+            row.get(review.status),
+            row.get(review.createdAt),
+            row.get(review.updatedAt),
             viewerMemberId != null && memberId.equals(viewerMemberId),
             images
         );
+    }
+
+    private String displayName(Tuple row) {
+        String realName = row.get(member.realName);
+        String nickname = row.get(member.nickname);
+        return "REAL_NAME".equals(row.get(member.displayType)) && realName != null && !realName.isBlank()
+            ? realName
+            : nickname;
+    }
+
+    private String contentSummary(String content) {
+        if (content == null || content.length() <= 120) {
+            return content;
+        }
+        return content.substring(0, 120);
+    }
+
+    private String coalesce(String first, String second) {
+        return first == null || first.isBlank() ? second : first;
     }
 }

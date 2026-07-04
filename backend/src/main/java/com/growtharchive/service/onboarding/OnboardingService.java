@@ -11,6 +11,7 @@ import com.growtharchive.repository.OauthAccountRepository;
 import com.growtharchive.security.AuthCookieService;
 import com.growtharchive.security.JwtService;
 import com.growtharchive.service.auth.CodeHashService;
+import com.growtharchive.support.KstDateTimes;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.LocalDate;
@@ -58,11 +59,8 @@ public class OnboardingService {
 
     public void verifyInviteCode(HttpServletRequest request, HttpServletResponse response, String code) {
         JwtService.SignupToken signupToken = requireSignup(request);
-        String activeHash = inviteCodeRepository.findActiveHash()
+        String inviteRole = inviteCodeRepository.findActiveRoleByHash(codeHashService.hashInviteCode(code))
             .orElseThrow(() -> new ApiException(ErrorCode.INVALID_INVITE_CODE, "현재 사용할 수 없는 초대코드입니다. 운영진에게 문의해 주세요."));
-        if (!activeHash.equals(codeHashService.hashInviteCode(code))) {
-            throw new ApiException(ErrorCode.INVALID_INVITE_CODE);
-        }
         rewriteSignupToken(response, new JwtService.SignupToken(
             signupToken.provider(),
             signupToken.providerUserId(),
@@ -70,6 +68,7 @@ public class OnboardingService {
             signupToken.nickname(),
             signupToken.profileImageUrl(),
             true,
+            inviteRole,
             signupToken.termsAgreed(),
             signupToken.privacyAgreed()
         ));
@@ -90,9 +89,36 @@ public class OnboardingService {
             signupToken.nickname(),
             signupToken.profileImageUrl(),
             true,
+            signupToken.inviteRole(),
             true,
             true
         ));
+    }
+
+    public ProfileDraft getProfileDraft(HttpServletRequest request) {
+        JwtService.SignupToken signupToken = requireSignup(request);
+        if (!signupToken.inviteVerified() || !signupToken.termsAgreed() || !signupToken.privacyAgreed()) {
+            throw new ApiException(ErrorCode.TERMS_NOT_AGREED);
+        }
+        Optional<Long> existingMemberId = oauthAccountRepository.findMemberId(PROVIDER_KAKAO, signupToken.providerUserId());
+        if (existingMemberId.isPresent() && memberRepository.isWithdrawn(existingMemberId.get())) {
+            return memberRepository.findWithdrawnOnboardingDraft(existingMemberId.get())
+                .map(row -> new ProfileDraft(
+                    row.nickname(),
+                    row.oneLineIntro(),
+                    normalizeDisplayNameType(row.displayNameType()),
+                    null,
+                    null,
+                    null,
+                    row.futureMeAt50(),
+                    row.joinReason(),
+                    row.currentConcern(),
+                    row.threeYearGoal(),
+                    row.interestTagIds()
+                ))
+                .orElseGet(() -> emptyProfileDraft(signupToken));
+        }
+        return emptyProfileDraft(signupToken);
     }
 
     @Transactional
@@ -102,17 +128,23 @@ public class OnboardingService {
             throw new ApiException(ErrorCode.TERMS_NOT_AGREED);
         }
         Optional<Long> existingMemberId = oauthAccountRepository.findMemberId(PROVIDER_KAKAO, signupToken.providerUserId());
-        if (existingMemberId.isPresent()) {
+        if (existingMemberId.isPresent() && !memberRepository.isWithdrawn(existingMemberId.get())) {
             issueAuthCookies(existingMemberId.get(), response);
             authCookieService.clearSignupCookie(response);
             return;
         }
         String nickname = command.nickname().trim();
-        if (memberRepository.existsNickname(nickname)) {
+        boolean nicknameTaken = existingMemberId
+            .map(memberId -> memberRepository.existsNicknameForOtherMember(nickname, memberId))
+            .orElseGet(() -> memberRepository.existsNickname(nickname));
+        if (nicknameTaken) {
             throw new ApiException(ErrorCode.DUPLICATE_NICKNAME);
         }
         if (isBlank(command.realName())) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "실명을 입력해 주세요.");
+        }
+        if (command.birthDate() == null) {
+            throw new ApiException(ErrorCode.VALIDATION_ERROR, "생년월일을 입력해 주세요.");
         }
         String displayNameType = normalizeDisplayNameType(command.displayNameType());
         if (command.interestTagIds() == null || command.interestTagIds().isEmpty()) {
@@ -124,26 +156,47 @@ public class OnboardingService {
         if (interestTagRepository.countActiveIds(command.interestTagIds()) != command.interestTagIds().size()) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "선택할 수 없는 관심 분야가 포함되어 있습니다.");
         }
-        if (command.birthDate() != null && command.birthDate().isAfter(LocalDate.now())) {
+        if (command.birthDate().isAfter(KstDateTimes.today())) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "생년월일을 다시 확인해 주세요.");
         }
         if (!imageAssetRepository.isUnownedImage(command.profileImageId(), "PROFILE")) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "사용할 수 없는 프로필 이미지입니다.");
         }
-        Long memberId = memberRepository.createOnboardedMember(
-            properties.getKakao().getInitialAdminProviderIds().contains(signupToken.providerUserId()) ? "ADMIN" : "MEMBER",
-            nickname,
-            command.oneLineIntro().trim(),
-            displayNameType,
-            command.realName().trim(),
-            command.birthDate(),
-            command.profileImageId(),
-            signupToken.profileImageUrl(),
-            command.futureMeAt50().trim(),
-            trimToNull(command.joinReason()),
-            trimToNull(command.currentConcern()),
-            trimToNull(command.threeYearGoal())
-        );
+        String role = normalizeInviteRole(signupToken.inviteRole());
+        Long memberId;
+        if (existingMemberId.isPresent()) {
+            memberId = existingMemberId.get();
+            memberRepository.reactivateWithdrawnMember(
+                memberId,
+                role,
+                nickname,
+                command.oneLineIntro().trim(),
+                displayNameType,
+                command.realName().trim(),
+                command.birthDate(),
+                command.profileImageId(),
+                signupToken.profileImageUrl(),
+                command.futureMeAt50().trim(),
+                trimToNull(command.joinReason()),
+                trimToNull(command.currentConcern()),
+                trimToNull(command.threeYearGoal())
+            );
+        } else {
+            memberId = memberRepository.createOnboardedMember(
+                role,
+                nickname,
+                command.oneLineIntro().trim(),
+                displayNameType,
+                command.realName().trim(),
+                command.birthDate(),
+                command.profileImageId(),
+                signupToken.profileImageUrl(),
+                command.futureMeAt50().trim(),
+                trimToNull(command.joinReason()),
+                trimToNull(command.currentConcern()),
+                trimToNull(command.threeYearGoal())
+            );
+        }
         imageAssetRepository.assignOwner(command.profileImageId(), memberId);
         interestTagRepository.replaceMemberTags(memberId, command.interestTagIds());
         oauthAccountRepository.upsert(
@@ -193,6 +246,10 @@ public class OnboardingService {
         return value.trim();
     }
 
+    private String normalizeInviteRole(String role) {
+        return "ADMIN".equals(role) ? "ADMIN" : "MEMBER";
+    }
+
     private String normalizeDisplayNameType(String displayNameType) {
         if (displayNameType == null || displayNameType.isBlank()) {
             return "REAL_NAME";
@@ -202,6 +259,22 @@ public class OnboardingService {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "공개 표시 방식을 선택해 주세요.");
         }
         return normalized;
+    }
+
+    private ProfileDraft emptyProfileDraft(JwtService.SignupToken signupToken) {
+        return new ProfileDraft(
+            signupToken.nickname(),
+            "",
+            "REAL_NAME",
+            null,
+            null,
+            null,
+            "",
+            null,
+            null,
+            null,
+            List.of()
+        );
     }
 
     public record CompleteProfileCommand(
@@ -216,6 +289,21 @@ public class OnboardingService {
         String joinReason,
         String currentConcern,
         String threeYearGoal
+    ) {
+    }
+
+    public record ProfileDraft(
+        String nickname,
+        String oneLineIntro,
+        String displayNameType,
+        String realName,
+        LocalDate birthDate,
+        Long profileImageId,
+        String futureMeAt50,
+        String joinReason,
+        String currentConcern,
+        String threeYearGoal,
+        List<Long> interestTagIds
     ) {
     }
 }

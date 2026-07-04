@@ -3,6 +3,7 @@ package com.growtharchive.service.admin;
 import com.growtharchive.repository.AdminDashboardRepository;
 import com.growtharchive.security.AccessLevel;
 import com.growtharchive.security.CurrentMemberResolver;
+import com.growtharchive.support.KstDateTimes;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class AdminDashboardService {
 
     public AdminDashboardView getDashboard(HttpServletRequest request) {
         currentMemberResolver.require(request, AccessLevel.ADMIN);
-        LocalDate targetMonth = LocalDate.now().withDayOfMonth(1);
+        LocalDate targetMonth = KstDateTimes.currentMonth();
         AdminDashboardRepository.AdminDashboardCounts counts = adminDashboardRepository.counts(targetMonth);
         long incompleteCount = Math.max(0, counts.participationTargetCount() - counts.participationCompletedCount());
         return new AdminDashboardView(

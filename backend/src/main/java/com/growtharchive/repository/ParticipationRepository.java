@@ -1,103 +1,144 @@
 package com.growtharchive.repository;
 
+import com.growtharchive.domain.admin.ParticipationAdminNote;
+import com.growtharchive.domain.admin.QParticipationAdminNote;
+import com.growtharchive.domain.image.QImageAsset;
+import com.growtharchive.domain.member.QMember;
+import com.growtharchive.domain.monthly.QMonthlyActionPlan;
+import com.growtharchive.domain.reading.QReadingRecord;
 import com.growtharchive.service.participation.AdminParticipationMemberView;
 import com.growtharchive.service.participation.ParticipationStatusView;
-import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import com.growtharchive.support.KstDateTimes;
+import com.querydsl.core.Tuple;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class ParticipationRepository {
 
     public static final String COFFEE_SUPPORT_ITEM = "투썸 아메리카노 1잔";
 
-    private final JdbcTemplate jdbcTemplate;
+    private static final QMember member = QMember.member;
+    private static final QImageAsset profileImage = new QImageAsset("profileImage");
+    private static final QReadingRecord readingRecord = QReadingRecord.readingRecord;
+    private static final QMonthlyActionPlan actionPlan = QMonthlyActionPlan.monthlyActionPlan;
+    private static final QParticipationAdminNote adminNote = QParticipationAdminNote.participationAdminNote;
 
-    public ParticipationRepository(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    private final JPAQueryFactory queryFactory;
+    private final EntityManager entityManager;
+
+    public ParticipationRepository(JPAQueryFactory queryFactory, EntityManager entityManager) {
+        this.queryFactory = queryFactory;
+        this.entityManager = entityManager;
     }
 
     public ParticipationStatusView getMemberStatus(Long memberId, LocalDate targetMonth) {
-        LocalDate nextMonth = targetMonth.plusMonths(1);
-        return jdbcTemplate.queryForObject(
-            """
-                SELECT m.participation_start_month <= ? AS calculation_target,
-                       (SELECT count(*) FROM reading_records rr
-                        WHERE rr.member_id = m.id AND rr.status = 'ACTIVE'
-                          AND rr.recorded_at >= ? AND rr.recorded_at < ?) AS reading_record_count,
-                       (SELECT count(*) FROM monthly_action_plans map
-                        WHERE map.member_id = m.id AND map.status = 'ACTIVE'
-                          AND map.target_month = ?) AS action_plan_count
-                FROM members m
-                WHERE m.id = ? AND m.deactivated_at IS NULL
-                """,
-            (rs, rowNum) -> mapStatus(targetMonth, rs),
-            Date.valueOf(targetMonth),
-            Date.valueOf(targetMonth),
-            Date.valueOf(nextMonth),
-            Date.valueOf(targetMonth),
-            memberId
-        );
+        Tuple row = queryFactory
+            .select(member.id, member.onboardingCompletedAt)
+            .from(member)
+            .where(member.id.eq(memberId), member.deactivatedAt.isNull())
+            .fetchOne();
+        if (row == null) {
+            return null;
+        }
+        long readingRecordCount = readingRecordCount(memberId, targetMonth);
+        long actionPlanCount = actionPlanCount(memberId, targetMonth);
+        boolean calculationTarget = isCalculationTarget(row.get(member.onboardingCompletedAt), targetMonth);
+        boolean manuallyCompleted = hasManualCompletion(memberId, targetMonth);
+        return toStatus(targetMonth, readingRecordCount, actionPlanCount, calculationTarget, manuallyCompleted);
     }
 
     public List<AdminParticipationMemberView> getAdminMembers(LocalDate targetMonth) {
-        LocalDate nextMonth = targetMonth.plusMonths(1);
-        return jdbcTemplate.query(
-            """
-                SELECT m.id, m.display_type, m.real_name, m.nickname,
-                       coalesce(profile_image.public_url, m.kakao_profile_image_url) AS profile_image_url,
-                       m.participation_start_month <= ? AS calculation_target,
-                       (SELECT count(*) FROM reading_records rr
-                        WHERE rr.member_id = m.id AND rr.status = 'ACTIVE'
-                          AND rr.recorded_at >= ? AND rr.recorded_at < ?) AS reading_record_count,
-                       EXISTS (
-                         SELECT 1 FROM monthly_action_plans map
-                         WHERE map.member_id = m.id AND map.status = 'ACTIVE' AND map.target_month = ?
-                       ) AS has_action_plan,
-                       pan.note AS admin_memo
-                FROM members m
-                LEFT JOIN image_assets profile_image ON profile_image.id = m.profile_image_id
-                LEFT JOIN participation_admin_notes pan ON pan.member_id = m.id AND pan.target_month = ?
-                WHERE m.onboarding_completed_at IS NOT NULL AND m.deactivated_at IS NULL
-                ORDER BY m.participation_start_month ASC, m.id ASC
-                """,
-            (rs, rowNum) -> mapAdminMember(rs),
-            Date.valueOf(targetMonth),
-            Date.valueOf(targetMonth),
-            Date.valueOf(nextMonth),
-            Date.valueOf(targetMonth),
-            Date.valueOf(targetMonth)
-        );
+        return queryFactory
+            .select(
+                member.id,
+                member.displayType,
+                member.realName,
+                member.nickname,
+                profileImage.publicUrl,
+                member.kakaoProfileImageUrl,
+                member.onboardingCompletedAt,
+                adminNote.manuallyCompletedAt,
+                adminNote.note
+            )
+            .from(member)
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .leftJoin(adminNote).on(adminNote.memberId.eq(member.id), adminNote.targetMonth.eq(targetMonth))
+            .where(member.onboardingCompletedAt.isNotNull(), member.deactivatedAt.isNull())
+            .orderBy(member.onboardingCompletedAt.asc(), member.id.asc())
+            .fetch()
+            .stream()
+            .map(row -> toAdminMember(row, targetMonth))
+            .toList();
     }
 
+    @Transactional
     public void saveNote(Long adminMemberId, Long memberId, LocalDate targetMonth, String note) {
-        jdbcTemplate.update(
-            """
-                INSERT INTO participation_admin_notes (
-                    member_id, target_month, note, created_by_member_id, created_at, updated_at
-                )
-                VALUES (?, ?, ?, ?, now(), now())
-                ON CONFLICT (member_id, target_month)
-                DO UPDATE SET note = excluded.note,
-                              created_by_member_id = excluded.created_by_member_id,
-                              updated_at = now()
-                """,
-            memberId,
-            Date.valueOf(targetMonth),
-            note,
-            adminMemberId
-        );
+        Long existingId = queryFactory
+            .select(adminNote.id)
+            .from(adminNote)
+            .where(adminNote.memberId.eq(memberId), adminNote.targetMonth.eq(targetMonth))
+            .fetchOne();
+        if (existingId == null) {
+            entityManager.persist(new ParticipationAdminNote(memberId, targetMonth, note, adminMemberId));
+            return;
+        }
+        queryFactory
+            .update(adminNote)
+            .set(adminNote.note, note)
+            .set(adminNote.createdByMemberId, adminMemberId)
+            .set(adminNote.updatedAt, OffsetDateTime.now())
+            .where(adminNote.id.eq(existingId))
+            .execute();
     }
 
-    private ParticipationStatusView mapStatus(LocalDate targetMonth, ResultSet rs) throws SQLException {
-        long readingRecordCount = rs.getLong("reading_record_count");
-        long actionPlanCount = rs.getLong("action_plan_count");
-        boolean calculationTarget = rs.getBoolean("calculation_target");
-        boolean completed = calculationTarget && (readingRecordCount > 0 || actionPlanCount > 0);
+    @Transactional
+    public void markManualCompletion(Long adminMemberId, Long memberId, LocalDate targetMonth) {
+        Long existingId = queryFactory
+            .select(adminNote.id)
+            .from(adminNote)
+            .where(adminNote.memberId.eq(memberId), adminNote.targetMonth.eq(targetMonth))
+            .fetchOne();
+        OffsetDateTime now = OffsetDateTime.now(KstDateTimes.KST);
+        if (existingId == null) {
+            ParticipationAdminNote created = new ParticipationAdminNote(memberId, targetMonth, "", adminMemberId);
+            created.markManuallyCompleted(adminMemberId, now);
+            entityManager.persist(created);
+            return;
+        }
+        queryFactory
+            .update(adminNote)
+            .set(adminNote.manuallyCompletedAt, now)
+            .set(adminNote.manuallyCompletedByMemberId, adminMemberId)
+            .set(adminNote.updatedAt, now)
+            .where(adminNote.id.eq(existingId))
+            .execute();
+    }
+
+    @Transactional
+    public void clearManualCompletion(Long memberId, LocalDate targetMonth) {
+        queryFactory
+            .update(adminNote)
+            .setNull(adminNote.manuallyCompletedAt)
+            .setNull(adminNote.manuallyCompletedByMemberId)
+            .set(adminNote.updatedAt, OffsetDateTime.now(KstDateTimes.KST))
+            .where(adminNote.memberId.eq(memberId), adminNote.targetMonth.eq(targetMonth))
+            .execute();
+    }
+
+    private ParticipationStatusView toStatus(
+        LocalDate targetMonth,
+        long readingRecordCount,
+        long actionPlanCount,
+        boolean calculationTarget,
+        boolean manuallyCompleted
+    ) {
+        boolean completed = calculationTarget && (readingRecordCount > 0 || actionPlanCount > 0 || manuallyCompleted);
         return new ParticipationStatusView(
             targetMonth.toString().substring(0, 7),
             readingRecordCount,
@@ -109,30 +150,84 @@ public class ParticipationRepository {
         );
     }
 
-    private AdminParticipationMemberView mapAdminMember(ResultSet rs) throws SQLException {
-        long readingRecordCount = rs.getLong("reading_record_count");
-        boolean hasActionPlan = rs.getBoolean("has_action_plan");
-        boolean calculationTarget = rs.getBoolean("calculation_target");
-        boolean completed = calculationTarget && (readingRecordCount > 0 || hasActionPlan);
+    private AdminParticipationMemberView toAdminMember(Tuple row, LocalDate targetMonth) {
+        Long memberId = row.get(member.id);
+        long readingRecordCount = readingRecordCount(memberId, targetMonth);
+        boolean hasActionPlan = actionPlanCount(memberId, targetMonth) > 0;
+        boolean calculationTarget = isCalculationTarget(row.get(member.onboardingCompletedAt), targetMonth);
+        boolean manuallyCompleted = row.get(adminNote.manuallyCompletedAt) != null;
+        boolean completed = calculationTarget && (readingRecordCount > 0 || hasActionPlan || manuallyCompleted);
+        String profileImageUrl = row.get(profileImage.publicUrl) == null
+            ? row.get(member.kakaoProfileImageUrl)
+            : row.get(profileImage.publicUrl);
         return new AdminParticipationMemberView(
-            rs.getLong("id"),
-            displayName(rs),
-            rs.getString("nickname"),
-            rs.getString("profile_image_url"),
+            memberId,
+            displayName(row),
+            row.get(member.nickname),
+            profileImageUrl,
             readingRecordCount,
             hasActionPlan,
             calculationTarget,
             completed,
+            manuallyCompleted,
             calculationTarget && !completed,
             COFFEE_SUPPORT_ITEM,
-            rs.getString("admin_memo")
+            row.get(adminNote.note)
         );
     }
 
-    private String displayName(ResultSet rs) throws SQLException {
-        String realName = rs.getString("real_name");
-        return "REAL_NAME".equals(rs.getString("display_type")) && realName != null && !realName.isBlank()
+    private long readingRecordCount(Long memberId, LocalDate targetMonth) {
+        Long count = queryFactory
+            .select(readingRecord.count())
+            .from(readingRecord)
+            .where(
+                readingRecord.memberId.eq(memberId),
+                readingRecord.status.eq("ACTIVE"),
+                readingRecord.recordedAt.goe(KstDateTimes.startOfMonth(targetMonth)),
+                readingRecord.recordedAt.lt(KstDateTimes.startOfNextMonth(targetMonth))
+            )
+            .fetchOne();
+        return count == null ? 0 : count;
+    }
+
+    private long actionPlanCount(Long memberId, LocalDate targetMonth) {
+        Long count = queryFactory
+            .select(actionPlan.count())
+            .from(actionPlan)
+            .where(
+                actionPlan.memberId.eq(memberId),
+                actionPlan.status.eq("ACTIVE"),
+                actionPlan.targetMonth.eq(targetMonth)
+            )
+            .fetchOne();
+        return count == null ? 0 : count;
+    }
+
+    private String displayName(Tuple row) {
+        String realName = row.get(member.realName);
+        return realName != null && !realName.isBlank()
             ? realName
-            : rs.getString("nickname");
+            : row.get(member.nickname);
+    }
+
+    private boolean hasManualCompletion(Long memberId, LocalDate targetMonth) {
+        OffsetDateTime manuallyCompletedAt = queryFactory
+            .select(adminNote.manuallyCompletedAt)
+            .from(adminNote)
+            .where(
+                adminNote.memberId.eq(memberId),
+                adminNote.targetMonth.eq(targetMonth),
+                adminNote.manuallyCompletedAt.isNotNull()
+            )
+            .fetchOne();
+        return manuallyCompletedAt != null;
+    }
+
+    private boolean isCalculationTarget(OffsetDateTime onboardingCompletedAt, LocalDate targetMonth) {
+        if (onboardingCompletedAt == null) {
+            return false;
+        }
+        LocalDate joinedMonth = KstDateTimes.monthOf(onboardingCompletedAt);
+        return !joinedMonth.isAfter(targetMonth);
     }
 }
