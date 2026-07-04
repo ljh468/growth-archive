@@ -1,7 +1,7 @@
 # OPS-003 Render + Vercel 배포 가이드
 
-상태: DRAFT
-최종 수정일: 2026-07-04
+상태: IMPLEMENTATION_ALIGNED
+최종 수정일: 2026-07-05
 범위: Render Free 백엔드, Vercel 프론트엔드, Supabase DB/Storage 배포
 
 ---
@@ -143,6 +143,15 @@ Render 배포 후 아래 URL이 응답해야 한다.
 https://growth-archive-api.onrender.com/api/v1/health
 ```
 
+Storage public base URL 기준:
+
+```text
+권장값: https://{project-ref}.supabase.co/storage/v1/object/public
+허용값: https://{project-ref}.supabase.co/storage/v1/object/public/images
+```
+
+현재 `SupabaseStorageService`는 public base URL이 bucket(`images`)을 이미 포함하면 object key만 뒤에 붙이고, 포함하지 않으면 bucket과 object key를 함께 붙인다. 따라서 두 값 모두 동작하지만 운영 문서와 환경변수는 권장값으로 통일한다.
+
 ---
 
 ## 5. Vercel 프론트엔드 설정
@@ -193,6 +202,14 @@ https://growth-archive.vercel.app
 Redirect URI:
 https://growth-archive.vercel.app/api/v1/auth/kakao/callback
 ```
+
+로컬 테스트를 병행할 때는 Redirect URI에 아래 값도 추가할 수 있다.
+
+```text
+http://localhost:8080/api/v1/auth/kakao/callback
+```
+
+Render 직접 콜백인 `https://growth-archive-api.onrender.com/api/v1/auth/kakao/callback`은 백엔드 도메인 쿠키로 동작할 수 있으므로, 현재 Vercel 프록시 배포에서는 기본값으로 사용하지 않는다.
 
 Vercel URL이 다르면 `Web platform domain`도 실제 Vercel URL로 맞춘다.
 

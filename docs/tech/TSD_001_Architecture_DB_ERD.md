@@ -76,7 +76,7 @@ DB 마이그레이션은 되돌리기 어렵기 때문에 신중하게 작성한
 | Migration | Flyway | SQL 기반 마이그레이션. Runtime ORM schema validation은 사용하지 않는다. |
 | Storage | Supabase Storage → Self-hosted disk-backed storage | MVP/dev는 Supabase Storage, 최종 개인 서버 디스크 기반 저장소로 전환 가능 |
 | Scheduler | Spring Scheduler | 정기모임 자동 생성, 향후 책 검증 스케줄러 |
-| Deployment | Docker Compose local + local desktop/DuckDNS dev + AWS EC2 fallback + Kubernetes-ready future | local은 Docker Compose, dev는 비용 최소화를 위해 로컬 데스크톱 서버와 DuckDNS 우선, EC2는 보조안, 향후 Kubernetes-ready |
+| Deployment | Docker Compose local + Vercel frontend + Render backend + Supabase DB/Storage + Kubernetes-ready future | local은 Docker Compose, 현재 dev 배포는 Vercel/Render 무료 플랜, 향후 AWS EC2 또는 개인 서버 Kubernetes/k3s로 이전 가능 |
 | Observability | Spring Actuator + structured logging | `/actuator/health`, container health check 제공 |
 
 ### 2.2 External Integrations
@@ -200,22 +200,27 @@ Backend container connects to PostgreSQL through postgres:5432 inside the Compos
 
 Codex 구현 시에는 `frontend`, `backend`, `postgres` 컨테이너 실행이 가능해야 하며, DB 연결 정보는 환경변수로 주입한다.
 
-### 3.6 Production Deployment Direction
+### 3.6 Current Dev Deployment Direction
 
-배포 비용을 아끼기 위해 dev 서버는 우선 로컬 데스크톱 서버 + Docker Compose + Caddy + DuckDNS 구조로 운영한다. 집 네트워크 인바운드가 막히거나 상시 운영이 어렵다면 AWS EC2 Free Tier eligible 인스턴스를 보조안으로 검토한다.
+현재 dev 배포 기준은 무료 플랜을 우선 사용한다. 프론트엔드는 Vercel, 백엔드는 Render Free Web Service, DB/Storage는 Supabase를 사용한다.
 
 Dev deployment direction:
 
 ```text
-- Frontend: Docker container on local desktop server
-- Backend: Docker container on local desktop server
+- Frontend: Vercel, https://growth-archive.vercel.app
+- Backend: Render Free Web Service, https://growth-archive-api.onrender.com
 - DB: Supabase PostgreSQL
 - Image/upload storage: Supabase Storage
-- Domain: DuckDNS free domain first
-- Fallback: AWS EC2 Docker container only when local inbound operation is not practical
+- Frontend browser API base: /api/v1
+- Vercel rewrite target: Render backend /api/v1
+- Kakao redirect URI 권장값: https://growth-archive.vercel.app/api/v1/auth/kakao/callback
 
 Frontend and backend build/deploy pipelines must be separable.
 ```
+
+Render Free는 비활성 상태에서 sleep 될 수 있으므로 초기 요청 지연이 발생할 수 있다. 주기적 health check는 임시 완화책이며, 장기 운영은 유료 인스턴스 또는 자체 서버로 이전한다.
+
+DuckDNS + 로컬 데스크톱 서버, AWS EC2 Docker 구조는 현재 기본 배포안이 아니라 후속 이전/대안으로 OPS-002에서 관리한다.
 
 배포 확장 기준은 Kubernetes-ready다.
 
@@ -504,7 +509,7 @@ src/
 | `meeting_attendances` | 모임 참석 |
 | `meeting_reviews` | 모임 후기 |
 | `meeting_review_images` | 후기 사진 |
-| `recommended_books` | 이달의 추천책 |
+| `recommended_books` | 추천책 |
 | `activity_events` | 최근 성장 기록 피드 |
 | `image_assets` | 업로드 이미지 |
 | `participation_admin_notes` | 월별 참여 현황 운영 메모 |
@@ -823,7 +828,7 @@ CREATE INDEX idx_books_status ON books (status);
 | `id` | BIGINT GENERATED IDENTITY | N | |
 | `member_id` | BIGINT | N | 작성자 |
 | `book_id` | BIGINT | N | |
-| `rating` | SMALLINT | Y | 1~5 정수, 선택 입력 |
+| `rating` | SMALLINT | Y | 1~5 정수. DB는 이관/기존 데이터 호환을 위해 nullable이나, 현재 create/update API는 필수로 검증 |
 | `one_line_review` | VARCHAR(300) | N | |
 | `blog_url` | TEXT | N | Guest 공개 |
 | `representative_image_id` | BIGINT | Y | 책 표지/인증 사진 둘 다 가능 |
@@ -1096,16 +1101,16 @@ Rules:
 
 ### 8.15 `recommended_books`
 
-이달의 추천책.
+추천책.
 
 | Column | Type | Null | Notes |
 |---|---|---:|---|
 | `id` | BIGINT GENERATED IDENTITY | N | |
 | `book_id` | BIGINT | N | |
-| `target_month` | DATE | N | 해당 월의 1일 |
+| `target_month` | DATE | N | 해당 월의 1일. 현재 공개 조회 필터에는 사용하지 않고 운영 기록/향후 월별 큐레이션 확장용으로 유지 |
 | `reason` | TEXT | N | 추천 이유 |
 | `recommended_by_member_id` | BIGINT | Y | Admin |
-| `display_order` | INT | N | 1~5 |
+| `display_order` | INT | N | 노출 순서. 현재 DB 제약은 1~5 |
 | `status` | VARCHAR(30) | N | `ACTIVE`, `HIDDEN`, `DELETED` |
 | `created_at` | TIMESTAMPTZ | N | |
 | `updated_at` | TIMESTAMPTZ | N | |
@@ -1113,9 +1118,11 @@ Rules:
 Rules:
 
 ```text
-월별 3~5권 권장.
-1~2권이면 등록된 만큼 노출 가능.
+공개 화면은 `ACTIVE` 상태 추천책 전체를 `display_order ASC, id ASC`로 노출한다.
+1권 이상이면 등록된 만큼 노출 가능.
 0권이면 섹션 숨김 또는 준비 중 표시.
+Admin 화면에서는 월별 조회도 가능하지만 공개 디스플레이는 월별 필터를 적용하지 않는다.
+현재 스키마는 `target_month`와 `display_order`를 유지하므로, 운영진은 공개 화면에 남길 추천책만 ACTIVE로 두고 이전 추천책은 HIDDEN 처리한다.
 ```
 
 Indexes:
@@ -1548,7 +1555,7 @@ Generate public or signed URL depending image type.
 관심 분야 태그 관리
 추천책 관리
 참여 현황 전체 조회
-미참여자 CSV 다운로드
+참여 현황 CSV export
 콘텐츠 숨김/삭제
 운영 메모
 ```
@@ -1624,7 +1631,10 @@ Recommended structure:
 ```text
 backend/src/main/resources/db/migration/
 ├─ V1__init_schema.sql
-└─ V2__seed_interest_tags.sql
+├─ V2__seed_interest_tags.sql
+├─ V4__add_my_archive_list_indexes.sql
+├─ V5__harden_supabase_public_schema.sql
+└─ V6__expand_invite_code_display.sql
 
 backend/src/main/resources/db/demo/
 └─ V3__seed_demo_growth_archive_data.sql
@@ -1663,7 +1673,14 @@ Demo cleanup:
 ```text
 cleanup_demo_growth_archive_data.sql is a manual script under `db/manual`.
 It is outside Flyway locations and must not run automatically.
-It truncates dev business data, preserves flyway_schema_history and interest_tags, and recreates default dev invite codes, baseline books, and current-month recommended books.
+It truncates dev business data, preserves flyway_schema_history and interest_tags, and recreates default dev invite codes, baseline books, and recommended books.
+```
+
+Supabase public schema hardening:
+
+```text
+V5__harden_supabase_public_schema.sql enables RLS on application tables in public schema and adjusts v_monthly_participation to avoid SECURITY DEFINER warnings.
+The application still accesses DB through the backend service account/JDBC connection. Frontend never talks to PostgREST or Supabase DB directly.
 ```
 
 Caution:
@@ -1822,7 +1839,7 @@ job is not collected in MVP onboarding/profile; legacy/import values must remain
 fifty_year_old_me length 1~1000
 join_reason/current_concern/three_year_goal length <= 1000 when provided
 blog_url format
-rating range 1~5 or null
+rating range 1~5, required for reading record create/update
 meeting capacity positive
 review image count <= 10
 target_month normalized to first day

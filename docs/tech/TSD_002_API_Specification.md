@@ -203,21 +203,26 @@ Soft delete된 데이터는 기본 목록, 통계, 참여 현황 계산에서 �
 
 ### 1.7 Kakao OAuth Redirect URL
 
-도메인 비용을 아끼기 위해 dev 환경은 유료 도메인 없이 EC2 public host/IP를 먼저 사용할 수 있다.
-도메인을 쓰지 않는 경우에도 Kakao Developers에는 실제 접근 가능한 Redirect URI를 정확히 등록해야 한다.
+현재 dev 배포는 Vercel 프론트엔드와 Render 백엔드를 사용한다.
+Kakao Developers에는 실제 접근 가능한 Redirect URI를 정확히 등록해야 한다.
 
 ```text
 Local:
 http://localhost:8080/api/v1/auth/kakao/callback
 
-Dev:
-http://{EC2_PUBLIC_HOST_OR_IP}:8080/api/v1/auth/kakao/callback
+Current dev via Vercel proxy:
+https://growth-archive.vercel.app/api/v1/auth/kakao/callback
+
+Backend direct callback, only when intentionally using backend domain cookies:
+https://growth-archive-api.onrender.com/api/v1/auth/kakao/callback
 
 Production:
-https://{PRODUCTION_API_HOST}/api/v1/auth/kakao/callback
+https://{FRONTEND_HOST}/api/v1/auth/kakao/callback
 ```
 
-HTTPS와 도메인을 붙이면 `KAKAO_REDIRECT_URI`, `FRONTEND_BASE_URL`, `CORS_ALLOWED_ORIGINS`를 함께 갱신한다.
+현재 Vercel 배포는 브라우저 API base를 `/api/v1`로 두고 Next.js rewrite로 Render 백엔드에 전달한다. HttpOnly cookie를 프론트 도메인 기준으로 안정적으로 유지하려면 Kakao Redirect URI도 Vercel proxy URL을 우선 사용한다. 백엔드 직접 콜백을 사용할 경우 쿠키 도메인과 이후 API 호출 경로를 함께 검토해야 한다.
+
+HTTPS와 도메인을 붙이면 `KAKAO_REDIRECT_URI`, `FRONTEND_BASE_URL`, `CORS_ALLOWED_ORIGINS`, Vercel `API_PROXY_TARGET`을 함께 갱신한다.
 
 ---
 
@@ -228,9 +233,11 @@ MVP 구현 기준:
 ```text
 Docker Compose로 로컬 개발 가능
 Local PostgreSQL은 Docker Compose로 실행하고 localhost:5432로 노출
-Dev 서버는 AWS Free Tier EC2에서 frontend/backend Docker container로 실행
+Dev 프론트엔드는 Vercel에서 실행
+Dev 백엔드는 Render Free Web Service에서 실행
 Dev DB는 Supabase PostgreSQL 사용
 Dev 이미지/업로드 저장소는 Supabase Storage 사용
+Local 개발은 Docker Compose로 frontend/backend/postgres 실행
 ```
 
 배포 확장 기준:
@@ -309,9 +316,16 @@ POST /api/v1/reading-records
 
 ---
 
-### 2.3 Pagination Response
+### 2.3 List and Pagination Response
 
-목록 API는 기본적으로 아래 구조를 사용한다.
+현재 구현된 MVP API는 공통 envelope는 동일하게 사용하되, 목록 응답은 두 가지 형태를 허용한다.
+
+1. 단순 목록 API: `data`가 배열이다.
+2. 향후 확장 또는 대량 목록 API: `data.items`와 page metadata를 포함한다.
+
+현재 코드의 다수 목록 API는 `page`, `size`, `limit`, `offset`, `month` 같은 query parameter를 받고 `data: []` 배열을 반환한다. 클라이언트는 요청 size보다 응답 개수가 적으면 다음 페이지가 없다고 판단한다.
+
+Page metadata가 필요한 API는 아래 구조를 사용한다.
 
 ```json
 {
@@ -1880,10 +1894,13 @@ Required Access Level: `ADMIN`
 ### 17.5 Recommended Book Management
 
 ```http
+GET /api/v1/admin/recommended-books
 GET /api/v1/admin/recommended-books?month=2026-07
 POST /api/v1/admin/recommended-books
 PUT /api/v1/admin/recommended-books/{recommendedBookId}
 DELETE /api/v1/admin/recommended-books/{recommendedBookId}
+POST /api/v1/admin/recommended-books/{recommendedBookId}/hide
+POST /api/v1/admin/recommended-books/{recommendedBookId}/restore
 ```
 
 Required Access Level: `ADMIN`
@@ -1891,9 +1908,12 @@ Required Access Level: `ADMIN`
 Policy:
 
 ```text
-이달의 추천책 3~5권 권장
+공개 라이브러리/홈 조회는 ACTIVE 추천책 전체를 display_order ASC, id ASC로 노출
+Admin 목록은 month 없이 조회하면 DELETED가 아닌 추천책 전체를 관리용으로 노출
+Admin 목록은 month를 지정하면 해당 월 ACTIVE 추천책을 조회
 추천 이유 필수
 노출 순서 지정 가능
+숨김/복구/삭제 가능
 ```
 
 ---
