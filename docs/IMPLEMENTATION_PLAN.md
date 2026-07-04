@@ -5,7 +5,7 @@
 Version: 1.0  
 Status: FINAL  
 Audience: Noah, Codex, Backend/Frontend Developer  
-Last Updated: 2026-06-22
+Last Updated: 2026-06-29
 
 ---
 
@@ -113,7 +113,7 @@ MVP 제외 기능:
 예외:
 
 - 공개 범위
-- 이미지 관리
+- 이미지 관리: 브라우저 우선 WebP 리사이징/압축, 서버 방어 검증, 고아 이미지 정리
 - 회원 비활성화
 - 미참여자 운영 확인
 - 추천책 관리
@@ -134,6 +134,8 @@ terms_agreed_at
 privacy_agreed_at
 onboarding_completed_at
 deactivated_at
+withdrawn_at
+admin_deactivated_at
 ```
 
 Role은 단순하게 유지한다.
@@ -246,12 +248,44 @@ MVP 구현 기준:
 
 ```text
 Docker Compose로 로컬 개발 가능
+Local PostgreSQL은 Docker Compose container로 실행
+Local PostgreSQL host port는 5432
 ```
 
 배포 확장 기준:
 
 ```text
 Kubernetes-ready
+```
+
+dev 서버 1차 배포 기준:
+
+```text
+Frontend: local desktop Docker container
+Backend: local desktop Docker container
+DB: Supabase PostgreSQL
+Image/upload storage: Supabase Storage
+Domain: DuckDNS 무료 도메인 우선
+Reverse proxy: Caddy
+Fallback: 집 네트워크 인바운드가 막힐 때만 AWS EC2 Docker container 검토
+```
+
+dev profile 원칙:
+
+```text
+SPRING_PROFILES_ACTIVE=dev
+SUPABASE_DATABASE_URL / USERNAME / PASSWORD 필수
+DATABASE_* fallback 사용 금지
+Kakao REST API key/client secret은 local/dev 동일 env 이름 사용
+Frontend/Backend build and deployment must run separately
+```
+
+향후 self-hosted Kubernetes/k3s 전환 기준:
+
+```text
+집 또는 사무실 데스크톱의 물리 디스크를 PersistentVolume으로 사용할 수 있다.
+local-path-provisioner, local PV, Longhorn, NFS/NAS 중 운영 난이도에 맞게 선택한다.
+컨테이너 내부 파일시스템은 영구 저장소로 사용하지 않는다.
 ```
 
 초기부터 반드시 포함:
@@ -790,9 +824,9 @@ OR
 
 매월 1일 00:10 KST에 해당 월 정기모임 2개 자동 생성.
 
-- 월간 독서기록 모임
+- 월간 독서기록모임
   - 매월 2번째 일요일 오전 10시
-- 월간 실행계획 모임
+- 월간 실행수다모임
   - 매월 4번째 일요일 오전 10시
 
 중복 생성 금지.
@@ -884,10 +918,12 @@ Guest는 다음을 볼 수 없다.
 - 단일 이미지 최대 10MB
 - 후기 사진 최대 10장
 - 전체 권장 업로드 용량 50MB 이하
-- 가능하면 WebP 변환, 지원 환경이 없으면 리사이즈된 JPEG 저장
-- 리사이징
+- 브라우저 우선 WebP 변환/리사이징/압축
+- 서버에서 10MB/MIME/purpose 검증과 방어용 재최적화
 - 원본 미저장
 - Supabase Storage 저장
+- 업로드 요청 타임아웃 25초
+- 저장 전 이탈로 생긴 고아 이미지는 백엔드 스케줄러가 24시간 유예 후 정리
 - 향후 storage provider 교체 가능하도록 인터페이스 구조
 
 ### Meeting Review
@@ -907,6 +943,8 @@ Guest는 다음을 볼 수 없다.
 - `/reviews/new`
 - 후기 작성 화면
 - 이미지 업로드 UI
+- 모임 후기 이미지는 최대 10장 선택, 2개씩 제한 병렬 업로드
+- 일부 이미지 업로드 실패 시 성공한 사진만 저장하고 수정 화면에서 재추가 안내
 - 후기 갤러리 UI
 - 공개 안내 문구
 

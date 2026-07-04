@@ -1,11 +1,11 @@
 # TSD-001. Technical Architecture / DB / ERD
 
-Project: **부자습관 만들기 - Growth Archive**  
-Tagline: **읽고, 실행하고, 성장한 기록을 남기는 사람들**  
-Version: **1.2 FINAL**  
-Status: **Final**  
-Last Updated: **2026-06-22**  
-Owner: **Noah**  
+Project: **부자습관 만들기 - Growth Archive**
+Tagline: **읽고, 실행하고, 성장한 기록을 남기는 사람들**
+Version: **1.2 FINAL**
+Status: **Final**
+Last Updated: **2026-06-29**
+Owner: **Noah**
 Related Docs:
 
 - `docs/prd/PRD_001_Growth_Archive.md`
@@ -35,7 +35,7 @@ Related Docs:
 
 ### 1.1 Product-first Technical Principles
 
-Growth Archive는 커뮤니티 기록 서비스다.  
+Growth Archive는 커뮤니티 기록 서비스다.
 기술 구조는 다음 원칙을 따른다.
 
 ```text
@@ -56,7 +56,7 @@ PRD에 없는 기능을 임의로 추가하지 않는다.
 문서에 남은 애매한 요구사항은 임의 결정하지 않고 TODO로 남긴다.
 DB 마이그레이션은 되돌리기 어렵기 때문에 신중하게 작성한다.
 권한 검증은 Controller가 아니라 Service/Security Layer에서 일관되게 처리한다.
-이미지 업로드는 원본 저장보다 리사이징된 표시용 이미지 저장을 우선한다. WebP writer가 있으면 WebP로 변환하고, 없으면 리사이즈된 JPEG로 저장한다.
+이미지 업로드는 원본 저장보다 리사이징된 표시용 이미지 저장을 우선한다. 브라우저에서 우선 WebP 변환/리사이징/압축을 수행하고, 서버는 10MB/MIME/purpose 검증과 방어용 최적화를 수행한다.
 ```
 
 ---
@@ -71,12 +71,12 @@ DB 마이그레이션은 되돌리기 어렵기 때문에 신중하게 작성한
 | Styling | Tailwind CSS + shadcn/ui | DESIGN-001의 컬러/컴포넌트 토큰 반영 |
 | Backend | Java 25 + Spring Boot 4.1.0 | REST API 서버, stateless 구조 |
 | Security | Spring Security + Kakao OAuth + JWT Cookie | Kakao Login, Role 기반 인가, HttpOnly Secure Cookie |
-| DB | Supabase PostgreSQL | 관리형 PostgreSQL |
-| DB Access / Query | Spring JDBC + explicit SQL | MVP는 단순성과 SQL 가시성을 우선한다. JPA annotation model은 스키마 문서화/향후 전환 여지를 위해 compile-only로 일부 유지한다. |
+| DB | Local Docker PostgreSQL / Supabase PostgreSQL | local은 Docker PostgreSQL, dev/prod는 Supabase PostgreSQL |
+| DB Access / Query | Spring Data JPA + Querydsl | 엔티티 중심 CRUD는 JPA, 목록/통계/관리 화면 쿼리는 Querydsl을 우선 사용한다. JdbcTemplate은 특별한 사유가 있을 때만 예외적으로 사용한다. |
 | Migration | Flyway | SQL 기반 마이그레이션. Runtime ORM schema validation은 사용하지 않는다. |
-| Storage | Supabase Storage → Self-hosted disk-backed storage | MVP는 Supabase Storage, 최종 개인 서버 디스크 기반 저장소로 전환 가능 |
+| Storage | Supabase Storage → Self-hosted disk-backed storage | MVP/dev는 Supabase Storage, 최종 개인 서버 디스크 기반 저장소로 전환 가능 |
 | Scheduler | Spring Scheduler | 정기모임 자동 생성, 향후 책 검증 스케줄러 |
-| Deployment | Docker Compose local + Kubernetes-ready | 로컬은 Docker Compose, 운영 확장 기준은 Kubernetes-ready |
+| Deployment | Docker Compose local + local desktop/DuckDNS dev + AWS EC2 fallback + Kubernetes-ready future | local은 Docker Compose, dev는 비용 최소화를 위해 로컬 데스크톱 서버와 DuckDNS 우선, EC2는 보조안, 향후 Kubernetes-ready |
 | Observability | Spring Actuator + structured logging | `/actuator/health`, container health check 제공 |
 
 ### 2.2 External Integrations
@@ -98,8 +98,8 @@ flowchart LR
     U[User Browser / Mobile WebView] --> FE[Next.js Frontend]
     FE --> API[Spring Boot API Server]
 
-    API --> DB[(Supabase PostgreSQL)]
-    API --> ST[(Object Storage)]
+    API --> DB[(PostgreSQL)]
+    API --> ST[(Supabase Storage / Future Disk Storage)]
     API --> KAUTH[Kakao OAuth]
     API --> KBOOK[Kakao Book Search API]
 
@@ -129,8 +129,8 @@ Supabase는 Firebase처럼 직접 클라이언트에서 사용하는 구조가 �
 Java 25
 Spring Boot 4.1.0
 Spring Security
-Spring JDBC
-Explicit SQL
+Spring Data JPA
+Querydsl
 Flyway
 PostgreSQL Driver
 Validation
@@ -150,10 +150,10 @@ Mobile-first responsive layout
 ### 3.3 Database Runtime
 
 ```text
-Supabase PostgreSQL
+Local: Docker PostgreSQL exposed on localhost:5432
+Dev/Prod: Supabase PostgreSQL
 Connection through backend only
 Flyway-managed schema
-Local development may use PostgreSQL-compatible local DB when needed for tests
 ```
 
 ### 3.4 Connection Strategy
@@ -186,31 +186,47 @@ Required:
 - health check endpoint
 ```
 
-로컬 개발 구성은 다음 중 하나를 허용한다.
+로컬 개발 구성:
 
 ```text
-Option A:
-Docker Compose starts frontend + backend and connects to Supabase PostgreSQL.
+Docker Compose starts:
+- frontend container
+- backend container
+- PostgreSQL container
 
-Option B:
-Docker Compose starts frontend + backend + local PostgreSQL for isolated development/tests.
+Local PostgreSQL is exposed on localhost:5432 for IntelliJ/DataGrip access.
+Backend container connects to PostgreSQL through postgres:5432 inside the Compose network.
 ```
 
-Codex 구현 시에는 최소한 `frontend`, `backend` 컨테이너 실행이 가능해야 하며, DB 연결 정보는 환경변수로 주입한다.
+Codex 구현 시에는 `frontend`, `backend`, `postgres` 컨테이너 실행이 가능해야 하며, DB 연결 정보는 환경변수로 주입한다.
 
 ### 3.6 Production Deployment Direction
 
-배포 확장 기준은 Kubernetes-ready다.
+배포 비용을 아끼기 위해 dev 서버는 우선 로컬 데스크톱 서버 + Docker Compose + Caddy + DuckDNS 구조로 운영한다. 집 네트워크 인바운드가 막히거나 상시 운영이 어렵다면 AWS EC2 Free Tier eligible 인스턴스를 보조안으로 검토한다.
+
+Dev deployment direction:
 
 ```text
-Initial production direction:
-- AWS Kubernetes environment first
+- Frontend: Docker container on local desktop server
+- Backend: Docker container on local desktop server
+- DB: Supabase PostgreSQL
+- Image/upload storage: Supabase Storage
+- Domain: DuckDNS free domain first
+- Fallback: AWS EC2 Docker container only when local inbound operation is not practical
 
-Final production direction:
-- Personal server Kubernetes/k3s or equivalent self-hosted environment
+Frontend and backend build/deploy pipelines must be separable.
 ```
 
-MVP에서 Helm Chart나 Kubernetes manifest를 반드시 구현하지는 않는다.  
+배포 확장 기준은 Kubernetes-ready다.
+
+Future deployment direction:
+
+```text
+- Personal desktop/server Kubernetes/k3s or equivalent self-hosted environment
+- Self-hosted disk-backed storage may replace Supabase Storage later
+```
+
+MVP에서 Helm Chart나 Kubernetes manifest를 반드시 구현하지는 않는다.
 다만 애플리케이션은 처음부터 Kubernetes에 올릴 수 있는 형태로 설계한다.
 
 Required application properties:
@@ -221,7 +237,7 @@ Environment-variable based configuration
 Containerized frontend and backend
 Health check endpoints
 Graceful shutdown support
-No local container filesystem dependency for persistent business data
+No ephemeral container filesystem dependency for persistent business data
 ```
 
 Frontend deployment direction:
@@ -231,7 +247,30 @@ Next.js must also be containerizable.
 Frontend can be deployed into Kubernetes together with backend.
 ```
 
-Kubernetes manifest, Helm Chart, Ingress, Secret, ConfigMap, CronJob 운영 설계는 `OPS-001` 또는 별도 infra 문서에서 다룬다.
+Kubernetes manifest, Helm Chart, Ingress, ConfigMap, CronJob 운영 설계는 `OPS-001` 또는 별도 infra 문서에서 다룬다.
+
+### 3.7 Future Self-hosted Kubernetes Storage
+
+집 또는 사무실 데스크톱에 Kubernetes/k3s를 구축하면 물리 하드디스크를 스토리지로 사용할 수 있다.
+
+가능한 방식:
+
+```text
+- hostPath: 단일 노드 실험/개발용. 노드 이동과 장애 대응에 약함.
+- local PersistentVolume: 특정 노드의 디스크를 PVC로 사용. 단일 노드 k3s에 적합.
+- local-path-provisioner: k3s에서 흔히 쓰는 단순 동적 local PV 방식.
+- Longhorn: 여러 디스크/노드가 있을 때 복제와 UI를 제공하는 분산 블록 스토리지.
+- NFS: NAS 또는 별도 디스크 서버를 여러 Pod가 공유할 때 사용.
+```
+
+주의:
+
+```text
+- 컨테이너 내부 파일시스템은 영구 저장소로 쓰지 않는다.
+- 이미지/업로드 파일은 PVC 또는 외부 Storage에 저장한다.
+- 디스크 장애, 전원 장애, 백업 실패에 대비한 별도 백업이 필요하다.
+- Supabase Storage에서 self-hosted disk로 옮길 수 있도록 StorageService 추상화를 유지한다.
+```
 
 ---
 
@@ -253,23 +292,22 @@ sequenceDiagram
     Kakao-->>API: Authorization code
     API->>Kakao: Token exchange
     API->>Kakao: Fetch user profile
-    API->>DB: Find or create OAuth account
-    API-->>FE: Session/JWT cookie
+    API->>DB: Find existing OAuth account by provider id
+    API-->>FE: Existing member session cookie or signup_token cookie
     FE->>API: Check onboarding status
     API-->>FE: NEED_INVITE_CODE or MEMBER_READY
 ```
 
 ### 4.2 Account and Member Model
 
-MVP에서는 별도의 `account_status` enum을 사용하지 않는다.  
+MVP에서는 별도의 `account_status` enum을 사용하지 않는다.
 회원의 접근 가능 상태는 `members` 테이블의 timestamp 필드를 기반으로 계산한다.
 
 ```text
 oauth_accounts:
 - 카카오 OAuth identity 저장
-- member_id가 없을 수 있음
-- 카카오 로그인 직후에는 온보딩 전 사용자일 수 있음
-- 온보딩 완료 후 member_id 연결
+- 온보딩 최종 완료 시 members와 함께 생성
+- 카카오 로그인, 초대코드, 약관 동의만으로는 row를 만들지 않음
 
 members:
 - 서비스 회원의 중심 엔티티
@@ -457,7 +495,7 @@ src/
 | `interest_tags` | 관심 분야 태그 |
 | `member_interest_tags` | 회원-관심분야 연결 |
 | `member_join_intro_sources` | 기존 가입인사 이관 원문/프리필 후보 |
-| `invite_codes` | 활성 초대코드 |
+| `invite_codes` | 일반 멤버용/운영진용 활성 초대코드 |
 | `books` | 도서 정보 |
 | `reading_records` | 독서기록 |
 | `monthly_action_plans` | 월간 실행계획 |
@@ -525,6 +563,7 @@ erDiagram
 | `real_name` | VARCHAR(50) | N | 필수 입력. 실명 공개 선택 시 공개 표시명으로 사용 |
 | `nickname` | VARCHAR(20) | N | 중복 불가, 2~20자 |
 | `one_line_intro` | VARCHAR(80) | N | 한 줄 소개, 1~80자 |
+| `birth_date` | DATE | N | 필수 입력. 공개 프로필에는 노출하지 않음 |
 | `job` | VARCHAR(50) | Y | 레거시/이관 호환용. MVP 온보딩/프로필에서는 수집하지 않음 |
 | `profile_image_id` | BIGINT | Y | image_assets FK |
 | `kakao_profile_image_url` | TEXT | Y | fallback profile image |
@@ -540,14 +579,39 @@ erDiagram
 | `created_at` | TIMESTAMPTZ | N | |
 | `updated_at` | TIMESTAMPTZ | N | |
 | `deactivated_at` | TIMESTAMPTZ | Y | 값이 있으면 비활성 회원 |
+| `withdrawn_at` | TIMESTAMPTZ | Y | 사용자 직접 탈퇴 시각. 재가입으로 복구 가능 |
+| `admin_deactivated_at` | TIMESTAMPTZ | Y | 운영진 강퇴 시각. 운영진 해제 전 재가입 불가 |
+| `admin_deactivation_reason` | TEXT | Y | 운영진 강퇴 사유 또는 운영 메모 |
 
 Indexes:
 
 ```sql
 CREATE UNIQUE INDEX uk_members_nickname ON members (lower(nickname));
 CREATE INDEX idx_members_deactivated_at ON members (deactivated_at);
+CREATE INDEX idx_members_withdrawn_at ON members (withdrawn_at);
+CREATE INDEX idx_members_admin_deactivated_at ON members (admin_deactivated_at);
 CREATE INDEX idx_members_onboarding_completed_at ON members (onboarding_completed_at);
 CREATE INDEX idx_members_participation_start_month ON members (participation_start_month);
+```
+
+Additional validation rules:
+
+```text
+Active member:
+onboarding_completed_at IS NOT NULL
+AND deactivated_at IS NULL
+
+Self-deactivated member:
+withdrawn_at IS NOT NULL
+AND admin_deactivated_at IS NULL
+
+Admin-deactivated member:
+admin_deactivated_at IS NOT NULL
+
+사용자 직접 탈퇴 시 real_name, profile_image_id, kakao_profile_image_url, birth_date는 정리 또는 익명화한다.
+작성 기록은 보존하되 Member/Admin 기능은 차단한다.
+재가입 시 일반 초대코드는 MEMBER, 운영진 초대코드는 ADMIN Role로 복구한다.
+운영진 강퇴 회원은 운영진이 admin_deactivated_at을 해제하기 전까지 재가입할 수 없다.
 ```
 
 Rules:
@@ -636,14 +700,15 @@ CREATE INDEX idx_oauth_member_id ON oauth_accounts (member_id);
 
 ### 8.3 `invite_codes`
 
-초대코드 테이블. MVP에서는 활성 초대코드 1개만 유지한다.
+초대코드 테이블. MVP에서는 일반 멤버용 활성 코드 1개와 운영진용 활성 코드 1개를 유지한다.
 
 | Column | Type | Null | Notes |
 |---|---|---:|---|
 | `id` | BIGINT GENERATED IDENTITY | N | |
 | `code_hash` | VARCHAR(255) | N | 원문 저장 금지 권장 |
+| `code_type` | VARCHAR(20) | N | `MEMBER`, `ADMIN` |
 | `code_preview` | VARCHAR(30) | Y | Admin 표시용 |
-| `is_active` | BOOLEAN | N | true는 1개만 |
+| `is_active` | BOOLEAN | N | code_type별 true는 1개만 |
 | `created_by_member_id` | BIGINT | Y | Admin |
 | `created_at` | TIMESTAMPTZ | N | |
 | `deactivated_at` | TIMESTAMPTZ | Y | |
@@ -652,8 +717,9 @@ Rules:
 
 ```text
 초대코드는 대소문자 구분 없이 처리한다.
-Admin이 새 코드를 등록하면 기존 활성 코드는 즉시 비활성화한다.
-MVP에서 활성 코드는 1개만 허용한다.
+Admin이 새 코드를 등록하면 같은 code_type의 기존 활성 코드는 즉시 비활성화한다.
+MVP에서 활성 코드는 code_type별 1개만 허용한다.
+일반 코드는 온보딩 완료 시 MEMBER Role, 운영진 코드는 ADMIN Role을 부여한다.
 ```
 
 ---
@@ -792,7 +858,7 @@ CREATE INDEX idx_reading_records_month ON reading_records (date_trunc('month', r
 
 ### 8.8 `monthly_action_plans`
 
-월간 실행계획.  
+월간 실행계획.
 실행계획은 투두리스트가 아니라 “이번 달의 선언”이다.
 
 | Column | Type | Null | Notes |
@@ -828,7 +894,7 @@ WHERE status <> 'DELETED';
 
 ### 8.9 `monthly_reflections`
 
-월간 회고.  
+월간 회고.
 회고 슬롯은 매월 제공되지만, 실제 row는 저장할 때만 생성한다.
 
 | Column | Type | Null | Notes |
@@ -901,11 +967,11 @@ Admin은 소소모임 내용을 직접 수정하지 않고 숨김/삭제만 가�
 Regular meeting defaults:
 
 ```text
-월간 독서기록 모임:
+월간 독서기록모임:
 - 매월 2번째 일요일
 - 오전 10시
 
-월간 실행계획 모임:
+월간 실행수다모임:
 - 매월 4번째 일요일
 - 오전 10시
 ```
@@ -1009,7 +1075,7 @@ ON meeting_review_images (meeting_review_id, display_order);
 | `bucket` | VARCHAR(80) | N | |
 | `object_key` | TEXT | N | |
 | `public_url` | TEXT | Y | |
-| `image_type` | VARCHAR(50) | N | `PROFILE`, `READING_RECORD`, `MEETING_COVER`, `MEETING_REVIEW` |
+| `image_type` | VARCHAR(50) | N | `PROFILE`, `READING_RECORD`, `MEETING_COVER`, `MEETING_REVIEW`, `BOOK` |
 | `mime_type` | VARCHAR(50) | N | `image/webp` or resized `image/jpeg` fallback |
 | `width` | INT | Y | |
 | `height` | INT | Y | |
@@ -1020,8 +1086,10 @@ Rules:
 
 ```text
 모임 후기 사진은 최대 10장.
-업로드 시 가능하면 WebP 변환을 적용하고, 최소한 리사이징된 표시용 이미지를 저장한다.
+브라우저에서 우선 WebP 변환/리사이징/압축 후 업로드한다.
+서버는 최대 10MB, MIME type, purpose를 검증하고 방어적으로 1600px 이하 재최적화를 수행할 수 있다.
 원본 저장은 MVP에서 기본 제외.
+어느 도메인에도 연결되지 않은 image_asset은 24시간 유예 후 백엔드 스케줄러가 스토리지 객체와 DB row를 정리한다.
 ```
 
 ---
@@ -1252,8 +1320,8 @@ Cron:
 Action:
 해당 월의 정기모임 2개 생성
 
-1. 월간 독서기록 모임
-2. 월간 실행계획 모임
+1. 월간 독서기록모임
+2. 월간 실행수다모임
 
 Duplicate Prevention:
 meeting_type + target_month unique constraint
@@ -1407,7 +1475,7 @@ Persistent images must not depend on the application container filesystem.
 - Optional self-hosted object storage layer such as MinIO if needed later
 ```
 
-MVP에서는 MinIO/S3 호환 계층을 필수로 만들지 않는다.  
+MVP에서는 MinIO/S3 호환 계층을 필수로 만들지 않는다.
 다만 DB에는 `bucket`, `object_key`, `public_url`을 저장하여 저장소 교체가 가능하게 한다.
 
 ### 12.2 Storage Policy
@@ -1424,7 +1492,7 @@ Meeting review images: max 10 images
 ### 12.3 Processing Policy
 
 ```text
-Convert to WebP when possible. If no WebP writer is available in the runtime, store a resized JPEG display image.
+Convert to WebP in the browser first when possible. The backend validates and may defensively optimize again before storing the display image.
 Resize large images.
 Do not store original by default.
 Generate public or signed URL depending image type.
@@ -1556,19 +1624,44 @@ Recommended structure:
 ```text
 backend/src/main/resources/db/migration/
 ├─ V1__init_schema.sql
-├─ V2__seed_interest_tags.sql
+└─ V2__seed_interest_tags.sql
+
+backend/src/main/resources/db/demo/
 └─ V3__seed_demo_growth_archive_data.sql
+└─ cleanup_demo_growth_archive_data.sql
 ```
 
 ### 16.2 Seed Data
 
-MVP seed data:
+Common seed data:
 
 ```text
-Interest tags
+Interest tags only
+```
+
+Local-only demo seed data:
+
+```text
 Demo members and oauth mappings
 Initial active invite code
 Demo books, recommended books, reading records, meetings, reviews
+```
+
+Flyway location policy:
+
+```text
+local profile: classpath:db/migration,classpath:db/demo
+dev profile default: classpath:db/migration,classpath:db/demo
+prod profile default: classpath:db/migration
+dev cleanup/real-operation override: FLYWAY_LOCATIONS=classpath:db/migration
+```
+
+Demo cleanup:
+
+```text
+cleanup_demo_growth_archive_data.sql is a manual script.
+It has no Flyway version prefix and must not run automatically.
+It truncates dev business data, preserves flyway_schema_history and interest_tags, and recreates default dev invite codes, baseline books, and current-month recommended books.
 ```
 
 Caution:
@@ -1827,15 +1920,15 @@ Do not save persistent business images inside the application container filesyst
 Decision:
 
 ```text
-Spring JDBC + explicit SQL for MVP
+Spring Data JPA + Querydsl for MVP
 ```
 
 Implementation notes:
 
 ```text
-Repository classes use JdbcTemplate with parameterized SQL.
-Complex search/statistics/admin queries are written as explicit SQL and covered by focused service tests.
-Spring Data JPA + Querydsl can be reconsidered after MVP if repository complexity starts to justify the migration cost.
+Repository classes use Spring Data JPA or Querydsl.
+Complex search/statistics/admin queries are written with Querydsl and covered by focused service tests.
+JdbcTemplate is allowed only for narrow infrastructure exceptions where JPA/Querydsl is not practical, and the reason must be documented near the code.
 ```
 
 ---

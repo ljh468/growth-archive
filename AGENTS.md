@@ -177,16 +177,22 @@ Do not add excluded features unless explicitly requested by the product owner.
 ### Storage
 
 - MVP: Supabase Storage
-- Future: personal server disk or mounted storage
+- Dev: Supabase Storage
+- Future: personal server disk, mounted storage, or Kubernetes PersistentVolume
 - Do not store persistent images inside ephemeral container filesystem.
 - Use a storage abstraction so Supabase Storage can be replaced later.
 
 ### Deployment
 
 - Local MVP development must run with Docker Compose.
+- Local PostgreSQL runs in Docker Compose and is exposed on host port 5432.
 - Production direction is Kubernetes-ready.
-- Initial production may use AWS Kubernetes-related infrastructure.
+- Dev server direction is AWS Free Tier EC2 with separate frontend/backend Docker containers.
+- Dev DB is Supabase PostgreSQL.
+- Dev image/upload storage is Supabase Storage.
+- Paid domain is optional for dev; EC2 public host/IP may be used first.
 - Final direction may move to personal server Kubernetes/k3s or a similar self-hosted environment.
+- Future self-hosted Kubernetes may use local disks through PersistentVolume/local-path-provisioner/Longhorn/NFS.
 - Helm chart and Kubernetes manifests are not required in the first implementation unless explicitly requested.
 
 ---

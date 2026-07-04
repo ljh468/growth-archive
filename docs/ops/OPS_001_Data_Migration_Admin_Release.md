@@ -1,10 +1,10 @@
 # OPS-001. Data Migration / Admin Operations / Release Checklist
 
-Project: 부자습관 만들기 - Growth Archive  
-Version: 1.0 FINAL  
-Status: Final  
-Owner: Noah  
-Last Updated: 2026-06-22
+Project: 부자습관 만들기 - Growth Archive
+Version: 1.0 FINAL
+Status: Final
+Owner: Noah
+Last Updated: 2026-06-29
 
 ---
 
@@ -149,6 +149,42 @@ original_url
 blog_url = 저장함
 소모임/노션 원본 링크 = 저장하지 않음
 ```
+
+### 3.6 탈퇴/비활성 개인정보 운영 정책
+
+사용자 직접 탈퇴와 운영진 강퇴는 모두 `deactivated_at` 기반 비활성으로 처리하되, 재가입 가능 여부는 구분한다.
+
+```text
+사용자 직접 탈퇴:
+- 재가입 가능
+- 작성 기록은 유지
+- real_name, profile_image_id, kakao_profile_image_url, birth_date는 정리 또는 익명화
+- 재가입 시 실명과 생년월일은 다시 필수 입력
+- 일반 초대코드로 재가입하면 MEMBER, 운영진 초대코드로 재가입하면 ADMIN
+
+운영진 강퇴:
+- 운영진 해제 전 재가입 불가
+- 작성 기록은 유지
+- Member/Admin 기능 접근 차단
+```
+
+운영진 본인도 직접 탈퇴할 수 있다.
+재가입 시 Role은 과거 Role이 아니라 새로 입력한 초대코드 종류를 기준으로 부여한다.
+
+### 3.7 고아 이미지 정리 운영 정책
+
+이미지는 프로필/독서기록/모임/후기 저장보다 먼저 업로드될 수 있다. 사용자가 저장 전에 이탈하면 어느 도메인에도 연결되지 않은 이미지가 생길 수 있으므로 백엔드 스케줄러가 정리한다.
+
+```text
+실행 위치: Spring Boot backend
+실행 방식: Spring Scheduler
+정리 대상: 어떤 도메인에도 연결되지 않은 image_assets
+유예 시간: 생성 후 24시간 이상 지난 이미지
+정리 순서: Storage object 삭제 → image_assets DB row 삭제
+실패 처리: Storage 삭제 실패 시 DB row 유지 및 로그 기록
+```
+
+이 스케줄러는 Supabase Storage를 직접 운영자가 수동 정리하지 않아도 비용과 불필요한 파일 누적을 줄이기 위한 안전장치다.
 
 ---
 
@@ -947,10 +983,10 @@ Admin 기능:
 기본값:
 
 ```text
-월간 독서기록 모임:
+월간 독서기록모임:
 매월 2번째 일요일 오전 10시
 
-월간 실행계획 모임:
+월간 실행수다모임:
 매월 4번째 일요일 오전 10시
 ```
 
@@ -1110,7 +1146,8 @@ Admin 불가:
 Docker Compose로 로컬 개발 가능
 Backend Dockerfile 제공
 Frontend Dockerfile 제공
-PostgreSQL은 Supabase 또는 local container 사용 가능
+PostgreSQL은 Docker Compose local container 사용
+Local PostgreSQL host port는 5432 사용
 ```
 
 필수:
@@ -1121,19 +1158,58 @@ README 실행 방법 제공
 health check endpoint 제공
 ```
 
-## 16.2 Staging
+## 16.2 Dev Server
 
-권장:
+비용 절감을 위해 dev 서버는 우선 AWS Free Tier EC2 한 대에 Docker 컨테이너로 운영한다.
 
 ```text
-staging.growtharchive.kr
-staging API endpoint
-staging Kakao OAuth Redirect URL
-staging DB
-staging Storage bucket
+Frontend: EC2 Docker container
+Backend: EC2 Docker container
+DB: Supabase PostgreSQL
+Image/upload storage: Supabase Storage
+Domain: 유료 도메인은 선택. 초기 dev는 EC2 public host/IP 사용 가능
 ```
 
-MVP에서 별도 staging 서버가 어렵다면 최소한 local/prod 환경변수 분리는 반드시 한다.
+dev 환경 필수 설정:
+
+```text
+SPRING_PROFILES_ACTIVE=dev
+SUPABASE_DATABASE_URL
+SUPABASE_DATABASE_USERNAME
+SUPABASE_DATABASE_PASSWORD
+KAKAO_REST_API_KEY
+KAKAO_CLIENT_SECRET
+KAKAO_BOOK_REST_API_KEY
+KAKAO_REDIRECT_URI
+FRONTEND_BASE_URL
+CORS_ALLOWED_ORIGINS
+```
+
+dev profile은 `DATABASE_*` fallback을 사용하지 않는다. Supabase DB 설정이 없으면 서버가 뜨지 않는 것이 정상이다.
+
+dev 서버는 초기 공개 검수용 더미 데이터를 포함한다.
+
+```bash
+FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/demo
+```
+
+정식 운영 전에는 dev DB를 클리닝하거나 새 DB로 교체한 뒤 다음처럼 운영 seed만 적용한다.
+
+```bash
+FLYWAY_LOCATIONS=classpath:db/migration
+```
+
+dev 더미 데이터와 dev에서 추가로 생성된 사용자/운영 도메인 데이터를 모두 제거해야 하면 다음 수동 SQL을 실행한다.
+
+```bash
+psql "$SUPABASE_DATABASE_URL" -f backend/src/main/resources/db/demo/cleanup_demo_growth_archive_data.sql
+```
+
+이 SQL은 Flyway가 자동 실행하지 않도록 버전 prefix를 붙이지 않는다. `flyway_schema_history`와 공통 seed인 `interest_tags`는 남기고, 회원/인증/독서기록/실행계획/회고/모임/후기/이미지/운영 로그 테이블을 비운다. 초대코드는 정리 후 dev 기본값인 일반 `test`, 운영진 `admin` 코드로 다시 생성한다. 기본 도서와 현재월 추천책 5권도 다시 생성해 공개 화면이 비어 보이지 않게 한다.
+
+주의: 이 스크립트는 dev reset 전용이다. 정식 운영 데이터가 들어간 DB에서는 실행하지 않는다. 가능하면 정식 운영 전에는 새 DB를 만들거나 DB를 초기화한 뒤 `classpath:db/migration`만 적용한다.
+
+프론트엔드와 백엔드는 서로 독립적으로 빌드/배포할 수 있어야 한다.
 
 ## 16.3 Production
 
@@ -1141,7 +1217,7 @@ MVP에서 별도 staging 서버가 어렵다면 최소한 local/prod 환경변�
 
 ```text
 Kubernetes-ready
-초기 AWS Kubernetes 계열 검토
+초기 운영은 dev 구조를 확장하거나 별도 서버로 분리
 최종 개인 서버 Kubernetes/k3s 또는 유사 self-hosted 환경 검토
 ```
 
@@ -1153,6 +1229,28 @@ Frontend containerized
 이미지는 컨테이너 내부 파일시스템에 저장하지 않음
 환경변수로 설정 분리
 health check 제공
+```
+
+## 16.4 Future Self-hosted Kubernetes Storage
+
+집 또는 사무실 데스크톱에 Kubernetes/k3s를 구축하면 로컬 하드디스크를 PersistentVolume으로 사용할 수 있다.
+
+검토 가능한 방식:
+
+```text
+local PersistentVolume
+k3s local-path-provisioner
+Longhorn
+NFS/NAS
+```
+
+운영 원칙:
+
+```text
+컨테이너 내부 파일시스템에는 영구 이미지를 저장하지 않는다.
+업로드 이미지는 PVC 또는 외부 Storage에 저장한다.
+디스크 장애와 실수 삭제에 대비해 정기 백업을 둔다.
+Supabase Storage에서 self-hosted disk-backed storage로 이전할 수 있도록 StorageService 추상화를 유지한다.
 ```
 
 ---

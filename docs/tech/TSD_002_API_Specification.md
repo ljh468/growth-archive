@@ -1,11 +1,11 @@
 # TSD-002 API Specification
 
-**Project**: 부자습관 만들기 - Growth Archive  
-**Document Type**: Technical Specification  
-**Version**: 1.1 FINAL  
-**Status**: Final  
-**Last Updated**: 2026-06-22  
-**Primary Owner**: Noah  
+**Project**: 부자습관 만들기 - Growth Archive
+**Document Type**: Technical Specification
+**Version**: 1.1 FINAL
+**Status**: Final
+**Last Updated**: 2026-06-29
+**Primary Owner**: Noah
 
 **Related Documents**
 
@@ -155,11 +155,15 @@ Phase 2에서 CSRF Token 또는 Double Submit Cookie를 검토한다.
 단일 이미지 최대 크기: 10MB
 모임 후기 사진 최대 개수: 10장
 후기 사진 전체 업로드 권장 총량: 50MB 이하
-이미지 저장 형식: WebP 변환 권장
+이미지 저장 형식: 브라우저 우선 WebP 변환/리사이징/압축
 원본 이미지: MVP에서는 원본 저장하지 않음
+업로드 요청 타임아웃: 프론트 기준 요청당 25초
 ```
 
-프론트엔드는 여러 장을 한 번에 선택하더라도, 안정성을 위해 순차 업로드 또는 제한된 병렬 업로드를 권장한다.
+프론트엔드는 여러 장을 한 번에 선택하더라도, 안정성을 위해 단일 이미지 업로드 API를 제한된 병렬 개수로 호출한다.
+모임 후기 사진은 2개씩 병렬 업로드하는 것을 기본값으로 한다.
+일부 이미지 업로드가 실패해도 성공한 이미지 ID만 후기 생성 요청에 포함하고, 실패 이미지는 수정 화면에서 다시 추가하도록 안내한다.
+서버는 클라이언트 최적화를 신뢰하지 않고 10MB, MIME type, purpose 검증과 방어용 최적화를 수행한다.
 
 ---
 
@@ -199,20 +203,21 @@ Soft delete된 데이터는 기본 목록, 통계, 참여 현황 계산에서 �
 
 ### 1.7 Kakao OAuth Redirect URL
 
-도메인은 일단 `growtharchive.kr` 기준 placeholder로 둔다.
+도메인 비용을 아끼기 위해 dev 환경은 유료 도메인 없이 EC2 public host/IP를 먼저 사용할 수 있다.
+도메인을 쓰지 않는 경우에도 Kakao Developers에는 실제 접근 가능한 Redirect URI를 정확히 등록해야 한다.
 
 ```text
 Local:
 http://localhost:8080/api/v1/auth/kakao/callback
 
-Staging:
-https://staging.growtharchive.kr/api/v1/auth/kakao/callback
+Dev:
+http://{EC2_PUBLIC_HOST_OR_IP}:8080/api/v1/auth/kakao/callback
 
 Production:
-https://growtharchive.kr/api/v1/auth/kakao/callback
+https://{PRODUCTION_API_HOST}/api/v1/auth/kakao/callback
 ```
 
-실제 도메인이 변경되면 이 항목만 업데이트한다.
+HTTPS와 도메인을 붙이면 `KAKAO_REDIRECT_URI`, `FRONTEND_BASE_URL`, `CORS_ALLOWED_ORIGINS`를 함께 갱신한다.
 
 ---
 
@@ -222,12 +227,17 @@ MVP 구현 기준:
 
 ```text
 Docker Compose로 로컬 개발 가능
+Local PostgreSQL은 Docker Compose로 실행하고 localhost:5432로 노출
+Dev 서버는 AWS Free Tier EC2에서 frontend/backend Docker container로 실행
+Dev DB는 Supabase PostgreSQL 사용
+Dev 이미지/업로드 저장소는 Supabase Storage 사용
 ```
 
 배포 확장 기준:
 
 ```text
 Kubernetes-ready
+Future self-hosted Kubernetes/k3s에서 disk-backed storage로 전환 가능
 ```
 
 API는 다음 조건을 만족해야 한다.
@@ -583,9 +593,10 @@ Request:
 System Behavior:
 
 ```text
-- 활성 초대코드는 1개만 유지한다.
+- 일반 멤버용 활성 코드와 운영진용 활성 코드 2종을 유지한다.
+- 같은 종류의 활성 코드는 1개만 유지한다.
 - 대소문자 구분 없이 비교한다.
-- 성공 시 signup_token의 inviteVerified 값을 true로 갱신한다.
+- 성공 시 signup_token의 inviteVerified 값을 true로 갱신하고, 코드 종류에 따른 예정 Role을 담는다.
 ```
 
 Response:
@@ -594,7 +605,8 @@ Response:
 {
   "success": true,
   "data": {
-    "verified": true
+    "verified": true,
+    "role": "MEMBER"
   },
   "message": "초대코드가 확인되었습니다."
 }
@@ -681,6 +693,7 @@ Required fields:
 ```text
 nickname
 realName
+birthDate
 oneLineIntro
 interestTagIds 최소 1개
 futureMeAt50
@@ -690,7 +703,6 @@ displayNameType
 Optional fields:
 
 ```text
-birthDate
 profileImageId
 joinReason
 currentConcern
@@ -1656,7 +1668,9 @@ Validation:
 ```text
 최대 10MB
 지원 형식: jpg, jpeg, png, webp
-서버에서 WebP 변환 권장. WebP writer가 없으면 리사이즈된 JPEG 저장
+프론트는 jpg, jpeg, png, webp 및 브라우저 지원 시 heic/heif를 WebP로 변환해 전송
+서버는 jpg, jpeg, png, webp를 검증하고 방어적으로 WebP 또는 리사이즈된 JPEG로 최적화
+원본 저장 안 함
 ```
 
 Response:
@@ -1697,7 +1711,26 @@ Note:
 
 ```text
 MVP에서는 단일 업로드 API를 여러 번 호출하는 방식도 허용한다.
-프론트는 네트워크 안정성을 위해 순차 또는 제한된 병렬 업로드를 권장한다.
+프론트는 네트워크 안정성을 위해 단일 업로드 API를 2개씩 제한 병렬 호출한다.
+일부 실패 시 성공한 이미지 ID만 후기 생성 요청에 포함한다.
+실패한 이미지는 후기 저장 후 수정 화면에서 다시 추가하도록 안내한다.
+업로드 요청은 프론트 기준 25초 타임아웃을 둔다.
+```
+
+---
+
+### 16.3 Orphan Image Cleanup
+
+이미지 업로드는 후기/프로필/독서기록 저장보다 먼저 완료될 수 있으므로, 사용자가 저장 전에 이탈하면 연결되지 않은 `image_assets`가 남을 수 있다.
+
+Policy:
+
+```text
+백엔드 Spring Scheduler가 고아 이미지 정리를 수행한다.
+어느 도메인에도 연결되지 않은 image_asset만 정리 대상이다.
+업로드 직후 저장 중인 이미지를 지우지 않도록 24시간 유예 후 정리한다.
+정리 순서는 Storage object 삭제 후 DB row 삭제다.
+Storage 삭제 실패 시 DB row는 유지하고 로그를 남긴다.
 ```
 
 ---
@@ -1745,7 +1778,8 @@ Required Access Level: `ADMIN`
 System Behavior:
 
 ```text
-deactivated_at 저장
+deactivated_at과 admin_deactivated_at 저장
+운영진 강퇴 회원은 운영진 해제 전 재가입 불가
 ```
 
 #### Reactivate Member
@@ -1759,7 +1793,7 @@ Required Access Level: `ADMIN`
 System Behavior:
 
 ```text
-deactivated_at null 처리
+deactivated_at과 admin_deactivated_at null 처리
 ```
 
 #### Update Participation Start Month
@@ -1824,8 +1858,8 @@ Request:
 Policy:
 
 ```text
-활성 초대코드는 1개만 유지한다.
-새 코드 저장 시 기존 코드는 즉시 무효화한다.
+일반 멤버용 활성 코드와 운영진용 활성 코드 2종을 유지한다.
+같은 종류의 새 코드 저장 시 기존 코드는 즉시 무효화한다.
 ```
 
 ---
@@ -1970,10 +2004,10 @@ Behavior:
 Default meetings:
 
 ```text
-월간 독서기록 모임
+월간 독서기록모임
 - 매월 2번째 일요일 오전 10시
 
-월간 실행계획 모임
+월간 실행수다모임
 - 매월 4번째 일요일 오전 10시
 ```
 
@@ -1993,48 +2027,48 @@ MVP에서는 필수 구현이 아니다.
 
 ### AC-001 Auth
 
-Given 비로그인 사용자가 카카오 로그인을 완료했을 때  
-When 인증이 성공하면  
+Given 비로그인 사용자가 카카오 로그인을 완료했을 때
+When 인증이 성공하면
 Then 서버는 JWT 쿠키를 발급하고 온보딩 상태에 따라 적절한 페이지로 이동시킨다.
 
 ---
 
 ### AC-002 Onboarding
 
-Given 카카오 로그인 사용자가 초대코드를 입력했을 때  
-When 활성 초대코드와 일치하면  
+Given 카카오 로그인 사용자가 초대코드를 입력했을 때
+When 활성 초대코드와 일치하면
 Then invite_verified_at이 저장되고 약관 동의 단계로 이동한다.
 
 ---
 
 ### AC-003 Reading Record
 
-Given Member가 책 검색 결과에서 책을 선택하거나 직접 책을 등록했을 때  
-When 독서기록을 저장하면  
+Given Member가 책 검색 결과에서 책을 선택하거나 직접 책을 등록했을 때
+When 독서기록을 저장하면
 Then 책 상세, 프로필, 최근 성장 기록에 반영된다.
 
 ---
 
 ### AC-004 Participation
 
-Given Member가 해당 월에 독서기록 1건 또는 실행계획 1건을 작성했을 때  
-When 참여 현황을 조회하면  
+Given Member가 해당 월에 독서기록 1건 또는 실행계획 1건을 작성했을 때
+When 참여 현황을 조회하면
 Then completed=true로 반환된다.
 
 ---
 
 ### AC-005 Meeting Review Images
 
-Given Member가 모임 후기를 작성할 때  
-When 사진을 10장을 초과하여 첨부하면  
+Given Member가 모임 후기를 작성할 때
+When 사진을 10장을 초과하여 첨부하면
 Then API는 `REVIEW_IMAGE_LIMIT_EXCEEDED` 에러를 반환한다.
 
 ---
 
 ### AC-006 Admin Content Policy
 
-Given Admin이 회원의 독서기록 또는 후기를 관리할 때  
-When 콘텐츠 조치가 필요하면  
+Given Admin이 회원의 독서기록 또는 후기를 관리할 때
+When 콘텐츠 조치가 필요하면
 Then Admin은 숨김/복구/삭제만 할 수 있고 내용을 직접 수정할 수 없다.
 
 ---
