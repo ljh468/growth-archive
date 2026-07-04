@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiGetCurrentUser, apiPost, clearCurrentUserCache } from "@/lib/api";
 
@@ -33,7 +33,9 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [memberReady, setMemberReady] = useState(false);
   const [adminReady, setAdminReady] = useState(false);
+  const [pendingHref, setPendingHref] = useState("");
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     apiGetCurrentUser().then((result) => {
@@ -45,6 +47,22 @@ export function SiteShell({ children }: { children: ReactNode }) {
       setAdminReady(result.data.accessLevel === "ADMIN" || (activeMember && result.data.role === "ADMIN"));
     });
   }, []);
+
+  useEffect(() => {
+    bottomNav.forEach(([, , href]) => router.prefetch(href));
+  }, [router]);
+
+  useEffect(() => {
+    setPendingHref("");
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!pendingHref) {
+      return;
+    }
+    const timer = window.setTimeout(() => setPendingHref(""), 8000);
+    return () => window.clearTimeout(timer);
+  }, [pendingHref]);
 
   async function logout() {
     await apiPost("/auth/logout");
@@ -128,18 +146,31 @@ export function SiteShell({ children }: { children: ReactNode }) {
         className="fixed bottom-0 left-0 z-30 grid max-w-[100dvw] grid-cols-5 overflow-hidden border-t border-[rgba(74,52,36,0.16)] bg-[rgba(255,254,250,0.98)] px-1.5 pb-[calc(0.65rem+env(safe-area-inset-bottom))] pt-1.5 text-center text-[10px] shadow-[0_-14px_34px_rgba(63,47,34,0.12)] backdrop-blur md:hidden"
         style={{ width: "100dvw" }}
       >
+        {pendingHref && (
+          <span className="absolute left-0 top-0 h-px w-full overflow-hidden bg-[rgba(31,77,58,0.12)]">
+            <span className="block h-full w-1/2 animate-[bottomNavProgress_1.1s_ease-in-out_infinite] bg-[var(--color-deep-green)]" />
+          </span>
+        )}
         {bottomNav.map(([icon, label, href]) => {
           const active = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+          const pending = pendingHref === href && !active;
 
           return (
           <Link
             aria-current={active ? "page" : undefined}
+            aria-busy={pending}
             className={[
-              "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-card)] px-0.5 py-1.5 leading-none transition",
-              active ? "bg-[rgba(47,90,67,0.1)] text-[var(--color-deep-green)]" : "text-[var(--color-muted)] hover:text-[var(--color-charcoal)]",
+              "relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-card)] px-0.5 py-1.5 leading-none transition active:scale-[0.98]",
+              active || pending ? "bg-[rgba(47,90,67,0.1)] text-[var(--color-deep-green)]" : "text-[var(--color-muted)] hover:text-[var(--color-charcoal)]",
             ].join(" ")}
             href={href}
             key={href}
+            onClick={(event) => {
+              if (active || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
+              }
+              setPendingHref(href);
+            }}
           >
             <BottomNavIcon name={icon} active={active} />
             {label}
