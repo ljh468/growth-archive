@@ -1628,6 +1628,8 @@ backend/src/main/resources/db/migration/
 
 backend/src/main/resources/db/demo/
 └─ V3__seed_demo_growth_archive_data.sql
+
+backend/src/main/resources/db/manual/
 └─ cleanup_demo_growth_archive_data.sql
 ```
 
@@ -1659,8 +1661,8 @@ dev cleanup/real-operation override: FLYWAY_LOCATIONS=classpath:db/migration
 Demo cleanup:
 
 ```text
-cleanup_demo_growth_archive_data.sql is a manual script.
-It has no Flyway version prefix and must not run automatically.
+cleanup_demo_growth_archive_data.sql is a manual script under `db/manual`.
+It is outside Flyway locations and must not run automatically.
 It truncates dev business data, preserves flyway_schema_history and interest_tags, and recreates default dev invite codes, baseline books, and current-month recommended books.
 ```
 
