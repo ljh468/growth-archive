@@ -72,6 +72,7 @@ public class AppProperties {
         private long accessTokenSeconds = 3600;
         private long refreshTokenSeconds = 1_209_600;
         private boolean secureCookie;
+        private String sameSite = "Lax";
 
         public String getSecret() {
             return secret;
@@ -103,6 +104,14 @@ public class AppProperties {
 
         public void setSecureCookie(boolean secureCookie) {
             this.secureCookie = secureCookie;
+        }
+
+        public String getSameSite() {
+            return sameSite;
+        }
+
+        public void setSameSite(String sameSite) {
+            this.sameSite = sameSite;
         }
     }
 

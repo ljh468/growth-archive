@@ -30,14 +30,14 @@ function LoginContent() {
           </p>
         )}
         <button
-          className="mt-8 w-full rounded-[var(--radius-card)] bg-[var(--color-deep-green)] px-4 py-3 text-sm font-normal !text-[var(--color-warm-white)] shadow-[var(--shadow-soft)] transition hover:bg-[var(--color-wood-brown)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-bronze)]"
+          className="mt-8 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[#FEE500] px-4 py-3 text-sm font-normal text-[rgba(0,0,0,0.85)] shadow-[var(--shadow-soft)] transition hover:bg-[#F4D600] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-bronze)]"
           onClick={() => {
             window.location.href = kakaoLoginUrl();
           }}
-          style={{ color: "var(--color-warm-white)" }}
           type="button"
         >
-          카카오로 계속하기
+          <span className="grid size-5 place-items-center rounded-full bg-[rgba(0,0,0,0.82)] text-[11px] text-[#FEE500]">K</span>
+          <span>카카오로 계속하기</span>
         </button>
       </section>
     </main>
