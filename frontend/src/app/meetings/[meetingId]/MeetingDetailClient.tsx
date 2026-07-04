@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button, Card, EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
-import { apiDelete, apiGet, apiPost, type CurrentUser, type MeetingDetail } from "@/lib/api";
+import { apiDelete, apiGet, apiGetCurrentUser, apiPost, type CurrentUser, type MeetingDetail } from "@/lib/api";
 
 export function MeetingDetailClient({ meetingId }: { meetingId: string }) {
   const [meeting, setMeeting] = useState<MeetingDetail | null>(null);
@@ -14,7 +14,7 @@ export function MeetingDetailClient({ meetingId }: { meetingId: string }) {
     async function load() {
       const [meetingResult, userResult] = await Promise.all([
         apiGet<MeetingDetail>(`/meetings/${meetingId}`),
-        apiGet<CurrentUser>("/auth/me"),
+        apiGetCurrentUser(),
       ]);
       if (!meetingResult.success) {
         setMessage(meetingResult.error?.message ?? "모임을 불러오지 못했습니다.");

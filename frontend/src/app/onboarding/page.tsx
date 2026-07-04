@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState, type RefObject } from "react";
-import { apiGet, apiPost, type CurrentUser, type InterestTag, type OnboardingProfileDraft, uploadImage } from "@/lib/api";
+import { apiGet, apiGetCurrentUser, apiPost, clearCurrentUserCache, type InterestTag, type OnboardingProfileDraft, uploadImage } from "@/lib/api";
 
 type Step = "invite" | "terms" | "profile" | "done";
 type ProfileField = "nickname" | "realName" | "birthDate" | "oneLineIntro" | "futureMeAt50" | "interestTagIds";
@@ -36,7 +36,7 @@ export default function OnboardingPage() {
     interestTagIds: [] as number[],
   });
   useEffect(() => {
-    apiGet<CurrentUser>("/auth/me").then((result) => {
+    apiGetCurrentUser().then((result) => {
       if (!result.success || !result.data.authenticated) {
         window.location.replace("/login");
         return;
@@ -90,6 +90,7 @@ export default function OnboardingPage() {
       setMessage(result.error?.message ?? "초대코드를 확인하지 못했습니다.");
       return;
     }
+    clearCurrentUserCache();
     setMessage(result.message);
     setStep("terms");
   }
@@ -101,6 +102,7 @@ export default function OnboardingPage() {
       setMessage(result.error?.message ?? "동의 정보를 저장하지 못했습니다.");
       return;
     }
+    clearCurrentUserCache();
     setMessage(null);
     setStep("profile");
   }
@@ -131,6 +133,7 @@ export default function OnboardingPage() {
       setProfileSubmitting(false);
       return;
     }
+    clearCurrentUserCache();
     setStep("done");
     setProfileSubmitting(false);
   }
@@ -208,8 +211,8 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--color-ivory)] px-5 py-8 text-[var(--color-ink)] sm:py-10">
-      <section className="mx-auto max-w-4xl">
+    <main className="min-h-screen w-full overflow-x-hidden bg-[var(--color-ivory)] px-4 py-8 text-[var(--color-ink)] sm:px-5 sm:py-10">
+      <section className="mx-auto w-full max-w-4xl min-w-0">
         <p className="font-latin text-2xl leading-none text-[var(--color-bronze)] sm:text-4xl">People Onboarding</p>
         <div className="mt-3 max-w-2xl sm:mt-4">
           <h1 className="font-display text-2xl font-normal leading-[1.2] sm:text-4xl">성장 프로필 만들기</h1>
@@ -251,25 +254,25 @@ export default function OnboardingPage() {
         )}
 
         {step === "profile" && (
-          <form className="mt-6 grid gap-4 sm:mt-8 sm:gap-5" noValidate onSubmit={submitProfile}>
-            <div className="grid gap-4 rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-5 shadow-[var(--shadow-soft)] sm:p-6">
+          <form className="mt-6 grid w-full min-w-0 gap-4 sm:mt-8 sm:gap-5" noValidate onSubmit={submitProfile}>
+            <div className="grid min-w-0 gap-4 overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-5 shadow-[var(--shadow-soft)] sm:p-6">
               <div>
                 <h2 className="font-display text-xl font-normal sm:text-2xl">기본 정보</h2>
                 <p className="mt-2 hidden text-sm leading-6 text-[var(--color-muted)] sm:block">프로필 카드와 독서기록에 함께 표시됩니다.</p>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid min-w-0 gap-4 md:grid-cols-2">
                 <TextField error={fieldErrors.nickname} inputRef={nicknameRef} label="닉네임" maxLength={20} onChange={(value) => updateProfile("nickname", value)} placeholder="예: 김민준" required value={profile.nickname} />
                 <TextField error={fieldErrors.realName} inputRef={realNameRef} label="실명" maxLength={50} onChange={(value) => updateProfile("realName", value)} placeholder="예: 김민준" required value={profile.realName} />
                 <TextField compact error={fieldErrors.birthDate} inputRef={birthDateRef} inputType="date" label="생년월일" max={new Date().toISOString().slice(0, 10)} onChange={(value) => updateProfile("birthDate", value)} required value={profile.birthDate} />
-                <div className="grid gap-2">
+                <div className="grid min-w-0 gap-2">
                   <span className="text-sm text-[var(--color-charcoal)]">공개 표시 방식</span>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid min-w-0 gap-2 sm:grid-cols-2">
                     {[
                       ["REAL_NAME", "실명 공개", "실명으로 신뢰감 있게 보여줍니다."],
                       ["NICKNAME", "닉네임 공개", "모임 안에서 쓰는 이름으로 보여줍니다."],
                     ].map(([value, title, description]) => (
                       <button
-                        className={`rounded-[var(--radius-card)] border p-3 text-left transition ${profile.displayNameType === value ? "border-[var(--color-deep-green)] bg-[rgba(47,90,67,0.08)]" : "border-[var(--color-line)] bg-[var(--color-warm-white)]"}`}
+                        className={`min-w-0 rounded-[var(--radius-card)] border p-3 text-left transition ${profile.displayNameType === value ? "border-[var(--color-deep-green)] bg-[rgba(47,90,67,0.08)]" : "border-[var(--color-line)] bg-[var(--color-warm-white)]"}`}
                         key={value}
                         onClick={() => updateProfile("displayNameType", value)}
                         type="button"
@@ -282,11 +285,11 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <TextField error={fieldErrors.oneLineIntro} inputRef={oneLineIntroRef} label="한 줄 소개" maxLength={80} onChange={(value) => updateProfile("oneLineIntro", value)} placeholder="예: 작게 읽고 꾸준히 실행합니다." required value={profile.oneLineIntro} />
-              <label className="grid gap-2 text-sm text-[var(--color-charcoal)]">
+              <label className="grid min-w-0 gap-2 text-sm text-[var(--color-charcoal)]">
                 <span>프로필 사진</span>
                 <input
                   accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-                  className="min-h-12 rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-base outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-[var(--color-deep-green)] file:px-4 file:py-2 file:text-sm file:text-[var(--color-warm-white)] focus:border-[var(--color-deep-green)]"
+                  className="block min-h-12 w-full min-w-0 max-w-full rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-warm-white)] px-2 py-2 text-sm outline-none transition file:mr-2 file:rounded-full file:border-0 file:bg-[var(--color-deep-green)] file:px-3 file:py-2 file:text-xs file:text-[var(--color-warm-white)] focus:border-[var(--color-deep-green)] sm:px-4 sm:text-base sm:file:mr-4 sm:file:px-4 sm:file:text-sm"
                   onChange={(event) => setProfileImageFile(event.target.files?.[0] ?? null)}
                   type="file"
                 />
@@ -294,21 +297,21 @@ export default function OnboardingPage() {
               </label>
             </div>
 
-            <div className="grid gap-4 rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-5 shadow-[var(--shadow-soft)] sm:p-6">
+            <div className="grid min-w-0 gap-4 overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-5 shadow-[var(--shadow-soft)] sm:p-6">
               <div>
                 <h2 className="flex items-center gap-2 font-display text-xl font-normal sm:text-2xl">관심 분야 <RequiredMark /></h2>
                 <p className="mt-1 hidden text-sm leading-6 text-[var(--color-muted)] sm:block">1개 이상, 최대 5개까지 선택할 수 있습니다.</p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex min-w-0 flex-wrap gap-2">
                 {interestTags.map((tag) => {
                   const selected = profile.interestTagIds.includes(tag.id);
                   return (
-	                    <button
-	                      className={`rounded-full border px-2.5 py-1 text-[11px] transition ${selected ? "border-[var(--color-deep-green)] bg-[var(--color-deep-green)] !text-[var(--color-warm-white)]" : "border-[var(--color-line)] bg-[var(--color-warm-white)] text-[var(--color-charcoal)] hover:border-[var(--color-deep-green)]"}`}
-	                      key={tag.id}
-	                      onClick={() => {
-	                        toggleInterestTag(tag.id);
-	                        setProfileError(null);
+                    <button
+                      className={`touch-manipulation rounded-full border px-2.5 py-1 text-[11px] transition-colors duration-75 ${selected ? "border-[var(--color-deep-green)] bg-[var(--color-deep-green)] !text-[var(--color-warm-white)]" : "border-[var(--color-line)] bg-[var(--color-warm-white)] text-[var(--color-charcoal)] hover:border-[var(--color-deep-green)]"}`}
+                      key={tag.id}
+                      onClick={() => {
+                        toggleInterestTag(tag.id);
+                        setProfileError(null);
                       }}
                       style={selected ? { color: "var(--color-warm-white)" } : undefined}
                       type="button"
@@ -321,7 +324,7 @@ export default function OnboardingPage() {
               {fieldErrors.interestTagIds && <p className="text-sm leading-6 text-[#9f3f2f]">{fieldErrors.interestTagIds}</p>}
             </div>
 
-            <div className="grid gap-4 rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-5 shadow-[var(--shadow-soft)] sm:gap-5 sm:p-6">
+            <div className="grid min-w-0 gap-4 overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-5 shadow-[var(--shadow-soft)] sm:gap-5 sm:p-6">
               <div>
                 <h2 className="font-display text-xl font-normal sm:text-2xl">성장 기록</h2>
                 <p className="mt-2 hidden text-sm leading-6 text-[var(--color-muted)] sm:block">긴 문장은 부담 없이 초안처럼 적어도 됩니다.</p>
@@ -378,11 +381,11 @@ function TextField({
   inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   return (
-    <label className="grid gap-2 text-sm text-[var(--color-charcoal)]">
+    <label className="grid min-w-0 gap-2 text-sm text-[var(--color-charcoal)]">
       <span className="flex items-center gap-2">{label} {required && <RequiredMark />}</span>
       <input
         aria-invalid={Boolean(error)}
-        className={`${compact ? "min-h-10 px-3 text-sm" : "min-h-10 px-3 text-sm sm:min-h-12 sm:px-4 sm:text-base"} rounded-[var(--radius-card)] border ${error ? "border-[#c78473]" : "border-[var(--color-line)]"} bg-[var(--color-warm-white)] outline-none transition placeholder:text-[rgba(111,103,93,0.58)] focus:border-[var(--color-deep-green)]`}
+        className={`${compact ? "min-h-10 px-3 text-sm" : "min-h-10 px-3 text-sm sm:min-h-12 sm:px-4 sm:text-base"} w-full min-w-0 rounded-[var(--radius-card)] border ${error ? "border-[#c78473]" : "border-[var(--color-line)]"} bg-[var(--color-warm-white)] outline-none transition placeholder:text-[rgba(111,103,93,0.58)] focus:border-[var(--color-deep-green)]`}
         max={max}
         maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
@@ -418,11 +421,11 @@ function TextAreaField({
   inputRef?: RefObject<HTMLTextAreaElement | null>;
 }) {
   return (
-    <label className="grid gap-2 text-sm text-[var(--color-charcoal)]">
+    <label className="grid min-w-0 gap-2 text-sm text-[var(--color-charcoal)]">
       <span className="flex items-center gap-2">{label} {required && <RequiredMark />}</span>
       <textarea
         aria-invalid={Boolean(error)}
-        className={`min-h-24 resize-y rounded-[var(--radius-card)] border ${error ? "border-[#c78473]" : "border-[var(--color-line)]"} bg-[var(--color-warm-white)] px-3 py-3 text-sm leading-6 outline-none transition placeholder:text-[rgba(111,103,93,0.58)] focus:border-[var(--color-deep-green)] sm:min-h-32 sm:px-4 sm:text-base sm:leading-7`}
+        className={`min-h-24 w-full min-w-0 resize-y rounded-[var(--radius-card)] border ${error ? "border-[#c78473]" : "border-[var(--color-line)]"} bg-[var(--color-warm-white)] px-3 py-3 text-sm leading-6 outline-none transition placeholder:text-[rgba(111,103,93,0.58)] focus:border-[var(--color-deep-green)] sm:min-h-32 sm:px-4 sm:text-base sm:leading-7`}
         maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}

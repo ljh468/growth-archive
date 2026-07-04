@@ -447,6 +447,17 @@ export async function apiGet<T>(path: string): Promise<ApiResponse<T>> {
   return response.json();
 }
 
+let currentUserRequest: Promise<ApiResponse<CurrentUser>> | null = null;
+
+export function apiGetCurrentUser() {
+  currentUserRequest ??= apiGet<CurrentUser>("/auth/me");
+  return currentUserRequest;
+}
+
+export function clearCurrentUserCache() {
+  currentUserRequest = null;
+}
+
 export async function apiPost<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
   const response = await fetch(`${apiBaseUrl()}${path}`, {
     method: "POST",
