@@ -1,0 +1,239 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Caveat";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/caveat.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "NanumSquare";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/nanum-square.woff") format("woff");
+}
+
+@font-face {
+  font-family: "NanumBeomSomCe";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/nanum-beomsom.ttf") format("truetype");
+}
+
+:root {
+  --color-ivory: #f8f6ee;
+  --color-warm-white: #fffefa;
+  --color-ink: #22221c;
+  --color-charcoal: #342f26;
+  --color-muted: #6e685f;
+  --color-bronze: #8a6a45;
+  --color-deep-green: #2f5a43;
+  --color-wood-brown: #4a3424;
+  --color-line: #e5ded1;
+  --radius-card: 8px;
+  --shadow-soft: 0 18px 45px rgba(63, 47, 34, 0.07);
+  --font-body: "Gowun Batang", "Noto Serif KR", "Apple SD Gothic Neo", serif;
+  --font-display: "NanumSquare", "Gowun Batang", "Noto Serif KR", sans-serif;
+  --font-hand: "NanumBeomSomCe", "Nanum Pen Script", "Nanum Brush Script", cursive;
+  --font-latin: "Caveat", "Nanum Pen Script", cursive;
+  --font-editorial-latin: "Cormorant Garamond", Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ivory);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  letter-spacing: 0;
+  line-height: 1.65;
+}
+
+html {
+  min-height: 100%;
+  max-width: 100%;
+  font-synthesis: none;
+  overflow-x: hidden;
+}
+
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  border-radius: var(--radius-card);
+  font: inherit;
+}
+
+::selection {
+  background: rgba(63, 95, 74, 0.22);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-hand {
+  font-family: var(--font-hand);
+  font-weight: 400;
+}
+
+.font-latin {
+  font-family: var(--font-latin);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.font-editorial-latin {
+  font-family: var(--font-editorial-latin);
+}
+
+.keep-words {
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.mobile-hard-wrap {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+@media (min-width: 640px) {
+  .mobile-hard-wrap {
+    word-break: keep-all;
+  }
+}
+
+.photo-muted {
+  filter: saturate(0.82) contrast(0.95);
+}
+
+.archive-more-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(31, 77, 58, 0.18);
+  border-radius: var(--radius-card);
+  background: var(--color-deep-green);
+  color: var(--color-warm-white);
+  font-family: var(--font-latin);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: 0.625rem 1.25rem;
+  box-shadow: 0 14px 32px rgba(47, 90, 67, 0.18);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.archive-more-button:hover {
+  background: var(--color-wood-brown);
+  border-color: rgba(74, 52, 36, 0.24);
+  box-shadow: 0 18px 38px rgba(74, 52, 36, 0.17);
+  transform: translateY(-1px);
+}
+
+.archive-more-button:focus-visible {
+  outline: 2px solid rgba(47, 90, 67, 0.35);
+  outline-offset: 4px;
+}
+
+.archive-more-button:disabled {
+  cursor: wait;
+  opacity: 0.64;
+  transform: none;
+}
+
+.archive-record-action {
+  color: var(--color-deep-green);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
+  text-underline-offset: 4px;
+}
+
+.archive-record-action:hover {
+  text-decoration: underline;
+}
+
+.archive-record-action--danger {
+  color: var(--color-wood-brown);
+}
+
+.archive-record-button {
+  display: inline-flex;
+  min-height: 1.875rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-warm-white);
+  color: var(--color-deep-green);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1;
+  padding: 0.375rem 0.7rem;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.archive-record-button:hover {
+  border-color: rgba(47, 90, 67, 0.28);
+  background: rgba(47, 90, 67, 0.045);
+}
+
+.archive-record-button--danger {
+  color: var(--color-wood-brown);
+}
+
+.archive-record-button--primary {
+  border-color: rgba(47, 90, 67, 0.18);
+  background: var(--color-deep-green);
+  color: var(--color-warm-white);
+  box-shadow: var(--shadow-soft);
+}
+
+.archive-record-button--primary:hover {
+  border-color: rgba(74, 52, 36, 0.28);
+  background: var(--color-wood-brown);
+}
+
+.archive-record-button--danger:hover {
+  border-color: rgba(74, 52, 36, 0.28);
+  background: rgba(74, 52, 36, 0.045);
+}
+
+.note-chip {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  border: 1px solid rgba(47, 90, 67, 0.24);
+  border-radius: 999px;
+  background: rgba(248, 246, 238, 0.84);
+  padding: 0.25rem 0.75rem;
+  line-height: 1;
+}

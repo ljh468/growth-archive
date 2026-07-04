@@ -1,0 +1,2 @@
+migration_key,meeting_type,title,description,scheduled_at,location_region,exact_location,capacity,fee_amount,status
+meeting-001,REGULAR_READING,2024년 2월 독서모임,기존 정기모임 이관,2024-02-11T10:00:00+09:00,서울,,20,0,HELD

@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: growth-archive-backend
+  profiles:
+    default: local
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+  jpa:
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:local-development-jwt-secret-change-before-production}
+    access-token-seconds: ${JWT_ACCESS_TOKEN_SECONDS:3600}
+    refresh-token-seconds: ${JWT_REFRESH_TOKEN_SECONDS:1209600}
+  kakao:
+    client-id: ${KAKAO_REST_API_KEY:${KAKAO_CLIENT_ID:}}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
+    admin-key: ${KAKAO_ADMIN_KEY:}
+    webhook-secret: ${KAKAO_WEBHOOK_SECRET:}
+    authorization-uri: ${KAKAO_AUTHORIZATION_URI:https://kauth.kakao.com/oauth/authorize}
+    token-uri: ${KAKAO_TOKEN_URI:https://kauth.kakao.com/oauth/token}
+    user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+    unlink-uri: ${KAKAO_UNLINK_URI:https://kapi.kakao.com/v1/user/unlink}
+    initial-admin-provider-ids: ${KAKAO_INITIAL_ADMIN_PROVIDER_IDS:}
+  book-search:
+    kakao:
+      rest-api-key: ${KAKAO_BOOK_REST_API_KEY:${KAKAO_REST_API_KEY:}}
+      endpoint: ${KAKAO_BOOK_SEARCH_ENDPOINT:https://dapi.kakao.com/v3/search/book}
+  invite:
+    initial-code: ${INITIAL_INVITE_CODE:}
+    admin-initial-code: ${INITIAL_ADMIN_INVITE_CODE:}
+  storage:
+    environment-prefix: ${STORAGE_ENVIRONMENT_PREFIX:local}
+    supabase:
+      url: ${SUPABASE_URL:}
+      service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+      bucket: ${SUPABASE_STORAGE_BUCKET:images}
+      s3-endpoint: ${SUPABASE_STORAGE_S3_ENDPOINT:}
+      s3-region: ${SUPABASE_STORAGE_S3_REGION:ap-northeast-2}
+      s3-access-key-id: ${SUPABASE_STORAGE_S3_ACCESS_KEY_ID:}
+      s3-secret-access-key: ${SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY:}
+      public-base-url: ${SUPABASE_STORAGE_PUBLIC_BASE_URL:}
