@@ -97,9 +97,9 @@ export function MeetingDetailClient({ meetingId }: { meetingId: string }) {
           <Card>
             <h2 className="text-base font-normal sm:text-lg">참석자</h2>
             {!memberView && (
-              <div className="mt-3 flex items-center gap-3 sm:mt-4">
+              <div className="mt-3 grid gap-2 sm:mt-4 sm:flex sm:items-center sm:gap-3">
                 <AttendeePreview count={meeting.attendeeCount} images={meeting.attendeePreviewImageUrls} />
-                <p className="text-sm text-[var(--color-charcoal)]">참석자 이름과 프로필은 성장하는 사람들에게만 공개됩니다.</p>
+                <p className="min-w-0 text-sm leading-6 text-[var(--color-charcoal)]">참석자 이름과 프로필은 성장하는 사람들에게만 공개됩니다.</p>
               </div>
             )}
             {memberView && (
@@ -140,7 +140,7 @@ function AttendeePreview({ images, count }: { images: Array<string | null>; coun
   const visibleAttendees = images.slice(0, maxVisible);
 
   return (
-    <div className="flex -space-x-2">
+    <div className="flex shrink-0 -space-x-2">
       {visibleAttendees.map((image, index) => (
         image ? (
           <Image alt="" className="size-8 rounded-full border border-[var(--color-warm-white)] object-cover" height={32} key={`${image}-${index}`} src={image} unoptimized width={32} />

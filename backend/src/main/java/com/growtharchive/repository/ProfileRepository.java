@@ -28,8 +28,11 @@ import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Repository;
@@ -69,7 +72,7 @@ public class ProfileRepository {
                 )
                 .exists());
         }
-        return queryFactory
+        List<Tuple> rows = queryFactory
             .select(member.id, member.role, member.nickname, member.realName, member.oneLineIntro, member.fiftyYearOldMe,
                 profileImage.publicUrl, member.kakaoProfileImageUrl)
             .from(member)
@@ -88,9 +91,21 @@ public class ProfileRepository {
             )
             .limit(limit)
             .offset(offset)
-            .fetch()
-            .stream()
-            .map(row -> toProfileCard(row, revealPrivateProfile))
+            .fetch();
+        List<Long> memberIds = rows.stream()
+            .map(row -> row.get(member.id))
+            .toList();
+        Map<Long, List<String>> interestTagsByMemberId = findInterestTagNames(memberIds);
+        Map<Long, ActivitySummary> latestReadingActivityByMemberId = latestReadingActivities(memberIds);
+        Map<Long, GrowthStats> growthStatsByMemberId = growthStats(memberIds);
+        return rows.stream()
+            .map(row -> toProfileCard(
+                row,
+                revealPrivateProfile,
+                interestTagsByMemberId.getOrDefault(row.get(member.id), List.of()),
+                growthStatsByMemberId.getOrDefault(row.get(member.id), emptyGrowthStats()),
+                latestReadingActivityByMemberId.get(row.get(member.id))
+            ))
             .toList();
     }
 
@@ -240,7 +255,13 @@ public class ProfileRepository {
             .toList();
     }
 
-    private ProfileCard toProfileCard(Tuple row, boolean revealPrivateProfile) {
+    private ProfileCard toProfileCard(
+        Tuple row,
+        boolean revealPrivateProfile,
+        List<String> interestTags,
+        GrowthStats growthStats,
+        ActivitySummary latestReadingActivity
+    ) {
         Long memberId = row.get(member.id);
         return new ProfileCard(
             memberId,
@@ -248,10 +269,10 @@ public class ProfileRepository {
             displayName(row, revealPrivateProfile),
             revealPrivateProfile ? coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)) : null,
             row.get(member.oneLineIntro),
-            findInterestTagNames(memberId),
+            interestTags,
             summarize(row.get(member.fiftyYearOldMe), 90),
-            growthStats(memberId),
-            latestReadingActivity(memberId)
+            growthStats,
+            latestReadingActivity
         );
     }
 
@@ -382,6 +403,23 @@ public class ProfileRepository {
             countMeetingReviews(memberId),
             countSmallMeetings(memberId)
         );
+    }
+
+    private Map<Long, GrowthStats> growthStats(List<Long> memberIds) {
+        Map<Long, Long> readingRecords = countReadingRecords(memberIds);
+        Map<Long, Long> actionPlans = countActionPlans(memberIds);
+        Map<Long, Long> reflections = countReflections(memberIds);
+        Map<Long, Long> meetingReviews = countMeetingReviews(memberIds);
+        Map<Long, Long> smallMeetings = countSmallMeetings(memberIds);
+        Map<Long, GrowthStats> statsByMemberId = new LinkedHashMap<>();
+        memberIds.forEach(memberId -> statsByMemberId.put(memberId, new GrowthStats(
+            readingRecords.getOrDefault(memberId, 0L),
+            actionPlans.getOrDefault(memberId, 0L),
+            reflections.getOrDefault(memberId, 0L),
+            meetingReviews.getOrDefault(memberId, 0L),
+            smallMeetings.getOrDefault(memberId, 0L)
+        )));
+        return statsByMemberId;
     }
 
     private List<ReadingRecordDetail> findRecentReadingRecords(Long memberId, int limit, boolean includeMemberOnly) {
@@ -549,6 +587,30 @@ public class ProfileRepository {
         );
     }
 
+    private Map<Long, ActivitySummary> latestReadingActivities(List<Long> memberIds) {
+        Map<Long, ActivitySummary> latestByMemberId = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return latestByMemberId;
+        }
+        queryFactory
+            .select(readingRecord.memberId, readingRecord.bookId, book.title, readingRecord.recordedAt)
+            .from(readingRecord)
+            .join(book).on(book.id.eq(readingRecord.bookId))
+            .where(readingRecord.memberId.in(memberIds), readingRecord.status.eq("ACTIVE"))
+            .orderBy(readingRecord.memberId.asc(), readingRecord.recordedAt.desc(), readingRecord.id.desc())
+            .fetch()
+            .forEach(row -> {
+                Long memberId = row.get(readingRecord.memberId);
+                latestByMemberId.putIfAbsent(memberId, new ActivitySummary(
+                    "READING_RECORD",
+                    row.get(book.title),
+                    "/books/" + row.get(readingRecord.bookId),
+                    row.get(readingRecord.recordedAt)
+                ));
+            });
+        return latestByMemberId;
+    }
+
     private List<String> findInterestTagNames(Long memberId) {
         return queryFactory
             .select(interestTag.name)
@@ -557,6 +619,28 @@ public class ProfileRepository {
             .where(memberInterestTag.id.memberId.eq(memberId), interestTag.active.isTrue())
             .orderBy(interestTag.displayOrder.asc())
             .fetch();
+    }
+
+    private Map<Long, List<String>> findInterestTagNames(List<Long> memberIds) {
+        Map<Long, List<String>> tagsByMemberId = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return tagsByMemberId;
+        }
+        queryFactory
+            .select(memberInterestTag.id.memberId, interestTag.name)
+            .from(memberInterestTag)
+            .join(interestTag).on(interestTag.id.eq(memberInterestTag.id.interestTagId))
+            .where(memberInterestTag.id.memberId.in(memberIds), interestTag.active.isTrue())
+            .orderBy(memberInterestTag.id.memberId.asc(), interestTag.displayOrder.asc())
+            .fetch()
+            .forEach(row -> tagsByMemberId
+                .computeIfAbsent(row.get(memberInterestTag.id.memberId), ignored -> new ArrayList<>())
+                .add(row.get(interestTag.name)));
+        return tagsByMemberId;
+    }
+
+    private GrowthStats emptyGrowthStats() {
+        return new GrowthStats(0L, 0L, 0L, 0L, 0L);
     }
 
     private List<Long> findInterestTagIds(Long memberId) {
@@ -578,6 +662,21 @@ public class ProfileRepository {
         return zeroIfNull(count);
     }
 
+    private Map<Long, Long> countReadingRecords(List<Long> memberIds) {
+        Map<Long, Long> counts = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return counts;
+        }
+        queryFactory
+            .select(readingRecord.memberId, readingRecord.count())
+            .from(readingRecord)
+            .where(readingRecord.memberId.in(memberIds), readingRecord.status.eq("ACTIVE"))
+            .groupBy(readingRecord.memberId)
+            .fetch()
+            .forEach(row -> counts.put(row.get(readingRecord.memberId), zeroIfNull(row.get(readingRecord.count()))));
+        return counts;
+    }
+
     private Long countActionPlans(Long memberId) {
         Long count = queryFactory
             .select(actionPlan.count())
@@ -585,6 +684,21 @@ public class ProfileRepository {
             .where(actionPlan.memberId.eq(memberId), actionPlan.status.eq("ACTIVE"))
             .fetchOne();
         return zeroIfNull(count);
+    }
+
+    private Map<Long, Long> countActionPlans(List<Long> memberIds) {
+        Map<Long, Long> counts = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return counts;
+        }
+        queryFactory
+            .select(actionPlan.memberId, actionPlan.count())
+            .from(actionPlan)
+            .where(actionPlan.memberId.in(memberIds), actionPlan.status.eq("ACTIVE"))
+            .groupBy(actionPlan.memberId)
+            .fetch()
+            .forEach(row -> counts.put(row.get(actionPlan.memberId), zeroIfNull(row.get(actionPlan.count()))));
+        return counts;
     }
 
     private Long countReflections(Long memberId) {
@@ -596,6 +710,21 @@ public class ProfileRepository {
         return zeroIfNull(count);
     }
 
+    private Map<Long, Long> countReflections(List<Long> memberIds) {
+        Map<Long, Long> counts = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return counts;
+        }
+        queryFactory
+            .select(reflection.memberId, reflection.count())
+            .from(reflection)
+            .where(reflection.memberId.in(memberIds), reflection.status.eq("ACTIVE"))
+            .groupBy(reflection.memberId)
+            .fetch()
+            .forEach(row -> counts.put(row.get(reflection.memberId), zeroIfNull(row.get(reflection.count()))));
+        return counts;
+    }
+
     private Long countMeetingReviews(Long memberId) {
         Long count = queryFactory
             .select(meetingReview.count())
@@ -605,6 +734,21 @@ public class ProfileRepository {
         return zeroIfNull(count);
     }
 
+    private Map<Long, Long> countMeetingReviews(List<Long> memberIds) {
+        Map<Long, Long> counts = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return counts;
+        }
+        queryFactory
+            .select(meetingReview.memberId, meetingReview.count())
+            .from(meetingReview)
+            .where(meetingReview.memberId.in(memberIds), meetingReview.status.eq("ACTIVE"))
+            .groupBy(meetingReview.memberId)
+            .fetch()
+            .forEach(row -> counts.put(row.get(meetingReview.memberId), zeroIfNull(row.get(meetingReview.count()))));
+        return counts;
+    }
+
     private Long countSmallMeetings(Long memberId) {
         Long count = queryFactory
             .select(meeting.count())
@@ -612,6 +756,21 @@ public class ProfileRepository {
             .where(meeting.hostMemberId.eq(memberId), meeting.meetingType.eq("SMALL"), meeting.status.ne("DELETED"))
             .fetchOne();
         return zeroIfNull(count);
+    }
+
+    private Map<Long, Long> countSmallMeetings(List<Long> memberIds) {
+        Map<Long, Long> counts = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return counts;
+        }
+        queryFactory
+            .select(meeting.hostMemberId, meeting.count())
+            .from(meeting)
+            .where(meeting.hostMemberId.in(memberIds), meeting.meetingType.eq("SMALL"), meeting.status.ne("DELETED"))
+            .groupBy(meeting.hostMemberId)
+            .fetch()
+            .forEach(row -> counts.put(row.get(meeting.hostMemberId), zeroIfNull(row.get(meeting.count()))));
+        return counts;
     }
 
     private BooleanBuilder activeMemberWhere() {

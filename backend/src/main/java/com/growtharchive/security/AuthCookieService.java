@@ -54,10 +54,23 @@ public class AuthCookieService {
         ResponseCookie cookie = ResponseCookie.from(name, value)
             .httpOnly(true)
             .secure(properties.getJwt().isSecureCookie())
-            .sameSite("Lax")
+            .sameSite(normalizeSameSite(properties.getJwt().getSameSite()))
             .path("/")
             .maxAge(Duration.ofSeconds(maxAgeSeconds))
             .build();
         response.addHeader("Set-Cookie", cookie.toString());
+    }
+
+    private String normalizeSameSite(String sameSite) {
+        if (sameSite == null || sameSite.isBlank()) {
+            return "Lax";
+        }
+        if ("none".equalsIgnoreCase(sameSite)) {
+            return "None";
+        }
+        if ("strict".equalsIgnoreCase(sameSite)) {
+            return "Strict";
+        }
+        return "Lax";
     }
 }
