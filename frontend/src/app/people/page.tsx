@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
-import { apiGet, type CurrentUser, type MonthlyActionPlanShowcase, type ProfileCard } from "@/lib/api";
+import { apiGet, apiGetCurrentUser, type MonthlyActionPlanShowcase, type ProfileCard } from "@/lib/api";
 
 export default function PeoplePage() {
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -25,7 +25,7 @@ export default function PeoplePage() {
   const showProfileImages = memberReady && people.some((person) => person.profileImageUrl);
 
   useEffect(() => {
-    Promise.all([apiGet<ProfileCard[]>("/people"), apiGet<CurrentUser>("/auth/me")])
+    Promise.all([apiGet<ProfileCard[]>("/people"), apiGetCurrentUser()])
       .then(([peopleResult, userResult]) => {
         if (!peopleResult.success) {
           setError(peopleResult.error?.message ?? "성장 프로필을 불러오지 못했습니다.");

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { Avatar, Button, EmptyState, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
-import { apiGet, apiPut, type BookDetailResponse, type CurrentUser, type ReadingRecord } from "@/lib/api";
+import { apiGet, apiGetCurrentUser, apiPut, type BookDetailResponse, type CurrentUser, type ReadingRecord } from "@/lib/api";
 
 type ReadingRecordEditForm = {
   rating: string;
@@ -25,7 +25,7 @@ export function BookDetailClient({ bookId }: { bookId: string }) {
     async function load() {
       const [bookResult, userResult] = await Promise.all([
         apiGet<BookDetailResponse>(`/books/${bookId}`),
-        apiGet<CurrentUser>("/auth/me"),
+        apiGetCurrentUser(),
       ]);
       if (!bookResult.success) {
         setError(bookResult.error?.message ?? "책 상세를 불러오지 못했습니다.");

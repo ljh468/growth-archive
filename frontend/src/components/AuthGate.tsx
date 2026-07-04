@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { apiGet, type CurrentUser } from "@/lib/api";
+import { apiGetCurrentUser, type CurrentUser } from "@/lib/api";
 
 const accessRank = {
   PUBLIC: 0,
@@ -22,7 +22,7 @@ export function AuthGate({ required, children }: AuthGateProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiGet<CurrentUser>("/auth/me")
+    apiGetCurrentUser()
       .then((result) => {
         if (!result.success) {
           setError(result.error?.message ?? "인증 상태를 확인하지 못했습니다.");

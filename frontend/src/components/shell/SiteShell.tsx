@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { apiGet, apiPost, type CurrentUser } from "@/lib/api";
+import { apiGetCurrentUser, apiPost, clearCurrentUserCache } from "@/lib/api";
 
 const desktopNav = [
   ["독서기록 라이브러리", "/library"],
@@ -36,7 +36,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    apiGet<CurrentUser>("/auth/me").then((result) => {
+    apiGetCurrentUser().then((result) => {
       if (!result.success) {
         return;
       }
@@ -48,6 +48,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
 
   async function logout() {
     await apiPost("/auth/logout");
+    clearCurrentUserCache();
     setMemberReady(false);
     setAdminReady(false);
     window.location.href = "/";

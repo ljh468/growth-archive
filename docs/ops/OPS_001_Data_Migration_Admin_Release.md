@@ -1202,10 +1202,10 @@ FLYWAY_LOCATIONS=classpath:db/migration
 dev 더미 데이터와 dev에서 추가로 생성된 사용자/운영 도메인 데이터를 모두 제거해야 하면 다음 수동 SQL을 실행한다.
 
 ```bash
-psql "$SUPABASE_DATABASE_URL" -f backend/src/main/resources/db/demo/cleanup_demo_growth_archive_data.sql
+psql "$SUPABASE_DATABASE_URL" -f backend/src/main/resources/db/manual/cleanup_demo_growth_archive_data.sql
 ```
 
-이 SQL은 Flyway가 자동 실행하지 않도록 버전 prefix를 붙이지 않는다. `flyway_schema_history`와 공통 seed인 `interest_tags`는 남기고, 회원/인증/독서기록/실행계획/회고/모임/후기/이미지/운영 로그 테이블을 비운다. 초대코드는 정리 후 dev 기본값인 일반 `test`, 운영진 `admin` 코드로 다시 생성한다. 기본 도서와 현재월 추천책 5권도 다시 생성해 공개 화면이 비어 보이지 않게 한다.
+이 SQL은 Flyway가 자동 실행하지 않도록 `db/manual`에 둔다. `flyway_schema_history`와 공통 seed인 `interest_tags`는 남기고, 회원/인증/독서기록/실행계획/회고/모임/후기/이미지/운영 로그 테이블을 비운다. 초대코드는 정리 후 dev 기본값인 일반 `test`, 운영진 `admin` 코드로 다시 생성한다. 기본 도서와 현재월 추천책 5권도 다시 생성해 공개 화면이 비어 보이지 않게 한다.
 
 주의: 이 스크립트는 dev reset 전용이다. 정식 운영 데이터가 들어간 DB에서는 실행하지 않는다. 가능하면 정식 운영 전에는 새 DB를 만들거나 DB를 초기화한 뒤 `classpath:db/migration`만 적용한다.
 

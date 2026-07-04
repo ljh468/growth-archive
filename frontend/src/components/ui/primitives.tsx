@@ -20,7 +20,7 @@ type ConfirmDialogProps = {
 
 export function Button({ children, href, onClick, type = "button", variant = "primary" }: ButtonProps) {
   const className = [
-    "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-card)] px-5 py-2.5 text-sm font-normal transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-bronze)] active:translate-y-px",
+    "inline-flex min-h-11 max-w-full self-start touch-manipulation items-center justify-center rounded-[var(--radius-card)] px-5 py-2.5 text-sm font-normal transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-bronze)] active:translate-y-px",
     variant === "primary" && "bg-[var(--color-deep-green)] !text-[var(--color-warm-white)] shadow-[var(--shadow-soft)] hover:bg-[var(--color-wood-brown)]",
     variant === "secondary" && "bg-[var(--color-deep-green)] !text-[var(--color-warm-white)] shadow-[var(--shadow-soft)] hover:bg-[var(--color-wood-brown)]",
     variant === "ghost" && "bg-[var(--color-deep-green)] !text-[var(--color-warm-white)] hover:bg-[var(--color-wood-brown)]",

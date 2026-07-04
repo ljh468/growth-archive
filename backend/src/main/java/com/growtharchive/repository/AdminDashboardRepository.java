@@ -11,8 +11,9 @@ import com.growtharchive.support.KstDateTimes;
 import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -60,11 +61,7 @@ public class AdminDashboardRepository {
             .fetchOne());
         List<Long> participationTargetMemberIds = participationTargetMemberIds(targetMonth);
         long participationTargetCount = participationTargetMemberIds.size();
-        long participationCompletedCount = participationTargetMemberIds.stream()
-            .filter(memberId -> hasReadingRecord(memberId, targetMonth)
-                || hasActionPlan(memberId, targetMonth)
-                || hasManualCompletion(memberId, targetMonth))
-            .count();
+        long participationCompletedCount = completedParticipationMemberIds(participationTargetMemberIds, targetMonth).size();
         return new AdminDashboardCounts(
             activeMemberCount,
             activeReadingRecordCount,
@@ -82,59 +79,56 @@ public class AdminDashboardRepository {
 
     private List<Long> participationTargetMemberIds(LocalDate targetMonth) {
         return queryFactory
-            .select(member.id, member.onboardingCompletedAt)
+            .select(member.id)
             .from(member)
-            .where(member.onboardingCompletedAt.isNotNull(), member.deactivatedAt.isNull())
-            .fetch()
-            .stream()
-            .filter(row -> isCalculationTarget(row.get(member.onboardingCompletedAt), targetMonth))
-            .map(row -> row.get(member.id))
-            .toList();
+            .where(
+                member.onboardingCompletedAt.isNotNull(),
+                member.deactivatedAt.isNull(),
+                member.onboardingCompletedAt.lt(KstDateTimes.startOfNextMonth(targetMonth))
+            )
+            .fetch();
     }
 
-    private boolean hasReadingRecord(Long memberId, LocalDate targetMonth) {
-        Long count = queryFactory
-            .select(readingRecord.count())
+    private Set<Long> completedParticipationMemberIds(List<Long> memberIds, LocalDate targetMonth) {
+        Set<Long> completedMemberIds = new LinkedHashSet<>();
+        if (memberIds.isEmpty()) {
+            return completedMemberIds;
+        }
+        queryFactory
+            .select(readingRecord.memberId)
             .from(readingRecord)
             .where(
-                readingRecord.memberId.eq(memberId),
+                readingRecord.memberId.in(memberIds),
                 readingRecord.status.eq("ACTIVE"),
                 readingRecord.recordedAt.goe(KstDateTimes.startOfMonth(targetMonth)),
                 readingRecord.recordedAt.lt(KstDateTimes.startOfNextMonth(targetMonth))
             )
-            .fetchOne();
-        return count != null && count > 0;
-    }
-
-    private boolean hasActionPlan(Long memberId, LocalDate targetMonth) {
-        Long count = queryFactory
-            .select(monthlyActionPlan.count())
+            .distinct()
+            .fetch()
+            .forEach(completedMemberIds::add);
+        queryFactory
+            .select(monthlyActionPlan.memberId)
             .from(monthlyActionPlan)
             .where(
-                monthlyActionPlan.memberId.eq(memberId),
+                monthlyActionPlan.memberId.in(memberIds),
                 monthlyActionPlan.status.eq("ACTIVE"),
                 monthlyActionPlan.targetMonth.eq(targetMonth)
             )
-            .fetchOne();
-        return count != null && count > 0;
-    }
-
-    private boolean hasManualCompletion(Long memberId, LocalDate targetMonth) {
-        OffsetDateTime manuallyCompletedAt = queryFactory
-            .select(adminNote.manuallyCompletedAt)
+            .distinct()
+            .fetch()
+            .forEach(completedMemberIds::add);
+        queryFactory
+            .select(adminNote.memberId)
             .from(adminNote)
             .where(
-                adminNote.memberId.eq(memberId),
+                adminNote.memberId.in(memberIds),
                 adminNote.targetMonth.eq(targetMonth),
                 adminNote.manuallyCompletedAt.isNotNull()
             )
-            .fetchOne();
-        return manuallyCompletedAt != null;
-    }
-
-    private boolean isCalculationTarget(OffsetDateTime onboardingCompletedAt, LocalDate targetMonth) {
-        LocalDate joinedMonth = KstDateTimes.monthOf(onboardingCompletedAt);
-        return !joinedMonth.isAfter(targetMonth);
+            .distinct()
+            .fetch()
+            .forEach(completedMemberIds::add);
+        return completedMemberIds;
     }
 
     public record AdminDashboardCounts(

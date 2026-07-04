@@ -18,7 +18,10 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -300,7 +303,7 @@ public class MeetingRepository {
     }
 
     private List<MeetingSummary> findSummaries(BooleanBuilder where, int limit, int offset, OrderSpecifier<?>... orderSpecifiers) {
-        return queryFactory
+        List<Tuple> rows = queryFactory
             .select(summaryFields())
             .from(meeting)
             .leftJoin(coverImage).on(coverImage.id.eq(meeting.coverImageId))
@@ -308,10 +311,57 @@ public class MeetingRepository {
             .orderBy(orderSpecifiers)
             .limit(limit)
             .offset(offset)
-            .fetch()
-            .stream()
-            .map(this::mapSummary)
+            .fetch();
+        List<Long> meetingIds = rows.stream()
+            .map(row -> row.get(meeting.id))
             .toList();
+        Map<Long, Integer> attendeeCounts = joinedCounts(meetingIds);
+        Map<Long, List<String>> previewImageUrls = previewImageUrls(meetingIds, 5);
+        return rows.stream()
+            .map(row -> mapSummary(row, attendeeCounts, previewImageUrls))
+            .toList();
+    }
+
+    private Map<Long, Integer> joinedCounts(List<Long> meetingIds) {
+        if (meetingIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, Integer> counts = new LinkedHashMap<>();
+        queryFactory
+            .select(attendance.id.meetingId, attendance.count())
+            .from(attendance)
+            .where(attendance.id.meetingId.in(meetingIds), attendance.status.eq("JOINED"))
+            .groupBy(attendance.id.meetingId)
+            .fetch()
+            .forEach(row -> {
+                Long meetingId = row.get(attendance.id.meetingId);
+                Long count = row.get(attendance.count());
+                counts.put(meetingId, count == null ? 0 : count.intValue());
+            });
+        return counts;
+    }
+
+    private Map<Long, List<String>> previewImageUrls(List<Long> meetingIds, int limit) {
+        if (meetingIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<String>> urlsByMeetingId = new LinkedHashMap<>();
+        queryFactory
+            .select(attendance.id.meetingId, profileImage.publicUrl, attendee.kakaoProfileImageUrl)
+            .from(attendance)
+            .join(attendee).on(attendee.id.eq(attendance.id.memberId))
+            .leftJoin(profileImage).on(profileImage.id.eq(attendee.profileImageId))
+            .where(attendance.id.meetingId.in(meetingIds), attendance.status.eq("JOINED"))
+            .orderBy(attendance.id.meetingId.asc(), attendance.createdAt.asc())
+            .fetch()
+            .forEach(row -> {
+                Long meetingId = row.get(attendance.id.meetingId);
+                List<String> urls = urlsByMeetingId.computeIfAbsent(meetingId, ignored -> new ArrayList<>());
+                if (urls.size() < limit) {
+                    urls.add(coalesce(row.get(profileImage.publicUrl), row.get(attendee.kakaoProfileImageUrl)));
+                }
+            });
+        return urlsByMeetingId;
     }
 
     private BooleanBuilder publicMeetingWhere(String type) {
@@ -360,7 +410,7 @@ public class MeetingRepository {
         };
     }
 
-    private MeetingSummary mapSummary(Tuple row) {
+    private MeetingSummary mapSummary(Tuple row, Map<Long, Integer> attendeeCounts, Map<Long, List<String>> previewImageUrls) {
         Long meetingId = row.get(meeting.id);
         return new MeetingSummary(
             meetingId,
@@ -373,8 +423,8 @@ public class MeetingRepository {
             row.get(meeting.costAmount),
             row.get(coverImage.publicUrl),
             row.get(meeting.status),
-            joinedCount(meetingId),
-            previewImageUrls(meetingId, 5)
+            attendeeCounts.getOrDefault(meetingId, 0),
+            previewImageUrls.getOrDefault(meetingId, List.of())
         );
     }
 

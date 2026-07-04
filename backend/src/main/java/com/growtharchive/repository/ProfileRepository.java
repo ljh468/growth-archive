@@ -208,13 +208,14 @@ public class ProfileRepository {
     }
 
     public MyDashboard findDashboard(Long memberId, LocalDate month) {
-        MyProfile profile = findMyProfile(memberId).orElseThrow();
+        MyDashboard.DashboardProfile profile = findDashboardProfile(memberId);
         Long readingRecordCount = countReadingRecordsForMonth(memberId, month);
         Long actionPlanCount = countActionPlansForMonth(memberId, month);
         boolean calculationTarget = isParticipationTarget(memberId, month);
         boolean completed = calculationTarget && (readingRecordCount > 0 || actionPlanCount > 0 || hasManualCompletion(memberId, month));
+        List<MyDashboard.DashboardReadingRecord> readingRecords = findDashboardReadingRecords(memberId, month);
         return new MyDashboard(
-            new MyDashboard.DashboardProfile(profile.memberId(), profile.role(), profile.displayName(), profile.profileImageUrl(), profile.oneLineIntro()),
+            profile,
             new MyDashboard.DashboardParticipation(
                 month.toString().substring(0, 7),
                 readingRecordCount,
@@ -222,11 +223,39 @@ public class ProfileRepository {
                 completed,
                 calculationTarget && !completed
             ),
-            findDashboardReadingRecord(memberId, month),
-            findDashboardReadingRecords(memberId, month),
+            readingRecords.isEmpty() ? null : readingRecords.getFirst(),
+            readingRecords,
             findDashboardActionPlan(memberId, month),
             growthStats(memberId),
             findPublicActivities(memberId, 5)
+        );
+    }
+
+    private MyDashboard.DashboardProfile findDashboardProfile(Long memberId) {
+        Tuple row = queryFactory
+            .select(
+                member.id,
+                member.role,
+                member.nickname,
+                member.realName,
+                member.displayType,
+                member.oneLineIntro,
+                profileImage.publicUrl,
+                member.kakaoProfileImageUrl
+            )
+            .from(member)
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .where(member.id.eq(memberId))
+            .fetchOne();
+        if (row == null) {
+            throw new IllegalStateException("Member not found: " + memberId);
+        }
+        return new MyDashboard.DashboardProfile(
+            row.get(member.id),
+            row.get(member.role),
+            myDisplayName(row),
+            coalesce(row.get(profileImage.publicUrl), row.get(member.kakaoProfileImageUrl)),
+            row.get(member.oneLineIntro)
         );
     }
 
@@ -323,33 +352,6 @@ public class ProfileRepository {
             .where(actionPlan.memberId.eq(memberId), actionPlan.status.eq("ACTIVE"), actionPlan.targetMonth.eq(month))
             .fetchOne();
         return zeroIfNull(count);
-    }
-
-    private MyDashboard.DashboardReadingRecord findDashboardReadingRecord(Long memberId, LocalDate month) {
-        Tuple row = queryFactory
-            .select(readingRecord.id, readingRecord.bookId, book.title, readingRecord.oneLineReview, readingRecord.blogUrl, readingRecord.recordedAt)
-            .from(readingRecord)
-            .join(book).on(book.id.eq(readingRecord.bookId))
-            .where(
-                readingRecord.memberId.eq(memberId),
-                readingRecord.status.eq("ACTIVE"),
-                readingRecord.recordedAt.goe(KstDateTimes.startOfMonth(month)),
-                readingRecord.recordedAt.lt(KstDateTimes.startOfNextMonth(month))
-            )
-            .orderBy(readingRecord.recordedAt.desc(), readingRecord.id.desc())
-            .limit(1)
-            .fetchOne();
-        if (row == null) {
-            return null;
-        }
-        return new MyDashboard.DashboardReadingRecord(
-            row.get(readingRecord.id),
-            row.get(readingRecord.bookId),
-            row.get(book.title),
-            row.get(readingRecord.oneLineReview),
-            row.get(readingRecord.blogUrl),
-            row.get(readingRecord.recordedAt)
-        );
     }
 
     private List<MyDashboard.DashboardReadingRecord> findDashboardReadingRecords(Long memberId, LocalDate month) {
@@ -539,6 +541,8 @@ public class ProfileRepository {
             .from(readingRecord)
             .join(book).on(book.id.eq(readingRecord.bookId))
             .where(readingRecord.memberId.eq(memberId), readingRecord.status.eq("ACTIVE"))
+            .orderBy(readingRecord.recordedAt.desc(), readingRecord.id.desc())
+            .limit(limit)
             .fetch()
             .stream()
             .map(row -> new ActivitySummary(
@@ -552,6 +556,8 @@ public class ProfileRepository {
             .select(meetingReview.id, meetingReview.title, meetingReview.createdAt)
             .from(meetingReview)
             .where(meetingReview.memberId.eq(memberId), meetingReview.status.eq("ACTIVE"))
+            .orderBy(meetingReview.createdAt.desc(), meetingReview.id.desc())
+            .limit(limit)
             .fetch()
             .stream()
             .map(row -> new ActivitySummary(
