@@ -12,7 +12,7 @@ export async function decodeHeicImage(file: File): Promise<ImageBitmap> {
     return await heicTo({
       blob: file,
       type: "bitmap",
-      options: { imageOrientation: "none" },
+      options: { imageOrientation: "from-image" },
     });
   } catch {
     throw new Error("HEIC 이미지를 변환하지 못했습니다. 사진 앱에서 JPG로 내보낸 뒤 다시 선택해 주세요.");
