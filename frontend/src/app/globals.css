@@ -4,7 +4,7 @@
   font-family: "Caveat";
   font-style: normal;
   font-weight: 400;
-  font-display: swap;
+  font-display: block;
   src: url("/fonts/caveat.ttf") format("truetype");
 }
 
@@ -12,8 +12,16 @@
   font-family: "NanumSquare";
   font-style: normal;
   font-weight: 400;
-  font-display: swap;
+  font-display: block;
   src: url("/fonts/nanum-square.woff") format("woff");
+}
+
+@font-face {
+  font-family: "NanumBeomSomCe";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/nanum-beomsom.ttf") format("truetype");
 }
 
 :root {
@@ -30,7 +38,7 @@
   --shadow-soft: 0 18px 45px rgba(63, 47, 34, 0.07);
   --font-body: "Gowun Batang", "Noto Serif KR", "Apple SD Gothic Neo", serif;
   --font-display: "NanumSquare", "Gowun Batang", "Noto Serif KR", sans-serif;
-  --font-hand: "Nanum Pen Script", "Nanum Brush Script", cursive;
+  --font-hand: "NanumBeomSomCe", "Nanum Pen Script", "Nanum Brush Script", cursive;
   --font-latin: "Caveat", "Nanum Pen Script", cursive;
   --font-editorial-latin: "Cormorant Garamond", Georgia, serif;
 }
@@ -50,6 +58,14 @@ body {
 
 html {
   min-height: 100%;
+  max-width: 100%;
+  font-synthesis: none;
+  overflow-x: hidden;
+}
+
+body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 a {
@@ -91,6 +107,18 @@ textarea {
 .keep-words {
   overflow-wrap: anywhere;
   word-break: keep-all;
+}
+
+.mobile-hard-wrap {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+@media (min-width: 640px) {
+  .mobile-hard-wrap {
+    word-break: keep-all;
+  }
 }
 
 .photo-muted {
@@ -136,4 +164,76 @@ textarea {
   cursor: wait;
   opacity: 0.64;
   transform: none;
+}
+
+.archive-record-action {
+  color: var(--color-deep-green);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
+  text-underline-offset: 4px;
+}
+
+.archive-record-action:hover {
+  text-decoration: underline;
+}
+
+.archive-record-action--danger {
+  color: var(--color-wood-brown);
+}
+
+.archive-record-button {
+  display: inline-flex;
+  min-height: 1.875rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-warm-white);
+  color: var(--color-deep-green);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1;
+  padding: 0.375rem 0.7rem;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.archive-record-button:hover {
+  border-color: rgba(47, 90, 67, 0.28);
+  background: rgba(47, 90, 67, 0.045);
+}
+
+.archive-record-button--danger {
+  color: var(--color-wood-brown);
+}
+
+.archive-record-button--primary {
+  border-color: rgba(47, 90, 67, 0.18);
+  background: var(--color-deep-green);
+  color: var(--color-warm-white);
+  box-shadow: var(--shadow-soft);
+}
+
+.archive-record-button--primary:hover {
+  border-color: rgba(74, 52, 36, 0.28);
+  background: var(--color-wood-brown);
+}
+
+.archive-record-button--danger:hover {
+  border-color: rgba(74, 52, 36, 0.28);
+  background: rgba(74, 52, 36, 0.045);
+}
+
+.note-chip {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  border: 1px solid rgba(47, 90, 67, 0.24);
+  border-radius: 999px;
+  background: rgba(248, 246, 238, 0.84);
+  padding: 0.25rem 0.75rem;
+  line-height: 1;
 }

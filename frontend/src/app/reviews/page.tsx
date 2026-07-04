@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Button, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { Button, EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, type MeetingReviewSummary } from "@/lib/api";
 
 export default function ReviewsPage() {
@@ -33,7 +34,7 @@ export default function ReviewsPage() {
             <PageHeader eyebrow="Meeting Reviews" title="모임 후기" description="공개된 모임 후기와 사진을 살펴봅니다." />
             <Button href="/reviews/new">후기 작성</Button>
           </div>
-          {loading && <EmptyState title="불러오는 중입니다." description="공개된 모임 후기를 확인하고 있습니다." />}
+          {loading && <ReviewsSkeleton />}
           {error && <EmptyState title="후기를 불러오지 못했습니다" description={error} />}
           {!loading && !error && reviews.length === 0 && <EmptyState title="아직 공개 후기가 없습니다" description="성장하는 사람들이 모임 후기를 남기면 이곳에 공개됩니다." />}
           <div className="grid gap-4 md:grid-cols-2">
@@ -43,14 +44,25 @@ export default function ReviewsPage() {
                 href={`/reviews/${review.id}`}
                 key={review.id}
               >
-                <div className="grid gap-3 p-5">
-                  <div className="flex flex-wrap gap-2">
-                    <Tag>{review.meetingTitle}</Tag>
+                <div className="grid grid-cols-[104px_minmax(0,1fr)] gap-3 p-3 sm:grid-cols-1 sm:gap-3 sm:p-5">
+                  {review.representativeImageUrl && (
+                    <Image
+                      alt=""
+                      className="h-32 w-full rounded-[var(--radius-card)] object-cover photo-muted transition group-hover:scale-[1.01] sm:aspect-[16/10] sm:h-auto"
+                      height={240}
+                      src={review.representativeImageUrl}
+                      unoptimized
+                      width={384}
+                    />
+                  )}
+                  <div className="min-w-0 max-w-[calc(100vw-168px)] sm:max-w-none">
+                    <div className="flex flex-wrap gap-2">
+                      <Tag>{review.meetingTitle}</Tag>
+                    </div>
+                    <h2 className="mt-2 truncate font-display text-[15px] font-normal leading-snug sm:line-clamp-3 sm:whitespace-normal sm:text-lg">{review.title}</h2>
+                    <p className="hidden font-hand text-[1.05rem] leading-6 text-[var(--color-charcoal)] sm:mt-2 sm:line-clamp-2">{review.contentSummary}</p>
+                    <p className="mt-2 text-xs leading-5 text-[var(--color-charcoal)] sm:text-sm">{review.memberDisplayName} · {formatDate(review.createdAt)}</p>
                   </div>
-                  {review.representativeImageUrl && <img alt="" className="aspect-[4/3] w-full rounded-[var(--radius-card)] object-cover photo-muted transition group-hover:scale-[1.01]" src={review.representativeImageUrl} />}
-                  <h2 className="font-display text-xl font-normal leading-snug">{review.title}</h2>
-                  <p className="line-clamp-3 text-sm leading-7 text-[var(--color-muted)]">{review.contentSummary}</p>
-                  <p className="pt-2 text-sm text-[var(--color-charcoal)]">{review.memberDisplayName} · {formatDate(review.createdAt)}</p>
                 </div>
               </a>
             ))}
@@ -73,4 +85,25 @@ export default function ReviewsPage() {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeZone: "Asia/Seoul" }).format(new Date(value));
+}
+
+function ReviewsSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2" aria-label="모임 후기 로딩 중">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <article className="grid overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] shadow-[var(--shadow-soft)]" key={index}>
+          <div className="grid grid-cols-[104px_minmax(0,1fr)] gap-3 p-3 sm:grid-cols-1 sm:p-5">
+            <SkeletonBlock className="h-32 w-full sm:aspect-[16/10] sm:h-auto" />
+            <div className="grid min-w-0 content-start gap-2">
+              <SkeletonBlock className="h-7 w-32 rounded-full" />
+              <SkeletonBlock className="h-5 w-4/5" />
+              <SkeletonBlock className="hidden h-4 w-full sm:block" />
+              <SkeletonBlock className="hidden h-4 w-2/3 sm:block" />
+              <SkeletonBlock className="h-4 w-32" />
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
 }

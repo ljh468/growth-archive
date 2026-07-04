@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Button, EmptyState, Section, Tag } from "@/components/ui/primitives";
+import { Button, EmptyState, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, type MeetingSummary } from "@/lib/api";
 
 type PastMeetingGroup = {
@@ -65,8 +66,8 @@ export default function MeetingsPage() {
             <div className="max-w-3xl">
               <p className="font-latin text-4xl text-[#efe7d8] sm:text-5xl">Meetings</p>
               <h1 className="mt-4 font-display text-3xl font-normal leading-[1.2] sm:text-4xl">모임</h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-[rgba(255,253,248,0.84)]">
-                이번 달 정기 모임과 성장하는 사람들이 만든 소소모임을 확인합니다. 지난 모임은 간략한 기록으로만 살펴봅니다.
+              <p className="mt-5 hidden max-w-2xl text-base leading-8 text-[rgba(255,253,248,0.84)] sm:block">
+                이번 달 자동 생성 정기모임 2개와 소소모임을 확인합니다. 지난 모임은 간략한 기록으로 살펴봅니다.
               </p>
             </div>
             <Button href="/meetings/new" variant="secondary">소소모임 만들기</Button>
@@ -80,9 +81,11 @@ export default function MeetingsPage() {
           <section className="grid gap-4">
             <div>
               <h2 className="text-xl font-normal">이번 달 모임</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">정기 모임 2개와 이번 달에 열리는 소소모임만 보여줍니다.</p>
+              <p className="mt-2 hidden text-sm leading-6 text-[var(--color-muted)] sm:block">
+                매달 자동으로 만들어지는 정기 모임 2개와 이번 달에 열리는 소소모임만 보여줍니다.
+              </p>
             </div>
-            {loadingCurrent && <EmptyState title="불러오는 중입니다." description="이번 달 모임을 확인하고 있습니다." />}
+            {loadingCurrent && <MeetingCardsSkeleton />}
             {!loadingCurrent && currentMeetings.length === 0 && <EmptyState title="이번 달 모임이 아직 없어요" description="정기 모임이 자동 생성되지 않았다면 잠시 후 새로고침해 주세요." />}
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -95,19 +98,19 @@ export default function MeetingsPage() {
                       <Tag>{meetingStatusLabel(meeting.status)}</Tag>
                     </div>
                     <h2 className="mt-3 line-clamp-1 text-lg font-normal">{meeting.title}</h2>
-                    {meeting.description && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--color-muted)]">{meeting.description}</p>}
+                    {meeting.description && <p className="mt-1 hidden text-xs leading-5 text-[var(--color-muted)] sm:line-clamp-2">{meeting.description}</p>}
                     <dl className="mt-3 grid gap-1.5 text-xs text-[var(--color-charcoal)]">
-                      <div className="flex justify-between gap-4">
+                      <div className="grid grid-cols-[42px_minmax(0,1fr)] gap-2 sm:flex sm:justify-between sm:gap-4">
                         <dt>일시</dt>
-                        <dd className="text-right">{formatDateTime(meeting.meetingAt)}</dd>
+                        <dd className="min-w-0 text-left sm:text-right">{formatDateTime(meeting.meetingAt)}</dd>
                       </div>
-                      <div className="flex justify-between gap-4">
+                      <div className="grid grid-cols-[42px_minmax(0,1fr)] gap-2 sm:flex sm:justify-between sm:gap-4">
                         <dt>지역</dt>
-                        <dd>{meeting.locationRegion}</dd>
+                        <dd className="min-w-0 text-left sm:text-right">{meeting.locationRegion}</dd>
                       </div>
-                      <div className="flex justify-between gap-4">
+                      <div className="grid grid-cols-[42px_minmax(0,1fr)] gap-2 sm:flex sm:justify-between sm:gap-4">
                         <dt>참석</dt>
-                        <dd>
+                        <dd className="min-w-0 text-left sm:text-right">
                           {meeting.attendeeCount}
                           {meeting.capacity ? ` / ${meeting.capacity}` : ""}
                         </dd>
@@ -123,20 +126,11 @@ export default function MeetingsPage() {
           </section>
 
           <section className="grid gap-4 border-t border-[var(--color-line)] pt-8">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
               <div>
                 <h2 className="text-xl font-normal">지난 모임</h2>
-                <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">지난 모임은 제목, 일정, 지역, 참여자만 간략하게 보여줍니다.</p>
+                <p className="mt-2 hidden text-sm leading-6 text-[var(--color-muted)] sm:block">지난 모임은 제목, 일정, 지역, 참여자만 간략하게 보여줍니다.</p>
               </div>
-              <button
-                aria-label="지난 모임 더 보기"
-                className="archive-more-button"
-                disabled={loadingPast}
-                onClick={loadPastMonth}
-                type="button"
-              >
-                {loadingPast ? "Wait" : "More"}
-              </button>
             </div>
 
             {pastGroups.length === 0 && <EmptyState title="지난 모임을 아직 불러오지 않았어요" description="More를 누르면 지난달부터 한 달씩 조회합니다." />}
@@ -167,6 +161,18 @@ export default function MeetingsPage() {
                   )}
                 </div>
               ))}
+            </div>
+            {loadingPast && <PastMeetingSkeleton />}
+            <div className="flex justify-center pt-2">
+              <button
+                aria-label="지난 모임 더 보기"
+                className="archive-more-button"
+                disabled={loadingPast}
+                onClick={loadPastMonth}
+                type="button"
+              >
+                {loadingPast ? "Wait" : "More"}
+              </button>
             </div>
           </section>
         </div>
@@ -220,7 +226,7 @@ function AttendeePreview({ images, count }: { images: Array<string | null>; coun
       <div className="flex -space-x-2">
         {visibleAttendees.map((image, index) => (
           image ? (
-            <img alt="" className="size-7 rounded-full border border-[var(--color-warm-white)] object-cover" key={`${image}-${index}`} src={image} />
+            <Image alt="" className="size-7 rounded-full border border-[var(--color-warm-white)] object-cover" height={28} key={`${image}-${index}`} src={image} unoptimized width={28} />
           ) : (
             <div className="size-7 rounded-full border border-[var(--color-warm-white)] bg-[var(--color-ivory)]" key={`placeholder-${index}`} />
           )
@@ -228,6 +234,67 @@ function AttendeePreview({ images, count }: { images: Array<string | null>; coun
         {count === 0 && <div className="size-7 rounded-full border border-[var(--color-line)] bg-[var(--color-ivory)]" />}
       </div>
       <span className="text-xs text-[var(--color-charcoal)]">{count}명</span>
+    </div>
+  );
+}
+
+function MeetingCardsSkeleton() {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-label="이번 달 모임 로딩 중">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <article className="overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] shadow-[var(--shadow-soft)]" key={index}>
+          <SkeletonBlock className="h-32 rounded-none sm:h-36" />
+          <div className="grid gap-3 p-4">
+            <div className="flex gap-2">
+              <SkeletonBlock className="h-7 w-24 rounded-full" />
+              <SkeletonBlock className="h-7 w-16 rounded-full" />
+            </div>
+            <SkeletonBlock className="h-5 w-3/4" />
+            <SkeletonBlock className="hidden h-4 w-full sm:block" />
+            <div className="grid gap-2 pt-1">
+              <SkeletonBlock className="h-4 w-full" />
+              <SkeletonBlock className="h-4 w-5/6" />
+              <SkeletonBlock className="h-4 w-2/3" />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <div className="flex -space-x-2">
+                {Array.from({ length: 3 }).map((__, avatarIndex) => (
+                  <SkeletonBlock className="size-7 rounded-full" key={avatarIndex} />
+                ))}
+              </div>
+              <SkeletonBlock className="h-4 w-10" />
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function PastMeetingSkeleton() {
+  return (
+    <div className="grid gap-3" aria-label="지난 모임 로딩 중">
+      <SkeletonBlock className="h-4 w-28" />
+      {Array.from({ length: 2 }).map((_, index) => (
+        <article className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[rgba(255,254,250,0.78)] p-4 sm:grid-cols-[1fr_auto] sm:items-center" key={index}>
+          <div className="grid gap-2">
+            <div className="flex gap-2">
+              <SkeletonBlock className="h-7 w-24 rounded-full" />
+              <SkeletonBlock className="h-7 w-16 rounded-full" />
+            </div>
+            <SkeletonBlock className="h-5 w-64 max-w-full" />
+            <SkeletonBlock className="h-4 w-48 max-w-full" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-2">
+              {Array.from({ length: 3 }).map((__, avatarIndex) => (
+                <SkeletonBlock className="size-7 rounded-full" key={avatarIndex} />
+              ))}
+            </div>
+            <SkeletonBlock className="h-4 w-10" />
+          </div>
+        </article>
+      ))}
     </div>
   );
 }

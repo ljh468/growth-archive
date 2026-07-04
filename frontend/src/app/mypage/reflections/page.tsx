@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
+import { Button, Card, PageHeader, Section } from "@/components/ui/primitives";
 import { apiGet, apiPut, type MonthlyReflectionSlot } from "@/lib/api";
 
 export default function MyReflectionsPage() {
@@ -47,18 +47,18 @@ function ReflectionContent() {
   return (
     <main>
       <Section>
-        <div className="grid gap-8">
+        <div className="grid gap-5 sm:gap-8">
           <PageHeader eyebrow="Monthly Reflection" title="월간 회고" description="회고는 선택 기록이며 참여 현황 계산에 포함되지 않습니다." />
-          {message && <EmptyState title="상태" description={message} />}
           <Card>
-            <form className="grid gap-3" onSubmit={submit}>
+            <form className="grid gap-3 sm:gap-4" onSubmit={submit}>
               <label className="grid gap-2 text-sm">
                 대상 월
-                <input className="min-h-11 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3" onChange={(event) => setMonth(event.target.value)} type="month" value={month} />
+                <input className="min-h-10 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3" onChange={(event) => setMonth(event.target.value)} type="month" value={month} />
               </label>
               <Textarea label="이번 달 잘한 것" value={form.didWell} onChange={(value) => setForm((current) => ({ ...current, didWell: value }))} />
               <Textarea label="아쉬운 점" value={form.couldImprove} onChange={(value) => setForm((current) => ({ ...current, couldImprove: value }))} />
               <Textarea label="다음 달 집중할 것" value={form.nextFocus} onChange={(value) => setForm((current) => ({ ...current, nextFocus: value }))} />
+              {message && <p className="text-sm leading-6 text-[var(--color-muted)]">{message}</p>}
               <Button type="submit">회고 저장</Button>
             </form>
           </Card>
@@ -72,7 +72,7 @@ function Textarea({ label, value, onChange }: { label: string; value: string; on
   return (
     <label className="grid gap-2 text-sm">
       {label}
-      <textarea className="min-h-32 border border-[var(--color-line)] bg-[var(--color-warm-white)] p-3" onChange={(event) => onChange(event.target.value)} value={value} />
+      <textarea className="min-h-28 border border-[var(--color-line)] bg-[var(--color-warm-white)] p-3 sm:min-h-32" onChange={(event) => onChange(event.target.value)} value={value} />
     </label>
   );
 }

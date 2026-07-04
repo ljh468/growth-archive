@@ -1,3 +1,6 @@
+import { decodeHeicImage, isHeicFile } from "./heicImage";
+import { imageUploadProfiles, TARGET_MAX_IMAGE_BYTES, type ImageUploadPurpose } from "./imageUploadConfig";
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1";
 
 function apiBaseUrl() {
@@ -91,6 +94,8 @@ export type RecommendedBook = {
   thumbnailUrl: string | null;
   reason: string;
   displayOrder: number;
+  targetMonth: string;
+  status: "ACTIVE" | "HIDDEN" | "DELETED";
 };
 
 export type AdminDashboard = {
@@ -121,11 +126,13 @@ export type AdminMember = {
   privacyAgreedAt: string | null;
   onboardingCompletedAt: string | null;
   deactivatedAt: string | null;
+  withdrawnAt: string | null;
   createdAt: string;
 };
 
 export type AdminInviteCode = {
-  codePreview: string | null;
+  memberCodePreview: string | null;
+  adminCodePreview: string | null;
 };
 
 export type AdminInterestTag = {
@@ -139,6 +146,20 @@ export type AdminInterestTag = {
 export type InterestTag = {
   id: number;
   name: string;
+};
+
+export type OnboardingProfileDraft = {
+  nickname: string | null;
+  oneLineIntro: string | null;
+  displayNameType: "REAL_NAME" | "NICKNAME";
+  realName: string | null;
+  birthDate: string | null;
+  profileImageId: number | null;
+  futureMeAt50: string | null;
+  joinReason: string | null;
+  currentConcern: string | null;
+  threeYearGoal: string | null;
+  interestTagIds: number[];
 };
 
 export type LibraryResponse = {
@@ -183,6 +204,17 @@ export type ProfileCard = {
   recentPublicActivity: ActivitySummary | null;
 };
 
+export type MonthlyActionPlanShowcase = {
+  id: number;
+  memberId: number;
+  displayName: string;
+  profileImageUrl: string | null;
+  targetMonth: string;
+  title: string | null;
+  content: string;
+  updatedAt: string;
+};
+
 export type ProfileDetail = {
   memberId: number;
   displayName: string;
@@ -223,6 +255,7 @@ export type MyProfile = {
 export type MyDashboard = {
   profile: {
     memberId: number;
+    role: "MEMBER" | "ADMIN";
     displayName: string;
     profileImageUrl: string | null;
     oneLineIntro: string;
@@ -234,6 +267,29 @@ export type MyDashboard = {
     completed: boolean;
     coffeeSupportTarget: boolean;
   };
+  currentReadingRecord: {
+    id: number;
+    bookId: number;
+    bookTitle: string;
+    oneLineReview: string;
+    blogUrl: string;
+    recordedAt: string;
+  } | null;
+  currentReadingRecords: Array<{
+    id: number;
+    bookId: number;
+    bookTitle: string;
+    oneLineReview: string;
+    blogUrl: string;
+    recordedAt: string;
+  }>;
+  currentActionPlan: {
+    id: number;
+    targetMonth: string;
+    title: string | null;
+    content: string;
+    updatedAt: string;
+  } | null;
   quickStats: GrowthStats;
   recentActivities: ActivitySummary[];
 };
@@ -286,6 +342,7 @@ export type AdminParticipationMember = {
   hasActionPlan: boolean;
   calculationTarget: boolean;
   completed: boolean;
+  manuallyCompleted: boolean;
   coffeeSupportTarget: boolean;
   coffeeSupportItem: string;
   adminMemo: string | null;
@@ -422,22 +479,276 @@ export async function apiDelete<T>(path: string): Promise<ApiResponse<T>> {
   return response.json();
 }
 
-export async function apiPostForm<T>(path: string, formData: FormData): Promise<ApiResponse<T>> {
+export async function apiPostForm<T>(path: string, formData: FormData, options?: { signal?: AbortSignal }): Promise<ApiResponse<T>> {
   const response = await fetch(`${apiBaseUrl()}${path}`, {
     method: "POST",
     credentials: "include",
     body: formData,
+    signal: options?.signal,
   });
   return response.json();
 }
 
-export function uploadImage(file: File, purpose: "PROFILE" | "READING_RECORD" | "MEETING" | "REVIEW" | "BOOK") {
+const UPLOAD_TIMEOUT_MS = 25_000;
+
+export async function uploadImage(file: File, purpose: ImageUploadPurpose) {
+  let uploadFile: File;
+  try {
+    uploadFile = await optimizeImageInWorker(file, purpose);
+  } catch (error) {
+    const message = error instanceof Error && error.message ? error.message : "이미지를 처리하지 못했습니다. jpg, png, webp, heic 이미지로 다시 선택해 주세요.";
+    return clientError<UploadedSingleImage>(message);
+  }
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", uploadFile);
   formData.append("purpose", purpose);
-  return apiPostForm<UploadedSingleImage>("/uploads/images", formData);
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+  try {
+    return await apiPostForm<UploadedSingleImage>("/uploads/images", formData, { signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return clientError<UploadedSingleImage>("업로드 시간이 초과되었습니다. 저장 후 수정 화면에서 다시 추가해 주세요.");
+    }
+    return clientError<UploadedSingleImage>("이미지 업로드에 실패했습니다. 저장 후 수정 화면에서 다시 시도해 주세요.");
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 export function kakaoLoginUrl() {
   return `${API_BASE_URL}/auth/kakao/login`;
+}
+
+function optimizeImageInWorker(file: File, purpose: ImageUploadPurpose): Promise<File> {
+  if (typeof Worker === "undefined") {
+    return optimizeImageForUpload(file, purpose);
+  }
+
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL("./imageUploadWorker.ts", import.meta.url));
+    const fallbackTimer = window.setTimeout(() => {
+      worker.terminate();
+      reject(new Error("이미지 처리 시간이 초과되었습니다. 다른 사진을 선택해 주세요."));
+    }, 30_000);
+
+    worker.onmessage = (event: MessageEvent<{ ok: boolean; file?: File; message?: string }>) => {
+      window.clearTimeout(fallbackTimer);
+      worker.terminate();
+      if (event.data.ok && event.data.file) {
+        resolve(event.data.file);
+        return;
+      }
+      optimizeImageForUpload(file, purpose)
+        .then(resolve)
+        .catch(() => reject(new Error(event.data.message ?? "이미지를 처리하지 못했습니다.")));
+    };
+    worker.onerror = () => {
+      window.clearTimeout(fallbackTimer);
+      worker.terminate();
+      optimizeImageForUpload(file, purpose).then(resolve).catch(reject);
+    };
+    worker.postMessage({ file, purpose });
+  });
+}
+
+async function optimizeImageForUpload(file: File, purpose: ImageUploadPurpose): Promise<File> {
+  if (!isSupportedInput(file)) {
+    throw new Error("지원하지 않는 이미지입니다. jpg, png, webp, heic 이미지를 선택해 주세요.");
+  }
+  const profile = imageUploadProfiles[purpose];
+  const orientation = await readExifOrientation(file);
+  const bitmap = await decodeImage(file);
+  const orientedWidth = swapsDimensions(orientation) ? bitmap.height : bitmap.width;
+  const orientedHeight = swapsDimensions(orientation) ? bitmap.width : bitmap.height;
+  const scale = purpose === "PROFILE"
+    ? profile.maxDimension / Math.min(orientedWidth, orientedHeight)
+    : Math.min(1, profile.maxDimension / Math.max(orientedWidth, orientedHeight));
+  let width = Math.max(1, Math.round(orientedWidth * scale));
+  let height = Math.max(1, Math.round(orientedHeight * scale));
+  let quality = profile.quality;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const blob = purpose === "PROFILE"
+      ? await canvasToSquareWebp(bitmap, orientation, width, height, profile.maxDimension, quality)
+      : await canvasToWebp(bitmap, orientation, width, height, quality);
+    if (blob.size <= TARGET_MAX_IMAGE_BYTES || (quality <= 0.54 && Math.max(width, height) <= 900)) {
+      bitmap.close();
+      return new File([blob], webpFileName(file.name), { type: "image/webp", lastModified: Date.now() });
+    }
+    if (quality > 0.54) {
+      quality -= 0.08;
+    } else {
+      width = Math.max(1, Math.round(width * 0.86));
+      height = Math.max(1, Math.round(height * 0.86));
+    }
+  }
+
+  bitmap.close();
+  throw new Error("Image compression failed");
+}
+
+function isSupportedInput(file: File) {
+  const name = file.name.toLowerCase();
+  return file.type.startsWith("image/")
+    || name.endsWith(".heic")
+    || name.endsWith(".heif");
+}
+
+async function decodeImage(file: File): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(file, { imageOrientation: "none" });
+  } catch {
+    if (isHeicFile(file)) {
+      return decodeHeicImage(file);
+    }
+    return createImageBitmap(file);
+  }
+}
+
+function canvasToWebp(bitmap: ImageBitmap, orientation: number, width: number, height: number, quality: number): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: true });
+  if (!context) {
+    return Promise.reject(new Error("Canvas is not available"));
+  }
+  applyOrientationTransform(context, orientation, width, height);
+  context.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, 0, 0, swapsDimensions(orientation) ? height : width, swapsDimensions(orientation) ? width : height);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("WebP conversion is not available"));
+        return;
+      }
+      resolve(blob);
+    }, "image/webp", quality);
+  });
+}
+
+function canvasToSquareWebp(bitmap: ImageBitmap, orientation: number, width: number, height: number, size: number, quality: number): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d", { alpha: true });
+  if (!context) {
+    return Promise.reject(new Error("Canvas is not available"));
+  }
+  applyOrientationTransform(context, orientation, size, size);
+  const swapped = swapsDimensions(orientation);
+  const drawWidth = swapped ? height : width;
+  const drawHeight = swapped ? width : height;
+  context.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, (size - drawWidth) / 2, (size - drawHeight) / 2, drawWidth, drawHeight);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("WebP conversion is not available"));
+        return;
+      }
+      resolve(blob);
+    }, "image/webp", quality);
+  });
+}
+
+function applyOrientationTransform(context: CanvasRenderingContext2D, orientation: number, width: number, height: number) {
+  switch (orientation) {
+    case 2:
+      context.translate(width, 0);
+      context.scale(-1, 1);
+      break;
+    case 3:
+      context.translate(width, height);
+      context.rotate(Math.PI);
+      break;
+    case 4:
+      context.translate(0, height);
+      context.scale(1, -1);
+      break;
+    case 5:
+      context.rotate(0.5 * Math.PI);
+      context.scale(1, -1);
+      break;
+    case 6:
+      context.translate(width, 0);
+      context.rotate(0.5 * Math.PI);
+      break;
+    case 7:
+      context.translate(width, height);
+      context.rotate(0.5 * Math.PI);
+      context.scale(-1, 1);
+      break;
+    case 8:
+      context.translate(0, height);
+      context.rotate(-0.5 * Math.PI);
+      break;
+    default:
+      break;
+  }
+}
+
+function swapsDimensions(orientation: number) {
+  return orientation >= 5 && orientation <= 8;
+}
+
+async function readExifOrientation(file: File): Promise<number> {
+  if (!file.type.includes("jpeg") && !file.name.toLowerCase().match(/\.(jpg|jpeg)$/)) {
+    return 1;
+  }
+  const buffer = await file.slice(0, 64 * 1024).arrayBuffer();
+  const view = new DataView(buffer);
+  if (view.getUint16(0, false) !== 0xffd8) {
+    return 1;
+  }
+  let offset = 2;
+  while (offset + 4 < view.byteLength) {
+    const marker = view.getUint16(offset, false);
+    offset += 2;
+    const length = view.getUint16(offset, false);
+    offset += 2;
+    if (marker === 0xffe1 && offset + length <= view.byteLength) {
+      return parseExifOrientation(view, offset);
+    }
+    offset += length - 2;
+  }
+  return 1;
+}
+
+function parseExifOrientation(view: DataView, offset: number) {
+  const exifHeader = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00];
+  for (let index = 0; index < exifHeader.length; index += 1) {
+    if (view.getUint8(offset + index) !== exifHeader[index]) {
+      return 1;
+    }
+  }
+  const tiffOffset = offset + 6;
+  const littleEndian = view.getUint16(tiffOffset, false) === 0x4949;
+  const firstIfdOffset = view.getUint32(tiffOffset + 4, littleEndian);
+  const entriesOffset = tiffOffset + firstIfdOffset;
+  const entries = view.getUint16(entriesOffset, littleEndian);
+  for (let index = 0; index < entries; index += 1) {
+    const entryOffset = entriesOffset + 2 + index * 12;
+    if (view.getUint16(entryOffset, littleEndian) === 0x0112) {
+      return view.getUint16(entryOffset + 8, littleEndian);
+    }
+  }
+  return 1;
+}
+
+function webpFileName(fileName: string) {
+  const baseName = fileName.replace(/\.[^.]+$/, "");
+  return `${baseName || "image"}.webp`;
+}
+
+function clientError<T>(message: string): ApiResponse<T> {
+  return {
+    success: false,
+    data: null as T,
+    message: null,
+    error: {
+      code: "CLIENT_IMAGE_UPLOAD_FAILED",
+      message,
+    },
+  };
 }

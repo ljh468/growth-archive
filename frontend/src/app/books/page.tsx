@@ -12,8 +12,8 @@ export default function BooksPage() {
 
   async function search(event: FormEvent) {
     event.preventDefault();
-    if (query.trim().length < 2) {
-      setMessage("검색어는 2자 이상 입력해 주세요.");
+    if (query.trim().length < 1) {
+      setMessage("검색어는 1자 이상 입력해 주세요.");
       setBooks([]);
       return;
     }

@@ -38,14 +38,22 @@ export function AuthGate({ required, children }: AuthGateProps) {
   }
 
   if (!user) {
-    return <p className="text-sm text-[var(--color-charcoal)]">확인 중입니다.</p>;
+    return <AuthSpinner />;
   }
 
   if (accessRank[user.accessLevel] < accessRank[required]) {
     const destination = !user.authenticated ? "/login" : "/onboarding";
     window.location.replace(destination);
-    return <p className="text-sm text-[var(--color-charcoal)]">이동 중입니다.</p>;
+    return <AuthSpinner />;
   }
 
   return children(user);
+}
+
+function AuthSpinner() {
+  return (
+    <div className="grid min-h-24 place-items-center" aria-label="처리 중">
+      <span className="size-6 animate-spin rounded-full border-2 border-[rgba(47,90,67,0.18)] border-t-[var(--color-deep-green)]" />
+    </div>
+  );
 }

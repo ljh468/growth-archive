@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Avatar, Button, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
+import { Button, EmptyState, PageHeader, Section, SkeletonBlock } from "@/components/ui/primitives";
 import { apiGet, type LibraryResponse } from "@/lib/api";
 
 export default function LibraryPage() {
@@ -100,12 +101,12 @@ export default function LibraryPage() {
       <Section>
         <div className="grid gap-8">
           {error && <EmptyState title="불러오기 실패" description={error} />}
-          {!library && !error && <EmptyState title="불러오는 중입니다." description="공개 독서기록 데이터를 확인하고 있습니다." />}
+          {!library && !error && <LibrarySkeleton />}
 
           {library && (
             <div className="grid gap-8">
               <section className="grid gap-4">
-                <h2 className="text-xl font-normal">이달의 추천책</h2>
+                <h2 className="text-xl font-normal">추천책</h2>
                 {library.recommendedBooks.length === 0 ? (
                   <EmptyState title="추천책 준비 중" description="운영진 추천책이 등록되면 이곳에 표시됩니다." />
                 ) : currentRecommendedBook ? (
@@ -159,16 +160,24 @@ export default function LibraryPage() {
                           </button>
                         </>
                       )}
-                      <div className="aspect-[3/4] w-full max-w-[190px] justify-self-center rounded-[var(--radius-card)] bg-[var(--color-line)] bg-cover bg-center photo-muted sm:max-w-none" style={{ backgroundImage: `url(${currentRecommendedBook.thumbnailUrl ?? "/images/reading-books.jpg"})` }} />
-                      <div className="flex min-w-0 flex-col justify-center">
-                        <p className="text-xs text-[var(--color-bronze)]">이달의 추천 {String(currentRecommendedBook.displayOrder).padStart(2, "0")}</p>
-                        <h3 className="mt-2 font-display text-2xl font-normal leading-snug">{currentRecommendedBook.title}</h3>
+                      <Image
+                        alt={`${currentRecommendedBook.title} 표지`}
+                        className="aspect-[3/4] w-full max-w-[178px] justify-self-center rounded-[var(--radius-card)] bg-[var(--color-line)] object-cover photo-muted shadow-[0_18px_42px_rgba(63,47,34,0.18),0_2px_10px_rgba(63,47,34,0.10)] sm:max-w-none"
+                        height={360}
+                        priority
+                        src={currentRecommendedBook.thumbnailUrl || "/images/reading-books.jpg"}
+                        unoptimized
+                        width={240}
+                      />
+                      <div className="flex min-w-0 flex-col justify-center px-6 sm:px-0">
+                        <p className="text-xs text-[var(--color-bronze)]">추천 {String(currentRecommendedBook.displayOrder).padStart(2, "0")}</p>
+                        <h3 className="mt-2 break-words font-display text-xl font-normal leading-snug [word-break:keep-all] sm:text-2xl">{currentRecommendedBook.title}</h3>
                         <p className="mt-2 text-sm text-[var(--color-muted)]">{currentRecommendedBook.authorsText}</p>
-                        <p className="mt-5 max-w-2xl text-sm leading-7">{currentRecommendedBook.reason}</p>
+                        <p className="mt-5 max-w-2xl break-words text-sm leading-7 [word-break:keep-all]">{currentRecommendedBook.reason}</p>
                       </div>
                     </article>
                     <div className="flex justify-center">
-                      <div className="flex items-center gap-2" aria-label="이달의 추천책 슬라이드 위치">
+                      <div className="flex items-center gap-2" aria-label="추천책 슬라이드 위치">
                         {recommendedBooks.map((book, index) => (
                           <button
                             aria-label={`추천책 ${index + 1}번 보기`}
@@ -198,13 +207,21 @@ export default function LibraryPage() {
                   <div className="grid items-stretch gap-4 md:grid-cols-5">
                     {library.popularBooks.map((book, index) => (
                       <article className="group h-full" key={book.id}>
-                        <a className="grid h-full grid-rows-[auto_1fr] overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] shadow-[var(--shadow-soft)]" href={`/books/${book.id}`}>
-                          <div className="aspect-[3/4] bg-[var(--color-line)] bg-cover bg-center photo-muted transition group-hover:scale-[1.02]" style={{ backgroundImage: `url(${book.thumbnailUrl ?? "/images/reading-books.jpg"})` }} />
-                          <div className="flex min-h-40 flex-col p-4">
+                        <a className="grid h-full grid-cols-[72px_1fr] gap-4 overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-3 shadow-[var(--shadow-soft)] md:grid-cols-1 md:grid-rows-[auto_1fr] md:gap-0 md:p-0" href={`/books/${book.id}`}>
+                          <Image
+                            alt={`${book.title} 표지`}
+                            className="aspect-[3/4] w-[72px] self-center rounded-[var(--radius-card)] bg-[var(--color-line)] object-contain photo-muted transition group-hover:scale-[1.02] md:w-full md:self-auto md:rounded-none"
+                            height={300}
+                            priority={index < 2}
+                            src={book.thumbnailUrl || "/images/reading-books.jpg"}
+                            unoptimized
+                            width={200}
+                          />
+                          <div className="flex min-h-0 flex-col py-1 md:min-h-40 md:p-4">
                             <p className="text-xs text-[var(--color-bronze)]">많이 읽힌 책 {String(index + 1).padStart(2, "0")}</p>
-                            <h3 className="mt-2 line-clamp-2 min-h-12 font-display text-lg font-normal leading-snug">{book.title}</h3>
+                            <h3 className="mt-1 line-clamp-2 font-display text-base font-normal leading-snug md:mt-2 md:min-h-12 md:text-lg">{book.title}</h3>
                             <p className="mt-2 line-clamp-1 text-sm text-[var(--color-muted)]">{book.authorsText}</p>
-                            <p className="mt-auto pt-3 text-sm text-[var(--color-muted)]">독서기록 {book.readingRecordCount}</p>
+                            <p className="mt-auto pt-2 text-sm text-[var(--color-muted)] md:pt-3">독서기록 {book.readingRecordCount}</p>
                           </div>
                         </a>
                       </article>
@@ -217,7 +234,7 @@ export default function LibraryPage() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                   <div>
                     <h2 className="text-xl font-normal">최근 독서기록</h2>
-                    <p className="mt-2 text-sm leading-6 text-[var(--color-muted)]">최신 기록을 10개씩 확인하고 책, 저자, 사람, 한줄평으로 검색합니다.</p>
+                    <p className="mt-2 hidden text-sm leading-6 text-[var(--color-muted)] sm:block">최신 기록을 10개씩 확인하고 책, 저자, 사람, 한줄평으로 검색합니다.</p>
                   </div>
                   <label className="w-full max-w-sm">
                     <span className="sr-only">최근 독서기록 검색</span>
@@ -237,45 +254,51 @@ export default function LibraryPage() {
                 ) : (
                   <div className="grid gap-5">
                     {visibleRecords.map((record) => (
-                      <article className="grid gap-4 border-b border-[var(--color-line)] pb-6 md:grid-cols-[160px_1fr]" key={record.id}>
-                        <div className="aspect-[4/3] rounded-[var(--radius-card)] bg-cover bg-center" style={{ backgroundImage: `url(${record.recordImageUrl ?? record.bookThumbnailUrl ?? "/images/reading-books.jpg"})` }} />
-                        <div className="grid content-start gap-3">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="flex min-w-0 gap-3">
+                      <article className="border-b border-[var(--color-line)] pb-6" key={record.id}>
+                        <div className="grid grid-cols-[72px_1fr] gap-4 sm:grid-cols-[84px_1fr]">
+                          <a
+                            aria-label={`${record.bookTitle} 상세 보기`}
+                            className="aspect-[3/4] w-[72px] overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-line)] bg-cover bg-center photo-muted shadow-[0_12px_28px_rgba(63,47,34,0.08)] sm:w-[84px]"
+                            href={`/books/${record.bookId}`}
+                            style={{ backgroundImage: `url(${record.recordImageUrl ?? record.bookThumbnailUrl ?? "/images/reading-books.jpg"})` }}
+                          />
+
+                          <div className="grid min-w-0 content-start gap-2">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-[var(--color-muted)]">
                               {record.memberProfileImageUrl ? (
                                 <div
                                   aria-label={`${record.memberDisplayName} 프로필 이미지`}
-                                  className="size-11 shrink-0 rounded-full bg-cover bg-center ring-1 ring-[var(--color-line)]"
+                                  className="size-7 shrink-0 rounded-full bg-cover bg-center ring-1 ring-[var(--color-line)]"
                                   role="img"
                                   style={{ backgroundImage: `url(${record.memberProfileImageUrl})` }}
                                 />
                               ) : (
-                                <Avatar name={record.memberDisplayName} />
+                                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-deep-green)] text-xs font-normal text-[var(--color-warm-white)]">
+                                  {record.memberDisplayName.trim().slice(0, 1)}
+                                </div>
                               )}
-                              <div className="min-w-0">
-                                <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-muted)]">
-                                  <span>{record.memberDisplayName}</span>
-                                  <span aria-hidden="true">·</span>
-                                  <time dateTime={record.createdAt}>{formatKoreanDate(record.createdAt)}</time>
-                                  {isToday(record.createdAt) && (
-                                    <span className="rounded-full bg-[rgba(47,90,67,0.12)] px-2 py-0.5 text-xs text-[var(--color-deep-green)]">New</span>
-                                  )}
-                                </p>
-                              </div>
+                              <span>{record.memberDisplayName}</span>
+                              <span aria-hidden="true">·</span>
+                              <time dateTime={record.createdAt}>{formatKoreanDate(record.createdAt)}</time>
+                              {isToday(record.createdAt) && (
+                                <span className="rounded-full bg-[rgba(47,90,67,0.12)] px-2 py-0.5 text-xs text-[var(--color-deep-green)]">New</span>
+                              )}
+                              <a
+                                className="inline-flex items-center border-b border-[#0b3d2e] text-xs font-normal text-[#0b3d2e] transition hover:border-[var(--color-deep-green)] hover:text-[var(--color-deep-green)]"
+                                href={record.blogUrl}
+                              >
+                                블로그 원문
+                              </a>
                             </div>
-                          </div>
-                          <div>
-                            <h3 className="font-display text-xl font-normal leading-snug">
-                              <a className="font-normal" href={`/books/${record.bookId}`}>
+
+                            <h3 className="font-display text-lg font-normal leading-snug sm:text-xl">
+                              <a className="font-normal transition hover:text-[var(--color-deep-green)]" href={`/books/${record.bookId}`}>
                                 {record.bookTitle}
                               </a>
                             </h3>
-                            <p className="mt-1 text-sm text-[var(--color-muted)]">{record.authorsText}</p>
+                            <p className="line-clamp-1 text-sm text-[var(--color-muted)]">{record.authorsText}</p>
+                            <p className="line-clamp-2 text-sm leading-7 text-[var(--color-charcoal)]">{record.oneLineReview}</p>
                           </div>
-                          <p className="text-sm leading-7">{record.oneLineReview}</p>
-                          <a className="inline-flex w-fit border-b border-[rgba(138,99,61,0.44)] pb-0.5 text-sm font-normal text-[var(--color-bronze)] transition hover:border-[var(--color-deep-green)] hover:text-[var(--color-deep-green)]" href={record.blogUrl}>
-                            블로그 원문
-                          </a>
                         </div>
                       </article>
                     ))}
@@ -317,4 +340,73 @@ function isToday(value: string) {
     day: "2-digit",
   });
   return formatter.format(new Date(value)) === formatter.format(new Date());
+}
+
+function LibrarySkeleton() {
+  return (
+    <div className="grid gap-8" aria-label="독서기록 라이브러리 로딩 중">
+      <section className="grid gap-4">
+        <SkeletonBlock className="h-7 w-36" />
+        <article className="grid gap-5 overflow-hidden rounded-[var(--radius-card)] bg-[rgba(255,254,250,0.92)] p-4 shadow-[var(--shadow-soft)] sm:grid-cols-[180px_1fr] sm:p-5">
+          <SkeletonBlock className="aspect-[3/4] w-full max-w-[190px] justify-self-center sm:max-w-none" />
+          <div className="grid content-center gap-3">
+            <SkeletonBlock className="h-4 w-24" />
+            <SkeletonBlock className="h-7 w-3/4" />
+            <SkeletonBlock className="h-4 w-40" />
+            <div className="mt-2 grid gap-2">
+              <SkeletonBlock className="h-4 w-full" />
+              <SkeletonBlock className="h-4 w-5/6" />
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section className="grid gap-4">
+        <SkeletonBlock className="h-7 w-56" />
+        <div className="grid items-stretch gap-4 md:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <article className="grid grid-cols-[72px_1fr] gap-4 rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-3 shadow-[var(--shadow-soft)] md:grid-cols-1 md:gap-0 md:p-0" key={index}>
+              <SkeletonBlock className="aspect-[3/4] w-[72px] md:w-full md:rounded-none" />
+              <div className="grid content-start gap-2 py-1 md:min-h-40 md:p-4">
+                <SkeletonBlock className="h-3 w-20" />
+                <SkeletonBlock className="h-4 w-full" />
+                <SkeletonBlock className="h-4 w-4/5" />
+                <SkeletonBlock className="mt-2 h-4 w-24 md:mt-auto" />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="grid gap-2">
+            <SkeletonBlock className="h-7 w-36" />
+            <SkeletonBlock className="hidden h-4 w-96 sm:block" />
+          </div>
+          <SkeletonBlock className="h-11 w-full max-w-sm" />
+        </div>
+        <div className="grid gap-5">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <article className="border-b border-[var(--color-line)] pb-6" key={index}>
+              <div className="grid grid-cols-[72px_1fr] gap-4 sm:grid-cols-[84px_1fr]">
+                <SkeletonBlock className="aspect-[3/4] w-[72px] sm:w-[84px]" />
+                <div className="grid min-w-0 content-start gap-2">
+                  <div className="flex items-center gap-2">
+                    <SkeletonBlock className="size-7 rounded-full" />
+                    <SkeletonBlock className="h-4 w-24" />
+                    <SkeletonBlock className="h-4 w-20" />
+                  </div>
+                  <SkeletonBlock className="h-5 w-3/4" />
+                  <SkeletonBlock className="h-4 w-36" />
+                  <SkeletonBlock className="h-4 w-full" />
+                  <SkeletonBlock className="h-4 w-5/6" />
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
 }

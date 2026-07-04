@@ -15,6 +15,7 @@ export default function AdminReviewsPage() {
 
 function AdminReviewsContent() {
   const [reviews, setReviews] = useState<MeetingReviewSummary[]>([]);
+  const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ function AdminReviewsContent() {
   async function remove(reviewId: number) {
     const result = await apiDelete<void>(`/admin/reviews/${reviewId}`);
     setMessage(result.success ? "후기를 삭제했습니다." : result.error?.message ?? "삭제에 실패했습니다.");
+    setSelectedReviewId(null);
     load();
   }
 
@@ -56,23 +58,45 @@ function AdminReviewsContent() {
           {message && <EmptyState title="상태" description={message} />}
           <div className="grid gap-3">
             {reviews.map((review) => (
-              <Card key={review.id}>
-                <div className="flex flex-wrap gap-2">
-                  <Tag>{review.status}</Tag>
-                  <Tag>{review.meetingTitle}</Tag>
-                </div>
-                <h2 className="mt-4 text-lg font-normal">{review.title}</h2>
-                <p className="mt-2 text-sm text-[var(--color-charcoal)]">{review.memberDisplayName} · {formatDate(review.createdAt)}</p>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Button href={`/reviews/${review.id}`} variant="secondary">상세 보기</Button>
-                  {review.status === "HIDDEN" ? (
-                    <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => restore(review.id)} type="button">복구</button>
-                  ) : (
-                    <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => hide(review.id)} type="button">숨김</button>
-                  )}
-                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => remove(review.id)} type="button">삭제</button>
-                </div>
-              </Card>
+              <div
+                className={[
+                  "grid gap-3",
+                  selectedReviewId === review.id ? "lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start" : "",
+                ].join(" ")}
+                key={review.id}
+              >
+                <button
+                  className={[
+                    "border bg-[var(--color-warm-white)] p-4 text-left transition",
+                    selectedReviewId === review.id ? "border-[var(--color-deep-green)] shadow-[var(--shadow-soft)]" : "border-[var(--color-line)]",
+                  ].join(" ")}
+                  onClick={() => setSelectedReviewId((current) => (current === review.id ? null : review.id))}
+                  type="button"
+                >
+                  <div className="flex flex-wrap gap-2">
+                    <Tag>{review.status}</Tag>
+                    <Tag>{review.meetingTitle}</Tag>
+                  </div>
+                  <h2 className="mt-4 text-lg font-normal">{review.title}</h2>
+                  <p className="mt-2 text-sm text-[var(--color-charcoal)]">{review.memberDisplayName} · {formatDate(review.createdAt)}</p>
+                </button>
+                {selectedReviewId === review.id && (
+                  <Card>
+                    <div className="grid gap-3">
+                      <p className="text-sm text-[var(--color-charcoal)]">후기 본문은 수정하지 않고 노출 상태만 관리합니다.</p>
+                      <div className="flex flex-wrap gap-3">
+                        <Button href={`/reviews/${review.id}`} variant="secondary">상세 보기</Button>
+                        {review.status === "HIDDEN" ? (
+                          <button className="archive-record-button" onClick={() => restore(review.id)} type="button">복구</button>
+                        ) : (
+                          <button className="archive-record-button" onClick={() => hide(review.id)} type="button">숨김</button>
+                        )}
+                        <button className="archive-record-button archive-record-button--danger" onClick={() => remove(review.id)} type="button">삭제</button>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
             ))}
           </div>
         </div>
