@@ -165,8 +165,8 @@ export default function LibraryPage() {
                         className="aspect-[3/4] w-full max-w-[178px] justify-self-center rounded-[var(--radius-card)] bg-[var(--color-line)] object-cover photo-muted shadow-[0_18px_42px_rgba(63,47,34,0.18),0_2px_10px_rgba(63,47,34,0.10)] sm:max-w-none"
                         height={360}
                         priority
+                        sizes="(min-width: 640px) 180px, 178px"
                         src={currentRecommendedBook.thumbnailUrl || "/images/reading-books.jpg"}
-                        unoptimized
                         width={240}
                       />
                       <div className="flex min-w-0 flex-col justify-center px-6 sm:px-0">
@@ -212,9 +212,9 @@ export default function LibraryPage() {
                             alt={`${book.title} 표지`}
                             className="aspect-[3/4] w-[72px] self-center rounded-[var(--radius-card)] bg-[var(--color-line)] object-contain photo-muted transition group-hover:scale-[1.02] md:w-full md:self-auto md:rounded-none"
                             height={300}
-                            priority={index < 2}
+                            loading="lazy"
+                            sizes="(min-width: 768px) 20vw, 72px"
                             src={book.thumbnailUrl || "/images/reading-books.jpg"}
-                            unoptimized
                             width={200}
                           />
                           <div className="flex min-h-0 flex-col py-1 md:min-h-40 md:p-4">
@@ -258,10 +258,18 @@ export default function LibraryPage() {
                         <div className="grid grid-cols-[72px_1fr] gap-4 sm:grid-cols-[84px_1fr]">
                           <a
                             aria-label={`${record.bookTitle} 상세 보기`}
-                            className="aspect-[3/4] w-[72px] overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-line)] bg-cover bg-center photo-muted shadow-[0_12px_28px_rgba(63,47,34,0.08)] sm:w-[84px]"
+                            className="relative aspect-[3/4] w-[72px] overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-line)] photo-muted shadow-[0_12px_28px_rgba(63,47,34,0.08)] sm:w-[84px]"
                             href={`/books/${record.bookId}`}
-                            style={{ backgroundImage: `url(${record.recordImageUrl ?? record.bookThumbnailUrl ?? "/images/reading-books.jpg"})` }}
-                          />
+                          >
+                            <Image
+                              alt=""
+                              className="object-cover"
+                              fill
+                              loading="lazy"
+                              sizes="(min-width: 640px) 84px, 72px"
+                              src={record.recordImageUrl ?? record.bookThumbnailUrl ?? "/images/reading-books.jpg"}
+                            />
+                          </a>
 
                           <div className="grid min-w-0 content-start gap-2">
                             <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-[var(--color-muted)]">
