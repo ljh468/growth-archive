@@ -85,6 +85,16 @@ textarea {
   background: rgba(63, 95, 74, 0.22);
 }
 
+@keyframes bottomNavProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
+}
+
 .font-display {
   font-family: var(--font-display);
 }
