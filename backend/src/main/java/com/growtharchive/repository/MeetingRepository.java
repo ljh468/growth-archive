@@ -75,6 +75,14 @@ public class MeetingRepository {
         return findSummaries(where, limit, offset, meeting.meetingAt.desc());
     }
 
+    public List<MeetingSummary> findCreatedSmallByMemberId(Long memberId, int limit, int offset) {
+        BooleanBuilder where = new BooleanBuilder()
+            .and(meeting.meetingType.eq("SMALL"))
+            .and(meeting.hostMemberId.eq(memberId))
+            .and(meeting.status.ne("DELETED"));
+        return findSummaries(where, limit, offset, meeting.meetingAt.desc(), meeting.id.desc());
+    }
+
     public Optional<MeetingDetail> findById(Long meetingId, boolean publicOnly, Long viewerMemberId) {
         BooleanBuilder where = new BooleanBuilder(meeting.id.eq(meetingId));
         if (publicOnly) {

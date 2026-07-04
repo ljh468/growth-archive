@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { Card, ConfirmDialog, PageHeader, Section } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPost, apiPut, type MonthlyActionPlan } from "@/lib/api";
@@ -16,8 +16,9 @@ export default function MyActionPlansPage() {
 
 function ActionPlanContent() {
   const router = useRouter();
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const [month, setMonth] = useState(currentMonth);
+  const searchParams = useSearchParams();
+  const currentMonth = formatMonthKst(new Date().toISOString());
+  const [month, setMonth] = useState(() => normalizeMonth(searchParams.get("month")) ?? currentMonth);
   const [plan, setPlan] = useState<MonthlyActionPlan | null>(null);
   const [form, setForm] = useState({ title: "", content: "" });
   const [message, setMessage] = useState<string | null>(null);
@@ -108,4 +109,19 @@ function ActionPlanContent() {
       />
     </main>
   );
+}
+
+function normalizeMonth(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}$/.test(value)) {
+    return null;
+  }
+  return value;
+}
+
+function formatMonthKst(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).format(new Date(value));
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { Button, Card, PageHeader, Section } from "@/components/ui/primitives";
 import { apiGet, apiPut, type MonthlyReflectionSlot } from "@/lib/api";
@@ -14,8 +15,9 @@ export default function MyReflectionsPage() {
 }
 
 function ReflectionContent() {
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const [month, setMonth] = useState(currentMonth);
+  const searchParams = useSearchParams();
+  const currentMonth = formatMonthKst(new Date().toISOString());
+  const [month, setMonth] = useState(() => normalizeMonth(searchParams.get("month")) ?? currentMonth);
   const [form, setForm] = useState({ didWell: "", couldImprove: "", nextFocus: "" });
   const [message, setMessage] = useState<string | null>(null);
 
@@ -66,6 +68,18 @@ function ReflectionContent() {
       </Section>
     </main>
   );
+}
+
+function normalizeMonth(value: string | null) {
+  return value && /^\d{4}-\d{2}$/.test(value) ? value : null;
+}
+
+function formatMonthKst(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).format(new Date(value));
 }
 
 function Textarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {

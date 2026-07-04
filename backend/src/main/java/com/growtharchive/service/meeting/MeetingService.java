@@ -58,6 +58,12 @@ public class MeetingService {
         return meetingRepository.findAdmin(normalizeTypeFilter(type), boundedSize, Math.max(page, 0) * boundedSize);
     }
 
+    public List<MeetingSummary> myCreatedSmallMeetings(HttpServletRequest request, int page, int size) {
+        MemberPrincipal member = currentMemberResolver.require(request, AccessLevel.MEMBER);
+        int boundedSize = Math.min(Math.max(size, 1), 50);
+        return meetingRepository.findCreatedSmallByMemberId(member.memberId(), boundedSize, Math.max(page, 0) * boundedSize);
+    }
+
     public MeetingDetail adminDetail(HttpServletRequest request, Long meetingId) {
         currentMemberResolver.require(request, AccessLevel.ADMIN);
         return detail(request, meetingId);

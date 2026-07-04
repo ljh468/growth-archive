@@ -15,7 +15,7 @@ export default function MyPage() {
 }
 
 function MyPageContent() {
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = formatMonthKst(new Date().toISOString());
   const [dashboard, setDashboard] = useState<MyDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [withdrawConfirmOpen, setWithdrawConfirmOpen] = useState(false);
@@ -115,20 +115,25 @@ function MyPageContent() {
                     <section className="grid gap-2 rounded-[var(--radius-card)] border border-[rgba(229,222,209,0.82)] bg-[rgba(255,254,250,0.56)] p-2.5">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[11px] text-[var(--color-bronze)]">실행계획 · 이번 달</p>
-                        <a className="archive-record-action" href="/mypage/action-plans">
-                          실행계획 수정/삭제
-                        </a>
+                        <div className="flex items-center gap-3">
+                          <a className="archive-record-action" href="/mypage/action-records">
+                            이전 기록
+                          </a>
+                          <a className="archive-record-action" href={`/mypage/action-plans?month=${currentMonth}`}>
+                            실행계획 수정/삭제
+                          </a>
+                        </div>
                       </div>
                       <MonthlyRecordCard
                         eyebrow="실행계획"
-                        href="/mypage/action-plans"
+                        href="/mypage/action-records"
                         title={dashboard.currentActionPlan.title || "이번 달 실행계획"}
                       >
                         {dashboard.currentActionPlan.content}
                       </MonthlyRecordCard>
                     </section>
                   ) : (
-                    <MonthlyEmptyCard href="/mypage/action-plans" label="실행계획" message="이번 달 실행계획은 아직 비어 있습니다." />
+                    <MonthlyEmptyCard href={`/mypage/action-plans?month=${currentMonth}`} label="실행계획" message="이번 달 실행계획은 아직 비어 있습니다." />
                   )}
                 </div>
                 {!hasMonthlyRecord && dashboard.participation.coffeeSupportTarget && (
@@ -143,7 +148,7 @@ function MyPageContent() {
                 <h2 className="mt-1 font-display text-xl font-normal sm:mt-2 sm:text-2xl">무엇을 남길까요?</h2>
                 <div className="mt-4 grid gap-2 sm:mt-5">
                   <ActionRow href={monthlyReadingRecords.length > 0 ? "/mypage/reading-records" : "/reading-records/new"} label="독서기록" status={monthlyReadingRecords.length > 0 ? "남김" : "작성"} />
-                  <ActionRow href="/mypage/action-plans" label="실행계획" status={dashboard.currentActionPlan ? "남김 · 수정" : "작성"} />
+                  <ActionRow href={dashboard.currentActionPlan ? "/mypage/action-records" : `/mypage/action-plans?month=${currentMonth}`} label="실행계획" status={dashboard.currentActionPlan ? "남김 · 보기" : "작성"} />
                   <ActionRow href="/mypage/reflections" label="월간회고" status="남기기" />
                   <ActionRow href="/meetings/new" label="소소모임" status="만들기" />
                 </div>
@@ -157,11 +162,11 @@ function MyPageContent() {
                   <h2 className="mt-1 font-display text-lg font-normal sm:text-xl">쌓인 흔적</h2>
                 </div>
                 <div className="mt-3 grid gap-1.5 sm:mt-4">
-                  <Stat label="독서" value={dashboard.quickStats.readingRecordCount} />
-                  <Stat label="액션플랜" value={dashboard.quickStats.actionPlanCount} />
-                  <Stat label="회고" value={dashboard.quickStats.monthlyReflectionCount} />
-                  <Stat label="후기" value={dashboard.quickStats.meetingReviewCount} />
-                  <Stat label="만든 소소모임" value={dashboard.quickStats.smallMeetingCreatedCount} />
+                  <Stat href="/mypage/reading-records" label="독서" value={dashboard.quickStats.readingRecordCount} />
+                  <Stat href="/mypage/action-records" label="액션플랜" value={dashboard.quickStats.actionPlanCount} />
+                  <Stat href="/mypage/reflection-records" label="회고" value={dashboard.quickStats.monthlyReflectionCount} />
+                  <Stat href="/mypage/reviews" label="후기" value={dashboard.quickStats.meetingReviewCount} />
+                  <Stat href="/mypage/meetings" label="만든 소소모임" value={dashboard.quickStats.smallMeetingCreatedCount} />
                 </div>
               </div>
 
@@ -186,7 +191,7 @@ function MyPageContent() {
             </section>
 
             <section className="rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-warm-white)] p-4 shadow-[var(--shadow-soft)] sm:p-5">
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div className="grid gap-3">
                 <div>
                   <p className="text-sm text-[var(--color-muted)]">계정 관리</p>
                   <p className="mt-1 text-sm leading-6 text-[var(--color-charcoal)]">
@@ -195,7 +200,7 @@ function MyPageContent() {
                   {withdrawMessage && <p className="mt-2 text-sm text-[var(--color-wood-brown)]">{withdrawMessage}</p>}
                 </div>
                 {withdrawConfirmOpen ? (
-                  <div className="grid gap-2 sm:min-w-64">
+                  <div className="grid gap-3 rounded-[var(--radius-card)] border border-[rgba(180,35,24,0.16)] bg-[rgba(180,35,24,0.025)] p-3">
                     <label className="grid gap-1 text-xs text-[var(--color-muted)]">
                       <span>계속하려면 탈퇴하기를 입력하세요.</span>
                       <input
@@ -204,9 +209,9 @@ function MyPageContent() {
                         value={withdrawPhrase}
                       />
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-3">
                       <button
-                        className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-card)] bg-[#B42318] px-4 text-sm text-[var(--color-warm-white)] transition hover:bg-[#8F1D14] disabled:cursor-not-allowed disabled:bg-[rgba(180,35,24,0.28)] disabled:text-[rgba(255,253,248,0.72)]"
+                        className="text-xs font-medium text-[#9F2A20] underline decoration-[rgba(159,42,32,0.28)] underline-offset-4 transition hover:text-[#7F2119] disabled:cursor-not-allowed disabled:text-[rgba(159,42,32,0.32)] disabled:no-underline"
                         disabled={withdrawPhrase !== "탈퇴하기"}
                         onClick={withdraw}
                         type="button"
@@ -214,7 +219,7 @@ function MyPageContent() {
                         탈퇴하기
                       </button>
                       <button
-                        className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-card)] border border-[var(--color-line)] px-4 text-sm text-[var(--color-charcoal)] transition hover:border-[var(--color-wood-brown)] hover:text-[var(--color-wood-brown)]"
+                        className="text-xs text-[var(--color-muted)] underline decoration-[rgba(138,106,69,0.24)] underline-offset-4 transition hover:text-[var(--color-wood-brown)]"
                         onClick={() => {
                           setWithdrawConfirmOpen(false);
                           setWithdrawPhrase("");
@@ -227,7 +232,7 @@ function MyPageContent() {
                   </div>
                 ) : (
                   <button
-                    className="inline-flex min-h-10 items-center justify-center rounded-[var(--radius-card)] bg-[#B42318] px-4 text-sm text-[var(--color-warm-white)] transition hover:bg-[#8F1D14]"
+                    className="justify-self-start text-xs text-[#9F2A20] underline decoration-[rgba(159,42,32,0.22)] underline-offset-4 transition hover:text-[#7F2119]"
                     onClick={() => setWithdrawConfirmOpen(true)}
                     type="button"
                   >
@@ -243,13 +248,30 @@ function MyPageContent() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between rounded-[var(--radius-card)] border border-[rgba(229,222,209,0.72)] bg-[rgba(255,254,250,0.58)] px-3 py-2">
+function Stat({ href, label, value }: { href?: string; label: string; value: number }) {
+  const activeHref = value > 0 ? href : undefined;
+  const content = (
+    <>
       <p className="text-xs leading-none text-[var(--color-charcoal)] sm:text-sm">{label}</p>
-      <p className="font-display text-base font-normal leading-none text-[var(--color-deep-green)] sm:text-lg">{value}</p>
-    </div>
+      <span className="flex items-baseline gap-2">
+        <span className="font-display text-base font-normal leading-none text-[var(--color-deep-green)] sm:text-lg">{value}</span>
+        <span className={activeHref ? "text-[10px] leading-none text-[var(--color-deep-green)] sm:text-[11px]" : "text-[10px] leading-none text-[var(--color-muted)] sm:text-[11px]"}>
+          {activeHref ? "기록 보기" : "비어 있음"}
+        </span>
+      </span>
+    </>
   );
+
+  const className = "flex min-h-10 items-center justify-between rounded-[var(--radius-card)] border border-[rgba(229,222,209,0.72)] bg-[rgba(255,254,250,0.58)] px-3 py-2 transition";
+  if (activeHref) {
+    return (
+      <a aria-label={`${label} 기록 보기`} className={`${className} hover:border-[rgba(31,77,58,0.26)] hover:bg-[rgba(47,90,67,0.045)]`} href={activeHref}>
+        {content}
+      </a>
+    );
+  }
+
+  return <div className={`${className} opacity-85`}>{content}</div>;
 }
 
 function MonthlyRecordCard({ children, eyebrow, href, title }: { children: string; eyebrow: string; href: string; title: string }) {
@@ -310,6 +332,14 @@ function activityLabel(type: string) {
     MEETING_REVIEW: "모임후기",
     SMALL_MEETING: "소소모임",
   }[type] ?? "기록";
+}
+
+function formatMonthKst(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).format(new Date(value));
 }
 
 function formatKoreanDate(value: string) {

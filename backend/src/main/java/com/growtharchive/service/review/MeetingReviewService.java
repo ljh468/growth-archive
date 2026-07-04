@@ -42,6 +42,12 @@ public class MeetingReviewService {
         return meetingReviewRepository.findAdmin(boundedSize, Math.max(page, 0) * boundedSize);
     }
 
+    public List<MeetingReviewSummary> myList(HttpServletRequest request, int page, int size) {
+        MemberPrincipal member = currentMemberResolver.require(request, AccessLevel.MEMBER);
+        int boundedSize = Math.min(Math.max(size, 1), 50);
+        return meetingReviewRepository.findByMemberId(member.memberId(), boundedSize, Math.max(page, 0) * boundedSize);
+    }
+
     public MeetingReviewDetail adminDetail(HttpServletRequest request, Long reviewId) {
         currentMemberResolver.require(request, AccessLevel.ADMIN);
         return meetingReviewRepository.findById(reviewId, false, null)

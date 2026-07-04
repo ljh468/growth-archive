@@ -42,6 +42,15 @@ public class MeetingController {
         return ApiResponse.success(meetingService.list(type, scope, monthOffset, page, size));
     }
 
+    @GetMapping("/mine/created")
+    public ApiResponse<List<MeetingSummary>> myCreated(
+        HttpServletRequest request,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(meetingService.myCreatedSmallMeetings(request, page, size));
+    }
+
     @GetMapping("/{meetingId}")
     public ApiResponse<MeetingDetail> detail(HttpServletRequest request, @PathVariable Long meetingId) {
         return ApiResponse.success(meetingService.detail(request, meetingId));
