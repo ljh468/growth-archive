@@ -285,8 +285,14 @@ public class SupabaseStorageService implements StorageService {
         return compact.substring(0, 300) + "...";
     }
 
-    private String publicUrl(String bucket, String objectKey) {
-        return "%s/%s/%s".formatted(publicBaseUrl(), encodePath(bucket), encodePath(objectKey));
+    String publicUrl(String bucket, String objectKey) {
+        String baseUrl = publicBaseUrl();
+        String encodedBucket = encodePath(bucket);
+        String encodedObjectKey = encodePath(objectKey);
+        if (baseUrl.endsWith("/" + encodedBucket)) {
+            return "%s/%s".formatted(baseUrl, encodedObjectKey);
+        }
+        return "%s/%s/%s".formatted(baseUrl, encodedBucket, encodedObjectKey);
     }
 
     private String publicBaseUrl() {
