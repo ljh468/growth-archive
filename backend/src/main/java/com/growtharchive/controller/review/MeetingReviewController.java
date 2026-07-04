@@ -39,6 +39,15 @@ public class MeetingReviewController {
         return ApiResponse.success(meetingReviewService.list(meetingId, page, size));
     }
 
+    @GetMapping("/mine")
+    public ApiResponse<List<MeetingReviewSummary>> mine(
+        HttpServletRequest request,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(meetingReviewService.myList(request, page, size));
+    }
+
     @GetMapping("/{reviewId}")
     public ApiResponse<MeetingReviewDetail> detail(HttpServletRequest request, @PathVariable Long reviewId) {
         return ApiResponse.success(meetingReviewService.detail(request, reviewId));

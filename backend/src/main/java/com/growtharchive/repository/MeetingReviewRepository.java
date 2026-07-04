@@ -82,6 +82,24 @@ public class MeetingReviewRepository {
             .toList();
     }
 
+    public List<MeetingReviewSummary> findByMemberId(Long targetMemberId, int limit, int offset) {
+        return queryFactory
+            .select(summaryFields())
+            .from(review)
+            .join(meeting).on(meeting.id.eq(review.meetingId))
+            .join(member).on(member.id.eq(review.memberId))
+            .leftJoin(profileImage).on(profileImage.id.eq(member.profileImageId))
+            .leftJoin(representativeImage).on(representativeImage.id.eq(review.representativeImageId))
+            .where(review.memberId.eq(targetMemberId), review.status.ne("DELETED"))
+            .orderBy(review.createdAt.desc(), review.id.desc())
+            .limit(limit)
+            .offset(offset)
+            .fetch()
+            .stream()
+            .map(this::mapSummary)
+            .toList();
+    }
+
     public Optional<MeetingReviewDetail> findById(Long reviewId, boolean publicOnly, Long viewerMemberId) {
         BooleanBuilder where = new BooleanBuilder(review.id.eq(reviewId));
         where.and(publicOnly ? review.status.eq("ACTIVE") : review.status.ne("DELETED"));
