@@ -14,7 +14,9 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,7 +56,7 @@ public class ParticipationRepository {
     }
 
     public List<AdminParticipationMemberView> getAdminMembers(LocalDate targetMonth) {
-        return queryFactory
+        List<Tuple> rows = queryFactory
             .select(
                 member.id,
                 member.displayType,
@@ -71,9 +73,14 @@ public class ParticipationRepository {
             .leftJoin(adminNote).on(adminNote.memberId.eq(member.id), adminNote.targetMonth.eq(targetMonth))
             .where(member.onboardingCompletedAt.isNotNull(), member.deactivatedAt.isNull())
             .orderBy(member.onboardingCompletedAt.asc(), member.id.asc())
-            .fetch()
-            .stream()
-            .map(row -> toAdminMember(row, targetMonth))
+            .fetch();
+        List<Long> memberIds = rows.stream()
+            .map(row -> row.get(member.id))
+            .toList();
+        Map<Long, Long> readingRecordCounts = readingRecordCounts(memberIds, targetMonth);
+        Map<Long, Long> actionPlanCounts = actionPlanCounts(memberIds, targetMonth);
+        return rows.stream()
+            .map(row -> toAdminMember(row, targetMonth, readingRecordCounts, actionPlanCounts))
             .toList();
     }
 
@@ -150,10 +157,15 @@ public class ParticipationRepository {
         );
     }
 
-    private AdminParticipationMemberView toAdminMember(Tuple row, LocalDate targetMonth) {
+    private AdminParticipationMemberView toAdminMember(
+        Tuple row,
+        LocalDate targetMonth,
+        Map<Long, Long> readingRecordCounts,
+        Map<Long, Long> actionPlanCounts
+    ) {
         Long memberId = row.get(member.id);
-        long readingRecordCount = readingRecordCount(memberId, targetMonth);
-        boolean hasActionPlan = actionPlanCount(memberId, targetMonth) > 0;
+        long readingRecordCount = readingRecordCounts.getOrDefault(memberId, 0L);
+        boolean hasActionPlan = actionPlanCounts.getOrDefault(memberId, 0L) > 0;
         boolean calculationTarget = isCalculationTarget(row.get(member.onboardingCompletedAt), targetMonth);
         boolean manuallyCompleted = row.get(adminNote.manuallyCompletedAt) != null;
         boolean completed = calculationTarget && (readingRecordCount > 0 || hasActionPlan || manuallyCompleted);
@@ -190,6 +202,26 @@ public class ParticipationRepository {
         return count == null ? 0 : count;
     }
 
+    private Map<Long, Long> readingRecordCounts(List<Long> memberIds, LocalDate targetMonth) {
+        Map<Long, Long> counts = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return counts;
+        }
+        queryFactory
+            .select(readingRecord.memberId, readingRecord.count())
+            .from(readingRecord)
+            .where(
+                readingRecord.memberId.in(memberIds),
+                readingRecord.status.eq("ACTIVE"),
+                readingRecord.recordedAt.goe(KstDateTimes.startOfMonth(targetMonth)),
+                readingRecord.recordedAt.lt(KstDateTimes.startOfNextMonth(targetMonth))
+            )
+            .groupBy(readingRecord.memberId)
+            .fetch()
+            .forEach(row -> counts.put(row.get(readingRecord.memberId), zeroIfNull(row.get(readingRecord.count()))));
+        return counts;
+    }
+
     private long actionPlanCount(Long memberId, LocalDate targetMonth) {
         Long count = queryFactory
             .select(actionPlan.count())
@@ -201,6 +233,25 @@ public class ParticipationRepository {
             )
             .fetchOne();
         return count == null ? 0 : count;
+    }
+
+    private Map<Long, Long> actionPlanCounts(List<Long> memberIds, LocalDate targetMonth) {
+        Map<Long, Long> counts = new LinkedHashMap<>();
+        if (memberIds.isEmpty()) {
+            return counts;
+        }
+        queryFactory
+            .select(actionPlan.memberId, actionPlan.count())
+            .from(actionPlan)
+            .where(
+                actionPlan.memberId.in(memberIds),
+                actionPlan.status.eq("ACTIVE"),
+                actionPlan.targetMonth.eq(targetMonth)
+            )
+            .groupBy(actionPlan.memberId)
+            .fetch()
+            .forEach(row -> counts.put(row.get(actionPlan.memberId), zeroIfNull(row.get(actionPlan.count()))));
+        return counts;
     }
 
     private String displayName(Tuple row) {
@@ -229,5 +280,9 @@ public class ParticipationRepository {
         }
         LocalDate joinedMonth = KstDateTimes.monthOf(onboardingCompletedAt);
         return !joinedMonth.isAfter(targetMonth);
+    }
+
+    private long zeroIfNull(Long count) {
+        return count == null ? 0 : count;
     }
 }
