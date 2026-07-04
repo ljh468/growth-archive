@@ -2,6 +2,7 @@
 
 import { kakaoLoginUrl } from "@/lib/api";
 import { Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
@@ -15,6 +16,24 @@ export default function LoginPage() {
 function LoginContent() {
   const searchParams = useSearchParams();
   const deactivated = searchParams.get("deactivated") === "true";
+  const [loginPending, setLoginPending] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+
+  useEffect(() => {
+    const healthUrl = kakaoLoginUrl().replace("/auth/kakao/login", "/health");
+    fetch(healthUrl, { cache: "no-store", credentials: "include" }).catch(() => undefined);
+  }, []);
+
+  function startKakaoLogin() {
+    setLoginPending(true);
+    setStatusMessage("카카오로 이동 중입니다.");
+    window.setTimeout(() => {
+      setStatusMessage("연결이 지연되고 있습니다. 잠시만 기다려 주세요.");
+    }, 5000);
+    window.setTimeout(() => {
+      window.location.assign(kakaoLoginUrl());
+    }, 50);
+  }
 
   return (
     <main className="min-h-screen bg-[var(--color-ivory)] px-5 py-10 text-[var(--color-ink)]">
@@ -30,15 +49,24 @@ function LoginContent() {
           </p>
         )}
         <button
-          className="mt-8 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[#FEE500] px-4 py-3 text-sm font-normal text-[rgba(0,0,0,0.85)] shadow-[var(--shadow-soft)] transition hover:bg-[#F4D600] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-bronze)]"
-          onClick={() => {
-            window.location.href = kakaoLoginUrl();
-          }}
+          aria-busy={loginPending}
+          className="mt-8 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[#FEE500] px-4 py-3 text-sm font-normal text-[rgba(0,0,0,0.85)] shadow-[var(--shadow-soft)] transition hover:bg-[#F4D600] disabled:cursor-wait disabled:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-bronze)]"
+          disabled={loginPending}
+          onClick={startKakaoLogin}
           type="button"
         >
-          <span className="grid size-5 place-items-center rounded-full bg-[rgba(0,0,0,0.82)] text-[11px] text-[#FEE500]">K</span>
-          <span>카카오로 계속하기</span>
+          {loginPending ? (
+            <span className="size-4 animate-spin rounded-full border-2 border-[rgba(0,0,0,0.24)] border-t-[rgba(0,0,0,0.82)]" />
+          ) : (
+            <span className="grid size-5 place-items-center rounded-full bg-[rgba(0,0,0,0.82)] text-[11px] text-[#FEE500]">K</span>
+          )}
+          <span>{loginPending ? "카카오로 이동 중" : "카카오로 계속하기"}</span>
         </button>
+        {statusMessage && (
+          <p className="mt-3 text-center text-xs leading-5 text-[var(--color-muted)]">
+            {statusMessage}
+          </p>
+        )}
       </section>
     </main>
   );
