@@ -155,11 +155,20 @@ function AdminRecommendedBooksContent() {
                 >
                   <div
                     className={[
-                      "flex flex-wrap items-start justify-between gap-3 border bg-[var(--color-warm-white)] p-4 transition",
+                      "flex cursor-pointer flex-wrap items-start justify-between gap-3 border bg-[var(--color-warm-white)] p-4 transition hover:border-[rgba(31,77,58,0.28)] hover:bg-[rgba(47,90,67,0.035)]",
                       selected?.id === book.id ? "border-[var(--color-deep-green)] shadow-[var(--shadow-soft)]" : "border-[var(--color-line)]",
                     ].join(" ")}
+                    onClick={() => choose(book)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        choose(book);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
-                    <button className="min-w-0 flex-1 text-left" onClick={() => choose(book)} type="button">
+                    <div className="min-w-0 flex-1 text-left">
                       <div className="flex flex-wrap gap-2">
                         <Tag>#{book.displayOrder}</Tag>
                         <Tag>Book {book.bookId}</Tag>
@@ -168,13 +177,27 @@ function AdminRecommendedBooksContent() {
                       <p className="mt-3 font-normal">{book.title}</p>
                       <p className="mt-1 text-sm text-[var(--color-charcoal)]">{book.authorsText}</p>
                       <p className="mt-3 text-sm leading-6">{book.reason}</p>
-                    </button>
+                    </div>
                     {book.status === "HIDDEN" ? (
-                      <button className="archive-record-button" onClick={() => restore(book.id)} type="button">
+                      <button
+                        className="archive-record-button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          restore(book.id);
+                        }}
+                        type="button"
+                      >
                         복구
                       </button>
                     ) : (
-                      <button className="archive-record-button archive-record-button--danger" onClick={() => hide(book.id)} type="button">
+                      <button
+                        className="archive-record-button archive-record-button--danger"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          hide(book.id);
+                        }}
+                        type="button"
+                      >
                         비활성화
                       </button>
                     )}

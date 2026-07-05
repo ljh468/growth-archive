@@ -117,11 +117,20 @@ function AdminBooksContent() {
                 >
                   <div
                     className={[
-                      "flex flex-wrap items-start justify-between gap-4 border bg-[var(--color-warm-white)] p-4 transition",
+                      "flex cursor-pointer flex-wrap items-start justify-between gap-4 border bg-[var(--color-warm-white)] p-4 transition hover:border-[rgba(31,77,58,0.28)] hover:bg-[rgba(47,90,67,0.035)]",
                       selected?.id === book.id ? "border-[var(--color-deep-green)] shadow-[var(--shadow-soft)]" : "border-[var(--color-line)]",
                     ].join(" ")}
+                    onClick={() => choose(book)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        choose(book);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
-                    <button className="min-w-0 flex-1 text-left" onClick={() => choose(book)} type="button">
+                    <div className="min-w-0 flex-1 text-left">
                       <div className="flex flex-wrap gap-2">
                         <Tag>Book {book.id}</Tag>
                         <Tag>{bookStatusLabel(book.status)}</Tag>
@@ -131,9 +140,16 @@ function AdminBooksContent() {
                       <p className="mt-2 text-sm text-[var(--color-charcoal)]">
                         {[book.publisher, book.publishedDate].filter(Boolean).join(" · ") || "출판 정보 없음"}
                       </p>
-                    </button>
+                    </div>
                     {book.status === "UNVERIFIED" && (
-                      <button className="inline-flex min-h-10 items-center border border-[var(--color-line)] px-3 text-sm font-normal" onClick={() => verify(book)} type="button">
+                      <button
+                        className="inline-flex min-h-10 items-center border border-[var(--color-line)] px-3 text-sm font-normal"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          verify(book);
+                        }}
+                        type="button"
+                      >
                         검증 완료
                       </button>
                     )}

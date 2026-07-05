@@ -2,9 +2,9 @@
 
 # 부자습관 만들기 - Growth Archive
 
-Version: 1.2 FINAL
-Status: Final
-Last Updated: 2026-06-29
+Version: 1.3 Implementation Aligned
+Status: IMPLEMENTATION_ALIGNED
+Last Updated: 2026-07-05
 Related Documents:
 
 - PRD-001. Product Vision & MVP Requirements
@@ -528,7 +528,7 @@ Wood Brown은 녹색 CTA hover/focus와 우드톤 포인트에 사용한다.
 Charcoal은 헤더 텍스트와 본문 강조에 사용한다.
 Soft Ivory 배경은 전체 서비스의 차분한 바탕으로 사용한다.
 Warm White는 카드, 폼, 모달, 프로필 영역의 표면색으로 사용한다.
-Bronze는 이달의 추천책, 큐레이션, 중요한 라벨에 제한적으로 사용한다.
+Bronze는 추천책, 큐레이션, 중요한 라벨에 제한적으로 사용한다.
 Danger는 삭제/숨김 같은 파괴적 액션에만 사용한다.
 화면 전체가 금색/초록색으로 느껴지지 않도록 포인트 컬러는 10% 이하로 제한한다.
 ```
@@ -555,11 +555,19 @@ MVP 기본 폰트는 북클럽 무드에 맞춰 아래 조합을 사용한다.
 ```css
 --font-body: "Gowun Batang", "Noto Serif KR", "Apple SD Gothic Neo", serif;
 --font-display: "NanumSquare", "Gowun Batang", "Noto Serif KR", sans-serif;
+--font-hand: "NanumBeomSomCe", "Nanum Pen Script", "Nanum Brush Script", cursive;
 --font-latin: "Caveat", "Nanum Pen Script", cursive;
 ```
 
-운영 안정성을 위해 필요한 핵심 폰트 파일은 저장소의 `frontend/public/fonts/`에 포함할 수 있다.
-웹폰트 사용 여부는 성능과 라이선스 확인 후 결정한다.
+현재 구현은 핵심 폰트 파일을 `frontend/public/fonts/`에 포함한다.
+
+```text
+caveat.ttf          영어 필기체 / 라틴 장식 텍스트
+nanum-square.woff   큰 제목과 주요 UI 제목
+nanum-beomsom.ttf   소개 페이지와 후기 요약의 손글씨 무드
+```
+
+폰트 깜빡임을 줄이기 위해 주요 로컬 폰트는 `font-display: block`을 사용한다.
 
 ### 9.2 Type Scale
 
@@ -669,7 +677,7 @@ Growth Archive의 핵심 UI 단위는 Card다.
 
 ```text
 흰색 또는 아이보리 계열 배경
-부드러운 radius
+절제된 radius
 얇은 border
 낮은 shadow 또는 shadow 없음
 충분한 내부 여백
@@ -678,12 +686,16 @@ Growth Archive의 핵심 UI 단위는 Card다.
 권장:
 
 ```text
-border-radius: 20px ~ 28px
+border-radius: 8px 이하
 border: 1px solid var(--border)
-padding: 20px ~ 28px
+padding: 화면 밀도에 맞춰 14px ~ 24px
 ```
 
 카드는 정보를 담되, 너무 많은 액션을 넣지 않는다.
+
+Admin 목록 카드처럼 편집 대상이 되는 카드는 텍스트 일부가 아니라 카드 전체 클릭으로 선택/접기를 제공한다. 모바일과 긴 목록에서는 선택한 카드 바로 아래 또는 가까운 위치에 편집 패널을 배치해 현재 맥락을 잃지 않게 한다.
+
+탈퇴 같은 파괴적 기능은 큰 빨간 버튼으로 강조하지 않고, 설정 하단에 작은 붉은 텍스트 액션으로 제공한다. 실행 전에는 앱 디자인에 맞춘 확인 팝업 또는 확인 문구 입력을 요구한다.
 
 ---
 
@@ -765,7 +777,7 @@ Book cover ratio: 2:3
 
 ## 11.5 Recommended Book Card
 
-이달의 추천책 카드.
+추천책 카드.
 
 노출 정보:
 
@@ -1137,7 +1149,7 @@ MVP에서는 고급 갤러리보다 안정적인 업로드/조회가 우선이�
 
 ```text
 1. Photo Hero
-2. 이달의 추천책
+2. 추천책
 3. 최근 성장 기록
 4. 인기 도서 TOP5
 5. 최근 모임
@@ -1158,7 +1170,7 @@ Hero에는 가능하면 실제 모임 또는 책/대화 장면 사진을 사용�
 핵심 섹션:
 
 ```text
-이달의 추천책
+추천책
 인기 도서 TOP5
 최근 독서기록
 책 검색

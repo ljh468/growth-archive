@@ -23,11 +23,6 @@ public class CodeHashService {
     }
 
     public String preview(String code) {
-        String normalized = normalize(code);
-        if (normalized.length() <= 4) {
-            return "****";
-        }
-        return normalized.substring(0, Math.min(3, normalized.length())) + "****"
-            + normalized.substring(normalized.length() - 2);
+        return code == null ? "" : code.trim();
     }
 }

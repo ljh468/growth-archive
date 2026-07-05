@@ -216,12 +216,12 @@ blog_url = 저장함
 ```text
 초대코드 변경
 관심 분야 태그 관리
-이달의 추천책 관리
+추천책 관리
 정기모임 운영 정보 수정
 소소모임 숨김/삭제
 회원 비활성화/재활성화
 참여 현황 확인
-미참여자 CSV 다운로드
+미참여자 조회, 카카오톡 공유 문구 생성, 수동 참여 처리, 운영 메모 저장
 운영 메모 작성
 부적절 콘텐츠 숨김/삭제
 ```
@@ -950,12 +950,12 @@ Admin 기능:
 
 태그 삭제는 MVP에서 soft delete 또는 hidden 처리만 한다.
 
-## 14.3 이달의 추천책 관리
+## 14.3 추천책 관리
 
 정책:
 
 ```text
-매월 3~5권 권장
+공개 화면은 ACTIVE 추천책 전체를 `display_order ASC, id ASC`로 노출
 0권이면 섹션 숨김 또는 준비 중 표시
 1~2권이면 등록된 만큼 표시
 ```
@@ -1032,12 +1032,11 @@ Admin 기능:
 MVP 제외:
 
 ```text
-Admin 권한 UI 부여/회수
 회원 완전 삭제
 회원 개인정보 직접 수정
 ```
 
-Admin 권한 부여는 seed 또는 운영 스크립트로 처리한다.
+Admin 권한 부여/회수는 현재 회원관리 화면에서 처리한다. 프론트의 role 표시는 UX 분기용이며, 실제 Admin API는 백엔드에서 JWT/Cookie와 Role을 다시 검증한다.
 
 ## 14.7 참여 현황 관리
 
@@ -1046,7 +1045,13 @@ Admin 기능:
 ```text
 월별 참여 현황 조회
 미참여자 목록 조회
-CSV 다운로드
+CSV export API 유지
+월별 대상자 조회
+이름 검색
+10명 단위 페이지
+수동 참여 처리 / 미참여 처리
+운영 메모 저장
+카카오톡 공유 문구 복사
 운영 메모 작성
 ```
 
@@ -1097,7 +1102,7 @@ Admin 불가:
 
 ```text
 정기모임 날짜/장소 확인
-이달의 추천책 등록
+추천책 등록
 초대코드 변경 필요 여부 확인
 ```
 
@@ -1160,14 +1165,14 @@ health check endpoint 제공
 
 ## 16.2 Dev Server
 
-비용 절감을 위해 dev 서버는 우선 AWS Free Tier EC2 한 대에 Docker 컨테이너로 운영한다.
+현재 dev 배포는 비용이 거의 들지 않는 방향으로 Vercel + Render Free + Supabase를 사용한다.
 
 ```text
-Frontend: EC2 Docker container
-Backend: EC2 Docker container
+Frontend: Vercel, https://growth-archive.vercel.app
+Backend: Render Free Web Service, https://growth-archive-api.onrender.com
 DB: Supabase PostgreSQL
 Image/upload storage: Supabase Storage
-Domain: 유료 도메인은 선택. 초기 dev는 EC2 public host/IP 사용 가능
+Domain: 각 서비스 기본 무료 도메인 우선
 ```
 
 dev 환경 필수 설정:
@@ -1183,6 +1188,7 @@ KAKAO_BOOK_REST_API_KEY
 KAKAO_REDIRECT_URI
 FRONTEND_BASE_URL
 CORS_ALLOWED_ORIGINS
+API_PROXY_TARGET
 ```
 
 dev profile은 `DATABASE_*` fallback을 사용하지 않는다. Supabase DB 설정이 없으면 서버가 뜨지 않는 것이 정상이다.
@@ -1205,7 +1211,7 @@ dev 더미 데이터와 dev에서 추가로 생성된 사용자/운영 도메인
 psql "$SUPABASE_DATABASE_URL" -f backend/src/main/resources/db/manual/cleanup_demo_growth_archive_data.sql
 ```
 
-이 SQL은 Flyway가 자동 실행하지 않도록 `db/manual`에 둔다. `flyway_schema_history`와 공통 seed인 `interest_tags`는 남기고, 회원/인증/독서기록/실행계획/회고/모임/후기/이미지/운영 로그 테이블을 비운다. 초대코드는 정리 후 dev 기본값인 일반 `test`, 운영진 `admin` 코드로 다시 생성한다. 기본 도서와 현재월 추천책 5권도 다시 생성해 공개 화면이 비어 보이지 않게 한다.
+이 SQL은 Flyway가 자동 실행하지 않도록 `db/manual`에 둔다. `flyway_schema_history`와 공통 seed인 `interest_tags`는 남기고, 회원/인증/독서기록/실행계획/회고/모임/후기/이미지/운영 로그 테이블을 비운다. 초대코드는 정리 후 dev 기본값인 일반 `test`, 운영진 `admin` 코드로 다시 생성한다. 기본 도서와 추천책도 다시 생성해 공개 화면이 비어 보이지 않게 한다.
 
 주의: 이 스크립트는 dev reset 전용이다. 정식 운영 데이터가 들어간 DB에서는 실행하지 않는다. 가능하면 정식 운영 전에는 새 DB를 만들거나 DB를 초기화한 뒤 `classpath:db/migration`만 적용한다.
 
@@ -1297,7 +1303,7 @@ Supabase Storage에서 self-hosted disk-backed storage로 이전할 수 있도�
 [ ] 블로그 URL Guest 공개
 [ ] 책 상세에서 독서기록 토글 확인 가능
 [ ] 인기 도서 TOP5 노출
-[ ] 이달의 추천책 노출
+[ ] 추천책 노출
 [ ] 기존 독서기록 ACTIVE/HIDDEN 정책 적용 확인
 ```
 
@@ -1534,12 +1540,12 @@ OPS 관점에서 MVP가 완료되었다고 판단하는 기준은 다음과 같�
 [ ] 이관 대상 중 제외 데이터는 SKIPPED 사유 기록
 [ ] 신규 회원 카카오 로그인/초대코드/온보딩 가능
 [ ] 독서기록 신규 작성 가능
-[ ] 추천책 3권 이상 등록 가능
+[ ] 추천책 등록/수정/숨김/복구 가능
 [ ] 정기모임 자동 생성 가능
 [ ] 소소모임 생성 가능
 [ ] 모임 후기 작성 가능
 [ ] 참여 현황 계산 가능
-[ ] 미참여자 CSV 다운로드 가능
+[ ] 참여 현황 CSV export 가능
 [ ] Admin이 주요 운영 업무를 UI에서 수행 가능
 [ ] 모바일 웹뷰에서 핵심 플로우 사용 가능
 [ ] 운영 배포 전 백업/복구 절차 문서화
