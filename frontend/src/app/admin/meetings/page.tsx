@@ -2,7 +2,8 @@
 
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Card, EmptyState, MoreButton, PageHeader, RecordButton, Section, Tag } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPost, apiPut, type MeetingDetail, type MeetingSummary } from "@/lib/api";
 
 export default function AdminMeetingsPage() {
@@ -122,6 +123,7 @@ function AdminMeetingsContent() {
     <main>
       <Section>
         <div className="grid gap-8">
+          <MobileBackButton fallbackHref="/admin" />
           <PageHeader eyebrow="Admin" title="모임 관리" description="정기모임 운영 정보를 수정하고, 정기모임과 소소모임의 노출 상태를 관리합니다." />
           {message && <EmptyState title="상태" description={message} />}
           <div className="grid gap-5">
@@ -153,9 +155,7 @@ function AdminMeetingsContent() {
                 </div>
               ))}
               {canShowMore && (
-                <button className="archive-record-button mx-auto mt-2" onClick={() => setVisibleMonthCount((count) => count + 2)} type="button">
-                  More
-                </button>
+                <MoreButton className="mx-auto mt-2" onClick={() => setVisibleMonthCount((count) => count + 2)} />
               )}
             </div>
           </div>
@@ -224,13 +224,13 @@ function MeetingEditor({
             </select>
           </label>
           <div className="flex flex-wrap gap-3">
-            {selected.meetingType !== "SMALL" && <button className="archive-record-button" type="submit">정기모임 수정</button>}
+            {selected.meetingType !== "SMALL" && <RecordButton type="submit">정기모임 수정</RecordButton>}
             {selected.status === "HIDDEN" ? (
-              <button className="archive-record-button" onClick={restore} type="button">복구</button>
+              <RecordButton onClick={restore}>복구</RecordButton>
             ) : (
-              <button className="archive-record-button" onClick={hide} type="button">비활성화</button>
+              <RecordButton onClick={hide}>비활성화</RecordButton>
             )}
-            <button className="archive-record-button archive-record-button--danger" onClick={remove} type="button">삭제</button>
+            <RecordButton onClick={remove} variant="danger">삭제</RecordButton>
           </div>
         </form>
       )}

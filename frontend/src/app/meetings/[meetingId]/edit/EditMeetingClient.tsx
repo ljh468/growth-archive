@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, ConfirmDialog, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, ConfirmDialog, EmptyState, PageHeader, RecordButton, Section } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPut, type MeetingDetail, uploadImage } from "@/lib/api";
 
 export function EditMeetingClient({ meetingId }: { meetingId: string }) {
@@ -105,6 +106,7 @@ function EditMeetingContent({ meetingId }: { meetingId: string }) {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref={`/meetings/${meetingId}`} />
           <PageHeader eyebrow="Small Meeting" title="소소모임 수정" description="소소모임 생성자만 내용을 수정할 수 있습니다." />
           {!loaded ? (
             <EmptyState title="모임을 확인하고 있습니다" description="수정 권한을 확인하는 중입니다." />
@@ -133,9 +135,7 @@ function EditMeetingContent({ meetingId }: { meetingId: string }) {
               {message && <p className="text-sm leading-6 text-[var(--color-muted)]">{message}</p>}
               <div className="flex flex-wrap gap-3">
                 <Button type="submit">{submitting ? "이미지 압축 및 저장 중" : "수정 저장"}</Button>
-                <button className="archive-record-action archive-record-action--danger inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2" onClick={() => setDeleteOpen(true)} type="button">
-                  삭제
-                </button>
+                <RecordButton onClick={() => setDeleteOpen(true)} variant="danger">삭제</RecordButton>
               </div>
             </form>
           </Card>

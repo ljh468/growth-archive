@@ -2,7 +2,8 @@
 
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, EmptyState, PageHeader, RecordButton, Section, Tag } from "@/components/ui/primitives";
 import { apiGet, apiPost, apiPut, type BookSearchResult, type BookSummary, type RecommendedBook } from "@/lib/api";
 
 const defaultTargetMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
@@ -140,6 +141,7 @@ function AdminRecommendedBooksContent() {
     <main>
       <Section>
         <div className="grid gap-8">
+          <MobileBackButton fallbackHref="/admin" />
           <PageHeader eyebrow="Admin" title="추천책 관리" description="라이브러리에 노출할 추천책을 등록하고 순서, 문구, 노출 상태를 관리합니다." />
           {message && <EmptyState title="처리 결과" description={message} />}
           <div className="grid gap-5">
@@ -179,27 +181,24 @@ function AdminRecommendedBooksContent() {
                       <p className="mt-3 text-sm leading-6">{book.reason}</p>
                     </div>
                     {book.status === "HIDDEN" ? (
-                      <button
-                        className="archive-record-button"
+                      <RecordButton
                         onClick={(event) => {
                           event.stopPropagation();
                           restore(book.id);
                         }}
-                        type="button"
                       >
                         복구
-                      </button>
+                      </RecordButton>
                     ) : (
-                      <button
-                        className="archive-record-button archive-record-button--danger"
+                      <RecordButton
                         onClick={(event) => {
                           event.stopPropagation();
                           hide(book.id);
                         }}
-                        type="button"
+                        variant="danger"
                       >
                         비활성화
-                      </button>
+                      </RecordButton>
                     )}
                   </div>
                   {selected?.id === book.id && (
@@ -302,9 +301,7 @@ function RecommendedBookEditor({
         <textarea className="min-h-28 border border-[var(--color-line)] bg-[var(--color-warm-white)] p-3" onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))} placeholder="추천 이유" value={form.reason} />
         <div className="flex flex-wrap gap-3">
           <Button type="submit">{selected ? "수정" : "등록"}</Button>
-          <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={reset} type="button">
-            새 추천책
-          </button>
+          <RecordButton onClick={reset}>새 추천책</RecordButton>
         </div>
       </form>
     </Card>

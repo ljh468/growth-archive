@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
-import { Avatar, Button, EmptyState, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Avatar, Button, EmptyState, MoreButton, RecordButton, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, apiGetCurrentUser, apiPut, type BookDetailResponse, type CurrentUser, type ReadingRecord } from "@/lib/api";
 
 type ReadingRecordEditForm = {
@@ -108,6 +109,7 @@ export function BookDetailClient({ bookId }: { bookId: string }) {
         <>
           <section className="border-b border-[var(--color-line)] bg-[linear-gradient(180deg,var(--color-warm-white),var(--color-ivory))]">
             <Section>
+              <MobileBackButton fallbackHref="/library" />
               <div className="grid gap-5 sm:gap-8 lg:grid-cols-[300px_1fr] lg:items-end">
                 <div className="w-full max-w-[148px] justify-self-center sm:max-w-[240px] lg:max-w-[300px]">
                   <div className="overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-line)] shadow-[0_22px_52px_rgba(63,47,34,0.16)]">
@@ -214,12 +216,10 @@ export function BookDetailClient({ bookId }: { bookId: string }) {
                               <input className="min-h-10 rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3 text-sm" maxLength={300} onChange={(event) => setEditForm((current) => ({ ...current, oneLineReview: event.target.value }))} required value={editForm.oneLineReview} />
                             </label>
                             <div className="flex flex-wrap gap-2">
-                              <button className="archive-record-button archive-record-button--primary" type="submit">
+                              <RecordButton type="submit" variant="primary">
                                 {savingRecord ? "저장 중" : "저장"}
-                              </button>
-                              <button className="archive-record-button" onClick={cancelEditRecord} type="button">
-                                취소
-                              </button>
+                              </RecordButton>
+                              <RecordButton onClick={cancelEditRecord}>취소</RecordButton>
                             </div>
                           </form>
                         ) : (
@@ -236,9 +236,7 @@ export function BookDetailClient({ bookId }: { bookId: string }) {
                             </a>
                             {canEditRecord(record) && (
                               <div className="flex justify-end">
-                                <button className="archive-record-button" onClick={() => startEditRecord(record)} type="button">
-                                  수정
-                                </button>
+                                <RecordButton onClick={() => startEditRecord(record)}>수정</RecordButton>
                               </div>
                             )}
                           </>
@@ -248,14 +246,12 @@ export function BookDetailClient({ bookId }: { bookId: string }) {
                   ))}
                   {visibleRecordCount < detail.readingRecords.length && (
                     <div className="flex justify-center pt-2">
-                      <button
+                      <MoreButton
                         aria-label="작성자별 독서기록 더 보기"
-                        className="archive-more-button"
                         onClick={() => setRecordPagination({ bookId, count: visibleRecordCount + 5 })}
-                        type="button"
                       >
                         More
-                      </button>
+                      </MoreButton>
                     </div>
                   )}
                 </div>

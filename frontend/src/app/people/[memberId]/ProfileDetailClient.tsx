@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { MobileBackButton } from "@/components/MobileBackButton";
 import { Avatar, Card, EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, type ProfileDetail } from "@/lib/api";
 
@@ -10,21 +11,36 @@ export function ProfileDetailClient({ memberId }: { memberId: string }) {
   const [profile, setProfile] = useState<ProfileDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadProfile = useCallback(() => {
     apiGet<ProfileDetail>(`/people/${memberId}`)
       .then((result) => {
         if (!result.success) {
           setError(result.error?.message ?? "프로필을 불러오지 못했습니다.");
           return;
         }
+        setError(null);
         setProfile(result.data);
       })
       .catch(() => setError("프로필을 불러오지 못했습니다."));
   }, [memberId]);
 
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  useEffect(() => {
+    window.addEventListener("focus", loadProfile);
+    window.addEventListener("pageshow", loadProfile);
+    return () => {
+      window.removeEventListener("focus", loadProfile);
+      window.removeEventListener("pageshow", loadProfile);
+    };
+  }, [loadProfile]);
+
   return (
     <main>
       <Section>
+        <MobileBackButton fallbackHref="/people" />
         {error && <EmptyState title="불러오기 실패" description={error} />}
         {!profile && !error && <ProfileDetailSkeleton />}
         {profile && (

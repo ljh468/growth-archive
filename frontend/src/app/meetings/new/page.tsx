@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { MobileBackButton } from "@/components/MobileBackButton";
 import { Button, Card, PageHeader, Section } from "@/components/ui/primitives";
 import { apiPost, type MeetingDetail, uploadImage } from "@/lib/api";
 
@@ -66,6 +67,7 @@ function MeetingForm() {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/meetings" />
           <PageHeader eyebrow="Small Meeting" title="소소모임 만들기" description="성장하는 사람들이 직접 만드는 작은 모임입니다. 정확한 장소는 성장하는 사람들에게만 공개됩니다." />
           <Card>
             <form className="grid gap-3 sm:gap-4" onSubmit={submit}>

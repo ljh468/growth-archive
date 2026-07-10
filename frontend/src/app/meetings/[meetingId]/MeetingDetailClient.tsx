@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Button, Card, EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, EmptyState, PageHeader, RecordButton, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiGetCurrentUser, apiPost, type CurrentUser, type MeetingDetail } from "@/lib/api";
 
 export function MeetingDetailClient({ meetingId }: { meetingId: string }) {
@@ -65,7 +66,15 @@ export function MeetingDetailClient({ meetingId }: { meetingId: string }) {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
-          <PageHeader eyebrow="Meeting Detail" title={meeting.title} description={meeting.description ?? undefined} />
+          <MobileBackButton fallbackHref="/meetings" />
+          <div className="grid gap-3">
+            <PageHeader eyebrow="Meeting Detail" title={meeting.title} />
+            {meeting.description && (
+              <p className="max-w-2xl whitespace-pre-wrap break-words text-sm leading-7 text-[var(--color-muted)] sm:text-base sm:leading-8">
+                {meeting.description}
+              </p>
+            )}
+          </div>
 
           <Card>
             <div className="flex flex-wrap gap-2">
@@ -83,14 +92,14 @@ export function MeetingDetailClient({ meetingId }: { meetingId: string }) {
             <div className="mt-4 flex flex-wrap gap-2 sm:mt-6 sm:gap-3">
               {canManageAttendance && (
                 meeting.attendedByMe ? (
-                  <Button onClick={cancel} variant="ghost">참석 취소</Button>
+                  <RecordButton onClick={cancel} variant="primary">참석 취소</RecordButton>
                 ) : (
-                  <Button onClick={join} variant="ghost">참석하기</Button>
+                  <RecordButton onClick={join} variant="primary">참석하기</RecordButton>
                 )
               )}
               {!memberView && <Button href="/login" variant="secondary">로그인하고 참석하기</Button>}
-              {meeting.meetingType === "SMALL" && meeting.canEdit && <Button href={`/meetings/${meeting.id}/edit`} variant="secondary">소소모임 수정</Button>}
-              {memberView && <Button href="/reviews/new" variant="ghost">후기 작성</Button>}
+              {meeting.meetingType === "SMALL" && meeting.canEdit && <RecordButton href={`/meetings/${meeting.id}/edit`}>소소모임 수정</RecordButton>}
+              {memberView && <RecordButton href="/reviews/new" variant="primary">후기 작성</RecordButton>}
             </div>
           </Card>
 

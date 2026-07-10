@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { MobileBackButton } from "@/components/MobileBackButton";
 import { Button, Card, PageHeader, Section, Tag } from "@/components/ui/primitives";
 import { apiGet, apiPost, type MeetingReviewDetail, type MeetingSummary, type UploadedImage, uploadImage } from "@/lib/api";
 import { isHeicFile } from "@/lib/heicImage";
@@ -132,6 +133,7 @@ function NewReviewContent() {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/reviews" />
           <PageHeader eyebrow="Meeting Review" title="모임 후기 작성" description="참석 버튼 여부와 무관하게 성장하는 사람들은 후기를 작성할 수 있습니다." />
           <p className="rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[rgba(255,254,250,0.78)] px-4 py-3 text-sm leading-6 text-[var(--color-muted)]">
             업로드한 사진은 공개 모임 후기에 노출될 수 있어요. 함께 나온 사람들에게 공개 가능 여부를 확인해주세요.

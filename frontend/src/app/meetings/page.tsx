@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Button, EmptyState, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { Button, EmptyState, MoreButton, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, type MeetingSummary } from "@/lib/api";
 
 type PastMeetingGroup = {
@@ -164,15 +164,13 @@ export default function MeetingsPage() {
             </div>
             {loadingPast && <PastMeetingSkeleton />}
             <div className="flex justify-center pt-2">
-              <button
+              <MoreButton
                 aria-label="지난 모임 더 보기"
-                className="archive-more-button"
                 disabled={loadingPast}
                 onClick={loadPastMonth}
-                type="button"
               >
                 {loadingPast ? "Wait" : "More"}
-              </button>
+              </MoreButton>
             </div>
           </section>
         </div>

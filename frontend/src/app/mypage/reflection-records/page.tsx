@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, EmptyState, PageHeader, RecordButton, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, type MonthlyReflectionSlot } from "@/lib/api";
 
 export default function MyReflectionRecordsPage() {
@@ -53,6 +54,7 @@ function MyReflectionRecordsContent() {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/mypage" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <PageHeader eyebrow="My Reflection" title="내 회고기록" description="월별로 남긴 회고를 다시 확인합니다." />
             <Button href={`/mypage/reflections?month=${currentMonth}`}>이번 달 회고</Button>
@@ -70,9 +72,7 @@ function MyReflectionRecordsContent() {
                   <Tag>{formatMonthLabel(selectedMonth)}</Tag>
                   <Tag>월간회고</Tag>
                 </div>
-                <a className="archive-record-button" href={`/mypage/reflections?month=${selectedMonth}`}>
-                  수정
-                </a>
+                <RecordButton href={`/mypage/reflections?month=${selectedMonth}`}>수정</RecordButton>
               </div>
               <ReflectionBlock label="잘한 것" value={reflection.wellDone} />
               <ReflectionBlock label="아쉬운 점" value={reflection.regret} />

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, EmptyState, PageHeader, RecordButton, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, type MonthlyActionPlan } from "@/lib/api";
 
 export default function MyActionRecordsPage() {
@@ -51,6 +52,7 @@ function MyActionRecordsContent() {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/mypage" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <PageHeader eyebrow="My Action" title="내 실행기록" description="월별로 남긴 실행계획을 차분히 다시 확인합니다." />
             <Button href={`/mypage/action-plans?month=${currentMonth}`}>이번 달 작성</Button>
@@ -99,9 +101,7 @@ function MyActionRecordsContent() {
                   <Tag>{formatMonthLabel(selectedMonth)}</Tag>
                   <Tag>실행계획</Tag>
                 </div>
-                <a className="archive-record-button" href={`/mypage/action-plans?month=${selectedMonth}`}>
-                  수정/삭제
-                </a>
+                <RecordButton href={`/mypage/action-plans?month=${selectedMonth}`}>수정/삭제</RecordButton>
               </div>
               <h2 className="mt-4 font-display text-lg font-normal leading-snug text-[var(--color-ink)] sm:text-2xl">
                 {plan.title || "이번 달 실행계획"}

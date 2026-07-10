@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, ConfirmDialog, EmptyState, PageHeader, Section, SkeletonBlock } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, ConfirmDialog, EmptyState, PageHeader, RecordButton, Section, SkeletonBlock } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPut, type CurrentUser, type ReadingRecord } from "@/lib/api";
 
 type EditForm = {
@@ -105,6 +106,7 @@ function MyReadingRecordsContent({ user }: { user: CurrentUser }) {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/mypage" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <PageHeader eyebrow="My Reading" title="내 독서기록" description="월별로 내가 남긴 독서기록을 확인하고 필요한 내용만 수정합니다." />
             <Button href="/reading-records/new">독서기록 추가</Button>
@@ -267,12 +269,10 @@ function ReadingRecordCard({
               <input className="min-h-10 rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3 text-sm" maxLength={300} onChange={(event) => onFormChange({ ...form, oneLineReview: event.target.value })} required value={form.oneLineReview} />
             </label>
             <div className="flex flex-wrap gap-2">
-              <button className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-card)] bg-[var(--color-deep-green)] px-3 text-xs text-[var(--color-warm-white)] transition hover:bg-[var(--color-wood-brown)]" type="submit">
+              <RecordButton type="submit" variant="primary">
                 {submitting ? "저장 중" : "저장"}
-              </button>
-              <button className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3 text-xs text-[var(--color-charcoal)]" onClick={onCancel} type="button">
-                취소
-              </button>
+              </RecordButton>
+              <RecordButton onClick={onCancel}>취소</RecordButton>
             </div>
           </form>
         ) : (
@@ -283,12 +283,8 @@ function ReadingRecordCard({
                 블로그 원문
               </a>
               <div className="ml-auto flex items-center gap-3">
-                <button className="archive-record-button" onClick={onEdit} type="button">
-                  수정
-                </button>
-                <button className="archive-record-button archive-record-button--danger" onClick={onDelete} type="button">
-                  삭제
-                </button>
+                <RecordButton onClick={onEdit}>수정</RecordButton>
+                <RecordButton onClick={onDelete} variant="danger">삭제</RecordButton>
               </div>
             </div>
           </>

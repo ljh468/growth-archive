@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Button, EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { Button, EmptyState, MoreButton, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, type MeetingReviewSummary } from "@/lib/api";
 
 export default function ReviewsPage() {
@@ -66,14 +66,13 @@ export default function ReviewsPage() {
             ))}
           </div>
           {visibleCount < reviews.length && (
-            <button
+            <MoreButton
               aria-label="모임 후기 더 보기"
-              className="archive-more-button mx-auto mt-2"
+              className="mx-auto mt-2"
               onClick={() => setVisibleCount((count) => count + 4)}
-              type="button"
             >
               More
-            </button>
+            </MoreButton>
           )}
         </div>
       </Section>

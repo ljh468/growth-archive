@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, EmptyState, PageHeader, RecordButton, Section, Tag } from "@/components/ui/primitives";
 import { apiGet, apiPost, apiPut, type AdminMember } from "@/lib/api";
 
 export default function AdminMembersPage() {
@@ -114,6 +115,7 @@ function AdminMembersContent() {
     <main>
       <Section>
         <div className="grid gap-8">
+          <MobileBackButton fallbackHref="/admin" />
           <PageHeader eyebrow="Admin" title="회원 관리" description="회원 상태를 확인하고 비활성화, 재활성화, 참여 시작월을 조정합니다." />
           {message && <EmptyState title="상태" description={message} />}
           <form className="flex flex-col gap-3 sm:flex-row" onSubmit={submitSearch}>
@@ -215,22 +217,18 @@ function MemberEditor({
             ) : (
               <div className="flex flex-wrap gap-3">
                 {selected.role === "ADMIN" ? (
-                  <button className="archive-record-button" onClick={() => updateRole("MEMBER")} type="button">
-                    일반 회원으로 변경
-                  </button>
+                  <RecordButton onClick={() => updateRole("MEMBER")}>일반 회원으로 변경</RecordButton>
                 ) : (
-                  <button className="archive-record-button" onClick={() => updateRole("ADMIN")} type="button">
-                    운영진 권한 부여
-                  </button>
+                  <RecordButton onClick={() => updateRole("ADMIN")}>운영진 권한 부여</RecordButton>
                 )}
               </div>
             )}
           </div>
           <div className="flex flex-wrap gap-3">
             {selected.deactivatedAt ? (
-              <button className="archive-record-button" onClick={reactivate} type="button">재활성화 실행</button>
+              <RecordButton onClick={reactivate}>재활성화 실행</RecordButton>
             ) : (
-              <button className="archive-record-button" onClick={deactivate} type="button">비활성화 실행</button>
+              <RecordButton onClick={deactivate}>비활성화 실행</RecordButton>
             )}
           </div>
         </div>

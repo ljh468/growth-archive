@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Button, Card, ConfirmDialog, EmptyState, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, ConfirmDialog, EmptyState, RecordButton, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPut, type MeetingReviewDetail } from "@/lib/api";
 
 export function ReviewDetailClient({ reviewId }: { reviewId: string }) {
@@ -93,6 +94,7 @@ export function ReviewDetailClient({ reviewId }: { reviewId: string }) {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/reviews" />
           <div className="max-w-3xl">
             <p className="font-latin text-2xl leading-none text-[var(--color-bronze)] sm:text-4xl">Meeting Review</p>
             <h1 className="mt-2 font-display text-xl font-normal leading-[1.28] sm:mt-4 sm:text-3xl">{review.title}</h1>
@@ -188,14 +190,14 @@ export function ReviewDetailClient({ reviewId }: { reviewId: string }) {
                 <textarea className="min-h-40 border border-[var(--color-line)] bg-[var(--color-warm-white)] p-3 sm:min-h-56" onChange={(event) => setForm((current) => ({ ...current, content: event.target.value }))} value={form.content} />
                 <div className="flex flex-wrap gap-3">
                   <Button type="submit">수정 저장</Button>
-                  <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={() => setEditing(false)} type="button">취소</button>
+                  <RecordButton onClick={() => setEditing(false)}>취소</RecordButton>
                 </div>
               </form>
             )}
             {review.canEdit && !editing && (
               <div className="mt-4 flex flex-wrap gap-3 sm:mt-6">
-                <button className="archive-record-action inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2" onClick={() => setEditing(true)} type="button">수정</button>
-                <button className="archive-record-action archive-record-action--danger inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2" onClick={() => setDeleteOpen(true)} type="button">삭제</button>
+                <RecordButton onClick={() => setEditing(true)}>수정</RecordButton>
+                <RecordButton onClick={() => setDeleteOpen(true)} variant="danger">삭제</RecordButton>
               </div>
             )}
           </Card>

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, EmptyState, PageHeader, RecordButton, Section, Tag } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPost, type MeetingReviewSummary } from "@/lib/api";
 
 export default function AdminReviewsPage() {
@@ -54,6 +55,7 @@ function AdminReviewsContent() {
     <main>
       <Section>
         <div className="grid gap-8">
+          <MobileBackButton fallbackHref="/admin" />
           <PageHeader eyebrow="Admin" title="모임 후기 관리" description="후기 본문은 직접 수정하지 않고 숨김/복구/삭제만 수행합니다." />
           {message && <EmptyState title="상태" description={message} />}
           <div className="grid gap-3">
@@ -87,11 +89,11 @@ function AdminReviewsContent() {
                       <div className="flex flex-wrap gap-3">
                         <Button href={`/reviews/${review.id}`} variant="secondary">상세 보기</Button>
                         {review.status === "HIDDEN" ? (
-                          <button className="archive-record-button" onClick={() => restore(review.id)} type="button">복구</button>
+                          <RecordButton onClick={() => restore(review.id)}>복구</RecordButton>
                         ) : (
-                          <button className="archive-record-button" onClick={() => hide(review.id)} type="button">숨김</button>
+                          <RecordButton onClick={() => hide(review.id)}>숨김</RecordButton>
                         )}
-                        <button className="archive-record-button archive-record-button--danger" onClick={() => remove(review.id)} type="button">삭제</button>
+                        <RecordButton onClick={() => remove(review.id)} variant="danger">삭제</RecordButton>
                       </div>
                     </div>
                   </Card>

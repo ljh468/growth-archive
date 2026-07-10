@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { MobileBackButton } from "@/components/MobileBackButton";
 import { Button, Card, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
 import { apiGet, apiPut, type InterestTag, type MyProfile, uploadImage } from "@/lib/api";
 
@@ -86,6 +87,7 @@ function MyProfileContent() {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/mypage" />
           <PageHeader eyebrow="Profile" title="프로필 수정" description="한 줄 소개는 80자, 주요 소개 항목은 1000자 기준으로 관리합니다." />
           {!profile && !message && <EmptyState title="불러오는 중입니다." description="내 프로필을 확인하고 있습니다." />}
           {!profile && message && <EmptyState title="상태" description={message} />}
