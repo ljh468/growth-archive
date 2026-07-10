@@ -85,7 +85,7 @@ export default function PeoplePage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center photo-muted" style={{ backgroundImage: "url(/images/korean-reading-table.jpg)" }} />
         <div className="absolute inset-0 bg-[rgba(248,246,238,0.88)]" />
-        <div className="relative mx-auto flex min-h-[260px] max-w-6xl items-end px-5 py-10 sm:min-h-[340px] sm:px-8 sm:py-12 lg:px-10">
+        <div className="relative mx-auto flex min-h-[250px] max-w-6xl items-end px-5 py-10 sm:min-h-[300px] sm:px-8 sm:py-10 lg:px-10">
           <PageHeader
             eyebrow="Growth People"
             title="성장을 기록하는 사람들"
@@ -93,7 +93,7 @@ export default function PeoplePage() {
           />
         </div>
       </section>
-      <section className="mx-auto w-full max-w-6xl px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
+      <section className="mx-auto w-full max-w-6xl px-5 py-7 sm:px-8 sm:py-8 lg:px-10 lg:py-8">
         <div className="grid gap-5 sm:gap-8">
           {error && <EmptyState title="불러오기 실패" description={error} />}
           {loading && <PeopleSkeleton />}
