@@ -115,7 +115,7 @@ class MeetingServiceTest {
     }
 
     @Test
-    void createSmallMeetingStoresCurrentMemberAsHost() {
+    void createSmallMeetingStoresCurrentMemberAsHostAndAttendee() {
         CurrentMemberResolver resolver = Mockito.mock(CurrentMemberResolver.class);
         MeetingRepository repository = Mockito.mock(MeetingRepository.class);
         ImageAssetRepository imageAssetRepository = Mockito.mock(ImageAssetRepository.class);
@@ -140,6 +140,7 @@ class MeetingServiceTest {
         service.createSmall(null, command);
 
         Mockito.verify(repository).createSmall(Mockito.eq(2L), Mockito.any(MeetingCommand.class));
+        Mockito.verify(repository).join(10L, 2L);
     }
 
     private MeetingDetail meeting(Long id, String status, Integer capacity) {

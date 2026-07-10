@@ -137,9 +137,9 @@ export function MeetingDetailClient({ meetingId }: { meetingId: string }) {
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-[var(--color-line)] pb-2">
-      <dt className="text-xs text-[var(--color-muted)] sm:text-sm">{label}</dt>
-      <dd className="text-right text-sm font-normal text-[var(--color-ink)]">{value}</dd>
+    <div className="grid w-full min-w-0 gap-1 border-b border-[var(--color-line)] pb-2 sm:flex sm:justify-between sm:gap-4">
+      <dt className="min-w-0 text-xs text-[var(--color-muted)] sm:text-sm">{label}</dt>
+      <dd className="min-w-0 max-w-full text-left text-sm font-normal leading-6 text-[var(--color-ink)] [overflow-wrap:anywhere] sm:text-right">{value}</dd>
     </div>
   );
 }
