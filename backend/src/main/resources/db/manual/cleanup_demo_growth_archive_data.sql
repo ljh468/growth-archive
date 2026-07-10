@@ -27,8 +27,8 @@ RESTART IDENTITY CASCADE;
 
 INSERT INTO invite_codes (code_hash, code_preview, role, is_active, created_by_member_id, created_at)
 VALUES
-    ('94ee059335e587e501cc4bf90613e0814f00a7b08bc7c648fd865a2af6a22cc2', '****', 'MEMBER', true, null, now()),
-    ('835d6dc88b708bc646d6db82c853ef4182fabbd4a8de59c213f2b5ab3ae7d9be', 'ADM****IN', 'ADMIN', true, null, now());
+    ('94ee059335e587e501cc4bf90613e0814f00a7b08bc7c648fd865a2af6a22cc2', 'test', 'MEMBER', true, null, now()),
+    ('835d6dc88b708bc646d6db82c853ef4182fabbd4a8de59c213f2b5ab3ae7d9be', 'admin', 'ADMIN', true, null, now());
 
 INSERT INTO books (
     id, source, source_book_id, isbn13, title, authors_text, publisher, published_date,

@@ -1,5 +1,6 @@
 package com.growtharchive.service.admin;
 
+import com.growtharchive.config.properties.AppProperties;
 import com.growtharchive.repository.InviteCodeRepository;
 import com.growtharchive.repository.MemberRepository;
 import com.growtharchive.security.AccessLevel;
@@ -24,19 +25,22 @@ public class AdminMemberService {
     private final InviteCodeRepository inviteCodeRepository;
     private final CodeHashService codeHashService;
     private final AdminAuditLogRepository adminAuditLogRepository;
+    private final AppProperties properties;
 
     public AdminMemberService(
         CurrentMemberResolver currentMemberResolver,
         MemberRepository memberRepository,
         InviteCodeRepository inviteCodeRepository,
         CodeHashService codeHashService,
-        AdminAuditLogRepository adminAuditLogRepository
+        AdminAuditLogRepository adminAuditLogRepository,
+        AppProperties properties
     ) {
         this.currentMemberResolver = currentMemberResolver;
         this.memberRepository = memberRepository;
         this.inviteCodeRepository = inviteCodeRepository;
         this.codeHashService = codeHashService;
         this.adminAuditLogRepository = adminAuditLogRepository;
+        this.properties = properties;
     }
 
     public List<MemberSummary> list(HttpServletRequest request, String keyword, int page, int size) {
@@ -144,7 +148,10 @@ public class AdminMemberService {
     public InviteCodeResponse activeInviteCode(HttpServletRequest request) {
         currentMemberResolver.require(request, AccessLevel.ADMIN);
         InviteCodeRepository.ActiveInviteCodePreviews previews = inviteCodeRepository.findActivePreviews();
-        return new InviteCodeResponse(previews.memberCodePreview(), previews.adminCodePreview());
+        return new InviteCodeResponse(
+            displayInviteCode("MEMBER", previews.memberCodePreview(), properties.getInvite().getInitialCode()),
+            displayInviteCode("ADMIN", previews.adminCodePreview(), properties.getInvite().getAdminInitialCode())
+        );
     }
 
     public void updateInviteCode(HttpServletRequest request, String role, String code) {
@@ -172,6 +179,16 @@ public class AdminMemberService {
             return role;
         }
         throw new ApiException(ErrorCode.VALIDATION_ERROR, "초대코드 권한을 선택해 주세요.");
+    }
+
+    private String displayInviteCode(String role, String preview, String configuredCode) {
+        if (preview == null || !preview.contains("*") || configuredCode == null || configuredCode.isBlank()) {
+            return preview;
+        }
+        return inviteCodeRepository.findActiveHash(role)
+            .filter(activeHash -> activeHash.equals(codeHashService.hashInviteCode(configuredCode)))
+            .map(activeHash -> codeHashService.preview(configuredCode))
+            .orElse(preview);
     }
 
     private MemberSummary toSummary(MemberRepository.AdminMemberRow row) {

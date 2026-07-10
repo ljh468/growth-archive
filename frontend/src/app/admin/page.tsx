@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
+import { Button, Card, EmptyState, PageHeader, Section, SkeletonBlock } from "@/components/ui/primitives";
 import { apiGet, type AdminDashboard } from "@/lib/api";
 
 export default function AdminPage() {
@@ -35,7 +35,7 @@ function AdminDashboardContent() {
         <div className="grid gap-5 sm:gap-8">
           <PageHeader eyebrow="Admin" title="운영 관리" description="회원, 초대코드, 태그, 추천책, 참여 현황, 모임과 후기를 관리합니다." />
           {message && <EmptyState title="상태" description={message} />}
-          {dashboard && (
+          {dashboard ? (
             <div className="grid gap-2 sm:gap-4 md:grid-cols-4">
               <Metric label="활성 회원" value={dashboard.activeMemberCount} />
               <Metric label="독서기록" value={dashboard.activeReadingRecordCount} />
@@ -46,6 +46,8 @@ function AdminDashboardContent() {
               <Metric label="참여 대상" value={dashboard.participationTargetCount} />
               <Metric label="UNVERIFIED 책" value={dashboard.unverifiedBookCount} />
             </div>
+          ) : (
+            !message && <MetricSkeletonGrid />
           )}
           <div className="grid gap-2 sm:gap-4 md:grid-cols-3">
             <AdminLink title="회원 관리" description="회원 목록, 비활성화, 재활성화, 참여 시작월을 관리합니다." href="/admin/members" />
@@ -60,6 +62,21 @@ function AdminDashboardContent() {
         </div>
       </Section>
     </main>
+  );
+}
+
+function MetricSkeletonGrid() {
+  return (
+    <div className="grid gap-2 sm:gap-4 md:grid-cols-4" aria-label="운영 지표 로딩 중">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <Card key={index}>
+          <div className="flex min-h-[28px] items-center justify-between gap-3 sm:block sm:min-h-[66px]">
+            <SkeletonBlock className="h-4 w-20" />
+            <SkeletonBlock className="h-5 w-8 sm:mt-3 sm:h-7 sm:w-12" />
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }
 

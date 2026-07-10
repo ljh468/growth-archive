@@ -14,6 +14,10 @@ import org.springframework.stereotype.Service;
 public class RegularMeetingService {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final String DEFAULT_REGION = "하남 미사";
+    private static final String DEFAULT_EXACT_LOCATION = "투썸플레이스 미사호수공원점";
+    private static final int DEFAULT_CAPACITY = 10;
+    private static final int DEFAULT_FEE_AMOUNT = 0;
 
     private final MeetingRepository meetingRepository;
 
@@ -28,7 +32,10 @@ public class RegularMeetingService {
             "REGULAR_READING",
             month.getMonthValue() + "월 독서기록모임",
             meetingAt(month, 2),
-            "온라인 또는 추후 공지",
+            DEFAULT_REGION,
+            DEFAULT_EXACT_LOCATION,
+            DEFAULT_CAPACITY,
+            DEFAULT_FEE_AMOUNT,
             "이번 달 독서기록을 함께 나누는 정기 모임입니다.",
             targetMonth
         )) {
@@ -38,7 +45,10 @@ public class RegularMeetingService {
             "REGULAR_ACTION",
             month.getMonthValue() + "월 실행수다모임",
             meetingAt(month, 4),
-            "온라인 또는 추후 공지",
+            DEFAULT_REGION,
+            DEFAULT_EXACT_LOCATION,
+            DEFAULT_CAPACITY,
+            DEFAULT_FEE_AMOUNT,
             "월초에 정한 실행목표를 함께 이야기하고 편하게 수다 나누는 정기 모임입니다.",
             targetMonth
         )) {

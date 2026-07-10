@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { Button, EmptyState, Section, Tag } from "@/components/ui/primitives";
-import { apiGet, apiPost, type ActivitySummary, type MyDashboard } from "@/lib/api";
+import { apiGet, apiPost, apiPut, type ActivitySummary, type MyDashboard, type MyProfile, uploadImage } from "@/lib/api";
 
 export default function MyPage() {
   return (
@@ -21,6 +21,9 @@ function MyPageContent() {
   const [withdrawConfirmOpen, setWithdrawConfirmOpen] = useState(false);
   const [withdrawPhrase, setWithdrawPhrase] = useState("");
   const [withdrawMessage, setWithdrawMessage] = useState<string | null>(null);
+  const [profileImageMessage, setProfileImageMessage] = useState<string | null>(null);
+  const [profileImageMessageType, setProfileImageMessageType] = useState<"success" | "error">("success");
+  const [profileImageUpdating, setProfileImageUpdating] = useState(false);
   const monthlyReadingRecords = dashboard?.currentReadingRecords ?? (dashboard?.currentReadingRecord ? [dashboard.currentReadingRecord] : []);
   const hasMonthlyRecord = Boolean(monthlyReadingRecords.length > 0 || dashboard?.currentActionPlan);
 
@@ -46,6 +49,54 @@ function MyPageContent() {
     window.location.href = "/login";
   }
 
+  async function updateProfileImage(file: File) {
+    if (profileImageUpdating) {
+      return;
+    }
+    setProfileImageUpdating(true);
+    setProfileImageMessage(null);
+
+    const profileResult = await apiGet<MyProfile>("/me/profile");
+    if (!profileResult.success) {
+      setProfileImageMessageType("error");
+      setProfileImageMessage(profileResult.error?.message ?? "프로필을 불러오지 못했습니다.");
+      setProfileImageUpdating(false);
+      return;
+    }
+
+    const uploadResult = await uploadImage(file, "PROFILE");
+    if (!uploadResult.success) {
+      setProfileImageMessageType("error");
+      setProfileImageMessage(uploadResult.error?.message ?? "프로필 이미지를 업로드하지 못했습니다.");
+      setProfileImageUpdating(false);
+      return;
+    }
+
+    const saveResult = await apiPut<MyProfile>("/me/profile", {
+      ...profileResult.data,
+      profileImageId: uploadResult.data.imageId,
+    });
+    if (!saveResult.success) {
+      setProfileImageMessageType("error");
+      setProfileImageMessage(saveResult.error?.message ?? "프로필 사진을 저장하지 못했습니다.");
+      setProfileImageUpdating(false);
+      return;
+    }
+
+    setDashboard((current) => current ? {
+      ...current,
+      profile: {
+        ...current.profile,
+        displayName: saveResult.data.displayName,
+        profileImageUrl: saveResult.data.profileImageUrl,
+        oneLineIntro: saveResult.data.oneLineIntro,
+      },
+    } : current);
+    setProfileImageMessageType("success");
+    setProfileImageMessage("프로필 사진이 변경되었습니다.");
+    setProfileImageUpdating(false);
+  }
+
   return (
     <main>
       <Section>
@@ -55,7 +106,12 @@ function MyPageContent() {
           <div className="grid gap-4 sm:gap-6">
             <section className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-line)] bg-[linear-gradient(135deg,rgba(255,254,250,0.96),rgba(47,90,67,0.07))] p-4 shadow-[var(--shadow-soft)] sm:p-7">
               <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-5">
-                <ProfileImage name={dashboard.profile.displayName} src={dashboard.profile.profileImageUrl} />
+                <ProfileImage
+                  name={dashboard.profile.displayName}
+                  onFileSelect={updateProfileImage}
+                  src={dashboard.profile.profileImageUrl}
+                  updating={profileImageUpdating}
+                />
                 <div className="min-w-0">
                   <p className="font-latin text-2xl leading-none text-[var(--color-bronze)] sm:text-4xl">My Archive</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-3">
@@ -67,6 +123,9 @@ function MyPageContent() {
                     )}
                   </div>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--color-muted)] sm:mt-3 sm:leading-7">{dashboard.profile.oneLineIntro}</p>
+                  {profileImageMessage && (
+                    <p className={`mt-2 text-xs leading-5 ${profileImageMessageType === "success" ? "text-[var(--color-deep-green)]" : "text-[#9F2A20]"}`}>{profileImageMessage}</p>
+                  )}
                   {dashboard.profile.role === "ADMIN" && (
                     <div className="mt-4">
                       <Button href="/admin">운영 관리</Button>
@@ -303,15 +362,43 @@ function ActionRow({ href, label, status }: { href: string; label: string; statu
   );
 }
 
-function ProfileImage({ name, src }: { name: string; src: string | null }) {
-  if (src) {
-    return <Image alt="" className="size-16 rounded-full object-cover shadow-[var(--shadow-soft)] sm:size-24" height={96} src={src} unoptimized width={96} />;
-  }
-
+function ProfileImage({
+  name,
+  onFileSelect,
+  src,
+  updating,
+}: {
+  name: string;
+  onFileSelect: (file: File) => void;
+  src: string | null;
+  updating: boolean;
+}) {
   return (
-    <div className="flex size-16 items-center justify-center rounded-full bg-[var(--color-deep-green)] text-xl text-[var(--color-warm-white)] shadow-[var(--shadow-soft)] sm:size-24 sm:text-2xl">
-      {name.slice(0, 1)}
-    </div>
+    <label className={`group relative size-16 cursor-pointer overflow-hidden rounded-full shadow-[var(--shadow-soft)] sm:size-24 ${updating ? "pointer-events-none opacity-80" : ""}`}>
+      {src ? (
+        <Image alt="" className="size-full rounded-full object-cover" height={96} src={src} unoptimized width={96} />
+      ) : (
+        <span className="flex size-full items-center justify-center rounded-full bg-[var(--color-deep-green)] text-xl text-[var(--color-warm-white)] sm:text-2xl">
+          {name.slice(0, 1)}
+        </span>
+      )}
+      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-[rgba(34,34,28,0.46)] text-[10px] text-[var(--color-warm-white)] opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 sm:text-xs">
+        {updating ? "저장 중" : "변경"}
+      </span>
+      <input
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+        className="sr-only"
+        disabled={updating}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.currentTarget.value = "";
+          if (file) {
+            onFileSelect(file);
+          }
+        }}
+        type="file"
+      />
+    </label>
   );
 }
 

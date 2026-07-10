@@ -28,7 +28,10 @@ class RegularMeetingServiceTest {
             Mockito.eq("REGULAR_READING"),
             Mockito.eq("7월 독서기록모임"),
             Mockito.eq(OffsetDateTime.parse("2026-07-12T10:00:00+09:00")),
-            Mockito.eq("온라인 또는 추후 공지"),
+            Mockito.eq("하남 미사"),
+            Mockito.eq("투썸플레이스 미사호수공원점"),
+            Mockito.eq(10),
+            Mockito.eq(0),
             Mockito.any(),
             Mockito.eq(LocalDate.of(2026, 7, 1))
         ))
@@ -37,7 +40,10 @@ class RegularMeetingServiceTest {
             Mockito.eq("REGULAR_ACTION"),
             Mockito.eq("7월 실행수다모임"),
             Mockito.eq(OffsetDateTime.parse("2026-07-26T10:00:00+09:00")),
-            Mockito.eq("온라인 또는 추후 공지"),
+            Mockito.eq("하남 미사"),
+            Mockito.eq("투썸플레이스 미사호수공원점"),
+            Mockito.eq(10),
+            Mockito.eq(0),
             Mockito.any(),
             Mockito.eq(LocalDate.of(2026, 7, 1))
         ))
@@ -50,7 +56,10 @@ class RegularMeetingServiceTest {
             Mockito.eq("REGULAR_READING"),
             Mockito.eq("7월 독서기록모임"),
             Mockito.eq(OffsetDateTime.parse("2026-07-12T10:00:00+09:00")),
-            Mockito.eq("온라인 또는 추후 공지"),
+            Mockito.eq("하남 미사"),
+            Mockito.eq("투썸플레이스 미사호수공원점"),
+            Mockito.eq(10),
+            Mockito.eq(0),
             Mockito.any(),
             Mockito.eq(LocalDate.of(2026, 7, 1))
         );
@@ -58,7 +67,10 @@ class RegularMeetingServiceTest {
             Mockito.eq("REGULAR_ACTION"),
             Mockito.eq("7월 실행수다모임"),
             Mockito.eq(OffsetDateTime.parse("2026-07-26T10:00:00+09:00")),
-            Mockito.eq("온라인 또는 추후 공지"),
+            Mockito.eq("하남 미사"),
+            Mockito.eq("투썸플레이스 미사호수공원점"),
+            Mockito.eq(10),
+            Mockito.eq(0),
             Mockito.any(),
             Mockito.eq(LocalDate.of(2026, 7, 1))
         );

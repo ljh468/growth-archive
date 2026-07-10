@@ -157,7 +157,7 @@ function AdminParticipationContent() {
                   <div className="mt-4 grid gap-2">
                     {pagedManagedMembers.map((member) => (
                       <div className="grid gap-3 border border-[rgba(229,222,209,0.82)] bg-[rgba(255,254,250,0.58)] px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" key={member.memberId}>
-                        <div className="min-w-48 flex-1">
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm font-normal">@{member.displayName}</p>
                             {member.manuallyCompleted && <Tag>운영진 처리 완료</Tag>}
@@ -259,10 +259,10 @@ function NoteForm({ memberId, initialNote, compact = false, onSave }: { memberId
   }
 
   return (
-    <form className={compact ? "mt-3 flex items-center gap-2" : "mt-4 flex flex-col gap-3 sm:flex-row"} onSubmit={submit}>
-      <input className={`${compact ? "min-h-8 text-xs" : "min-h-11"} flex-1 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3`} onChange={(event) => setNote(event.target.value)} placeholder="운영 메모" value={note} />
+    <form className={compact ? "mt-3 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5" : "mt-4 flex flex-col gap-3 sm:flex-row"} onSubmit={submit}>
+      <input className={`${compact ? "min-h-8 min-w-0 text-xs" : "min-h-11"} flex-1 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3`} onChange={(event) => setNote(event.target.value)} placeholder="운영 메모" value={note} />
       {compact ? (
-        <button className="inline-flex min-h-8 shrink-0 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-2.5 py-1 text-[10px] font-normal" type="submit">
+        <button className="archive-record-button shrink-0" type="submit">
           저장
         </button>
       ) : (
