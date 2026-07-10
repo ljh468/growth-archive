@@ -131,6 +131,7 @@ public class MeetingService {
         MeetingCommand normalized = normalize(command, false);
         validateCoverImage(member.memberId(), normalized.thumbnailImageId());
         Long meetingId = meetingRepository.createSmall(member.memberId(), normalized);
+        meetingRepository.join(meetingId, member.memberId());
         return detail(request, meetingId);
     }
 
