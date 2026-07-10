@@ -151,7 +151,7 @@ export default function HomePage() {
       </section>
 
       <Section>
-        <div className="grid gap-8">
+        <div className="grid gap-5 sm:gap-8">
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="font-latin text-2xl leading-none text-[var(--color-bronze)] sm:text-4xl">Reviews</p>
@@ -165,11 +165,11 @@ export default function HomePage() {
           {!reviewsLoaded ? (
             <HomeReviewSkeleton />
           ) : reviews.length ? (
-            <div className="grid gap-5 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
               {reviews.map((review) => (
-                <a className="group grid grid-cols-[68px_minmax(0,1fr)] gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-3 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 md:block md:p-0" href={`/reviews/${review.id}`} key={review.id}>
-                  <div className="h-[84px] w-[68px] rounded-[var(--radius-card)] bg-cover bg-center photo-muted md:aspect-[4/3] md:h-auto md:w-full md:rounded-none" style={{ backgroundImage: `url(${review.representativeImageUrl ?? "/images/korean-reading-table.jpg"})` }} />
-                  <div className="min-w-0 max-w-[calc(100vw-132px)] py-1 md:max-w-none md:p-6">
+                <a className="group grid grid-cols-[62px_minmax(0,1fr)] gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-3 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 md:block md:p-0" href={`/reviews/${review.id}`} key={review.id}>
+                  <div className="h-[76px] w-[62px] rounded-[var(--radius-card)] bg-cover bg-center photo-muted md:aspect-[4/3] md:h-auto md:w-full md:rounded-none" style={{ backgroundImage: `url(${reviewPreviewImage(review)})` }} />
+                  <div className="min-w-0 max-w-[calc(100vw-126px)] py-1 md:max-w-none md:p-6">
                     <p className="text-sm text-[var(--color-bronze)]">{review.meetingTitle}</p>
                     <h3 className="mt-1 truncate font-display text-base font-normal leading-snug md:mt-2 md:line-clamp-2 md:whitespace-normal md:text-lg">{review.title}</h3>
                     <p className="mt-2 hidden font-hand text-[1.05rem] leading-6 text-[var(--color-charcoal)] md:mt-3 md:line-clamp-2 md:block">{review.contentSummary}</p>
@@ -186,12 +186,21 @@ export default function HomePage() {
   );
 }
 
+function reviewPreviewImage(review: MeetingReviewSummary) {
+  const imageUrl = review.representativeImageUrl;
+  if (!imageUrl || imageUrl.includes("/book-shelf") || imageUrl.includes("/reading-books") || imageUrl.includes("/member-books")) {
+    const fallbacks = ["/images/korean-bookclub-discussion.jpg", "/images/meeting-table.jpg", "/images/hero-bookclub-discussion.png"];
+    return fallbacks[review.id % fallbacks.length];
+  }
+  return imageUrl;
+}
+
 function HomeReviewSkeleton() {
   return (
-    <div className="grid gap-5 md:grid-cols-3" aria-label="최근 모임 후기 로딩 중">
+    <div className="grid gap-4 md:grid-cols-3" aria-label="최근 모임 후기 로딩 중">
       {Array.from({ length: 3 }).map((_, index) => (
-        <article className="grid grid-cols-[68px_minmax(0,1fr)] gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-3 shadow-[var(--shadow-soft)] md:block md:p-0" key={index}>
-          <SkeletonBlock className="h-[84px] w-[68px] md:aspect-[4/3] md:h-auto md:w-full md:rounded-none" />
+        <article className="grid grid-cols-[62px_minmax(0,1fr)] gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] p-3 shadow-[var(--shadow-soft)] md:block md:p-0" key={index}>
+          <SkeletonBlock className="h-[76px] w-[62px] md:aspect-[4/3] md:h-auto md:w-full md:rounded-none" />
           <div className="grid min-w-0 gap-2 py-1 md:p-6">
             <SkeletonBlock className="h-4 w-28" />
             <SkeletonBlock className="h-4 w-full" />

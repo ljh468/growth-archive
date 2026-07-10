@@ -112,7 +112,7 @@ export default function LibraryPage() {
                 ) : currentRecommendedBook ? (
                   <div className="grid gap-4">
                     <article
-                      className="relative grid cursor-grab select-none gap-5 overflow-hidden rounded-[var(--radius-card)] bg-[rgba(255,254,250,0.92)] p-4 shadow-[var(--shadow-soft)] active:cursor-grabbing sm:grid-cols-[180px_1fr] sm:p-5"
+                      className="relative grid cursor-grab select-none grid-cols-[104px_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[rgba(255,254,250,0.92)] p-3 shadow-[var(--shadow-soft)] active:cursor-grabbing sm:grid-cols-[180px_1fr] sm:gap-5 sm:p-5"
                       onMouseDown={(event) => {
                         dragStartX.current = event.clientX;
                       }}
@@ -162,18 +162,18 @@ export default function LibraryPage() {
                       )}
                       <Image
                         alt={`${currentRecommendedBook.title} 표지`}
-                        className="aspect-[3/4] w-full max-w-[178px] justify-self-center rounded-[var(--radius-card)] bg-[var(--color-line)] object-cover photo-muted shadow-[0_18px_42px_rgba(63,47,34,0.18),0_2px_10px_rgba(63,47,34,0.10)] sm:max-w-none"
+                        className="aspect-[3/4] w-full max-w-[104px] justify-self-center rounded-[var(--radius-card)] bg-[var(--color-line)] object-cover photo-muted shadow-[0_14px_30px_rgba(63,47,34,0.16),0_2px_8px_rgba(63,47,34,0.08)] sm:max-w-none sm:shadow-[0_18px_42px_rgba(63,47,34,0.18),0_2px_10px_rgba(63,47,34,0.10)]"
                         height={360}
                         priority
-                        sizes="(min-width: 640px) 180px, 178px"
+                        sizes="(min-width: 640px) 180px, 104px"
                         src={currentRecommendedBook.thumbnailUrl || "/images/reading-books.jpg"}
                         width={240}
                       />
-                      <div className="flex min-w-0 flex-col justify-center px-6 sm:px-0">
+                      <div className="flex min-w-0 flex-col justify-center pl-1 pr-6 sm:px-0">
                         <p className="text-xs text-[var(--color-bronze)]">추천 {String(currentRecommendedBook.displayOrder).padStart(2, "0")}</p>
-                        <h3 className="mt-2 break-words font-display text-xl font-normal leading-snug [word-break:keep-all] sm:text-2xl">{currentRecommendedBook.title}</h3>
-                        <p className="mt-2 text-sm text-[var(--color-muted)]">{currentRecommendedBook.authorsText}</p>
-                        <p className="mt-5 max-w-2xl break-words text-sm leading-7 [word-break:keep-all]">{currentRecommendedBook.reason}</p>
+                        <h3 className="mt-1 break-words font-display text-base font-normal leading-snug [word-break:keep-all] sm:mt-2 sm:text-2xl">{currentRecommendedBook.title}</h3>
+                        <p className="mt-1 line-clamp-1 text-xs text-[var(--color-muted)] sm:mt-2 sm:text-sm">{currentRecommendedBook.authorsText}</p>
+                        <p className="mt-2 line-clamp-2 max-w-2xl break-words text-xs leading-5 [word-break:keep-all] sm:mt-5 sm:line-clamp-none sm:text-sm sm:leading-7">{currentRecommendedBook.reason}</p>
                       </div>
                     </article>
                     <div className="flex justify-center">
@@ -355,11 +355,11 @@ function LibrarySkeleton() {
     <div className="grid gap-8" aria-label="독서기록 라이브러리 로딩 중">
       <section className="grid gap-4">
         <SkeletonBlock className="h-7 w-36" />
-        <article className="grid gap-5 overflow-hidden rounded-[var(--radius-card)] bg-[rgba(255,254,250,0.92)] p-4 shadow-[var(--shadow-soft)] sm:grid-cols-[180px_1fr] sm:p-5">
-          <SkeletonBlock className="aspect-[3/4] w-full max-w-[190px] justify-self-center sm:max-w-none" />
+        <article className="grid grid-cols-[104px_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[rgba(255,254,250,0.92)] p-3 shadow-[var(--shadow-soft)] sm:grid-cols-[180px_1fr] sm:gap-5 sm:p-5">
+          <SkeletonBlock className="aspect-[3/4] w-full max-w-[104px] justify-self-center sm:max-w-none" />
           <div className="grid content-center gap-3">
             <SkeletonBlock className="h-4 w-24" />
-            <SkeletonBlock className="h-7 w-3/4" />
+            <SkeletonBlock className="h-5 w-3/4 sm:h-7" />
             <SkeletonBlock className="h-4 w-40" />
             <div className="mt-2 grid gap-2">
               <SkeletonBlock className="h-4 w-full" />

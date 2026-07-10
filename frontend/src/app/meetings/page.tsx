@@ -61,7 +61,7 @@ export default function MeetingsPage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center photo-muted" style={{ backgroundImage: "url(/images/korean-bookclub-discussion.jpg)" }} />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(31,47,36,0.72),rgba(45,63,49,0.28))]" />
-        <div className="relative mx-auto flex min-h-[420px] max-w-6xl items-end px-5 py-16 text-[var(--color-warm-white)] sm:px-8 lg:px-10">
+        <div className="relative mx-auto flex min-h-[360px] max-w-6xl items-end px-5 py-12 text-[var(--color-warm-white)] sm:min-h-[420px] sm:px-8 sm:py-16 lg:px-10">
           <div className="flex w-full flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-3xl">
               <p className="font-latin text-4xl text-[#efe7d8] sm:text-5xl">Meetings</p>
@@ -91,15 +91,15 @@ export default function MeetingsPage() {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {currentMeetings.map((meeting) => (
                 <a className="group overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5" href={`/meetings/${meeting.id}`} key={meeting.id}>
-                  <div className="h-32 bg-cover bg-center photo-muted sm:h-36" style={{ backgroundImage: `url(${meeting.coverImageUrl ?? "/images/korean-bookclub-discussion.jpg"})` }} />
-                  <div className="p-4">
+                  <div className="h-24 bg-cover bg-center photo-muted sm:h-36" style={{ backgroundImage: `url(${meeting.coverImageUrl ?? "/images/korean-bookclub-discussion.jpg"})` }} />
+                  <div className="p-3 sm:p-4">
                     <div className="flex flex-wrap gap-2">
                       <Tag>{meetingTypeLabel(meeting.meetingType)}</Tag>
                       <Tag>{meetingStatusLabel(meeting.status)}</Tag>
                     </div>
-                    <h2 className="mt-3 line-clamp-1 text-lg font-normal">{meeting.title}</h2>
+                    <h2 className="mt-2 line-clamp-1 text-base font-normal sm:mt-3 sm:text-lg">{meeting.title}</h2>
                     {meeting.description && <p className="mt-1 hidden text-xs leading-5 text-[var(--color-muted)] sm:line-clamp-2">{meeting.description}</p>}
-                    <dl className="mt-3 grid gap-1.5 text-xs text-[var(--color-charcoal)]">
+                    <dl className="mt-2 grid gap-1.5 text-xs text-[var(--color-charcoal)] sm:mt-3">
                       <div className="grid grid-cols-[42px_minmax(0,1fr)] gap-2 sm:flex sm:justify-between sm:gap-4">
                         <dt>일시</dt>
                         <dd className="min-w-0 text-left sm:text-right">{formatDateTime(meeting.meetingAt)}</dd>
@@ -116,7 +116,7 @@ export default function MeetingsPage() {
                         </dd>
                       </div>
                     </dl>
-                    <div className="mt-4">
+                    <div className="mt-3 sm:mt-4">
                       <AttendeePreview images={meeting.attendeePreviewImageUrls} count={meeting.attendeeCount} />
                     </div>
                   </div>
@@ -243,8 +243,8 @@ function MeetingCardsSkeleton() {
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-label="이번 달 모임 로딩 중">
       {Array.from({ length: 3 }).map((_, index) => (
         <article className="overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] shadow-[var(--shadow-soft)]" key={index}>
-          <SkeletonBlock className="h-32 rounded-none sm:h-36" />
-          <div className="grid gap-3 p-4">
+          <SkeletonBlock className="h-24 rounded-none sm:h-36" />
+          <div className="grid gap-3 p-3 sm:p-4">
             <div className="flex gap-2">
               <SkeletonBlock className="h-7 w-24 rounded-full" />
               <SkeletonBlock className="h-7 w-16 rounded-full" />

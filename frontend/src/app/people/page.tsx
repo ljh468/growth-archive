@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { EmptyState, PageHeader, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, apiGetCurrentUser, type MonthlyActionPlanShowcase, type ProfileCard } from "@/lib/api";
 
 export default function PeoplePage() {
@@ -85,7 +85,7 @@ export default function PeoplePage() {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center photo-muted" style={{ backgroundImage: "url(/images/korean-reading-table.jpg)" }} />
         <div className="absolute inset-0 bg-[rgba(248,246,238,0.88)]" />
-        <div className="relative mx-auto flex min-h-[260px] max-w-6xl items-end px-5 py-10 sm:min-h-[400px] sm:px-8 sm:py-16 lg:px-10">
+        <div className="relative mx-auto flex min-h-[260px] max-w-6xl items-end px-5 py-10 sm:min-h-[340px] sm:px-8 sm:py-12 lg:px-10">
           <PageHeader
             eyebrow="Growth People"
             title="성장을 기록하는 사람들"
@@ -93,61 +93,36 @@ export default function PeoplePage() {
           />
         </div>
       </section>
-      <Section>
+      <section className="mx-auto w-full max-w-6xl px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
         <div className="grid gap-5 sm:gap-8">
           {error && <EmptyState title="불러오기 실패" description={error} />}
           {loading && <PeopleSkeleton />}
           {!loading && !error && people.length === 0 && <EmptyState title="아직 보여줄 성장 프로필이 없어요." description="첫 프로필이 완성되면 이곳에 표시됩니다." />}
-          {!loading && people.length > 0 && <div
-            className="relative select-none"
-            onMouseDown={(event) => {
-              dragStartX.current = event.clientX;
-            }}
-            onMouseLeave={() => {
-              dragStartX.current = null;
-            }}
-            onMouseUp={(event) => finishPeopleDrag(event.clientX)}
-            onTouchEnd={(event) => {
-              const touch = event.changedTouches[0];
-              if (touch) {
-                finishPeopleDrag(touch.clientX);
-              }
-            }}
-            onTouchStart={(event) => {
-              dragStartX.current = event.touches[0]?.clientX ?? null;
-            }}
-          >
-            {people.length > pageSize && (
-              <>
-                <button
-                  aria-label="이전 성장 프로필 보기"
-                  className="absolute left-0 top-1/2 z-10 flex w-9 -translate-y-1/2 items-center justify-start bg-gradient-to-r from-[rgba(31,77,58,0.08)] to-transparent pl-1 opacity-75 transition hover:opacity-100 sm:inset-y-0 sm:top-auto sm:w-14 sm:translate-y-0 sm:pl-2"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    movePeople(-1);
-                  }}
-                  type="button"
-                >
-                  <span className="grid size-6 place-items-center rounded-full border border-[rgba(31,77,58,0.16)] bg-[rgba(255,253,248,0.86)] shadow-[var(--shadow-soft)] sm:size-7">
-                    <span className="block size-2.5 rotate-45 border-b border-l border-[var(--color-deep-green)]" />
-                  </span>
-                </button>
-                <button
-                  aria-label="다음 성장 프로필 보기"
-                  className="absolute right-0 top-1/2 z-10 flex w-9 -translate-y-1/2 items-center justify-end bg-gradient-to-l from-[rgba(31,77,58,0.08)] to-transparent pr-1 opacity-75 transition hover:opacity-100 sm:inset-y-0 sm:top-auto sm:w-14 sm:translate-y-0 sm:pr-2"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    movePeople(1);
-                  }}
-                  type="button"
-                >
-                  <span className="grid size-6 place-items-center rounded-full border border-[rgba(31,77,58,0.16)] bg-[rgba(255,253,248,0.86)] shadow-[var(--shadow-soft)] sm:size-7">
-                    <span className="block size-2.5 -rotate-45 border-b border-r border-[var(--color-deep-green)]" />
-                  </span>
-                </button>
-              </>
-            )}
-            <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+          {!loading && people.length > 0 && <div className="select-none">
+            <div className={people.length > pageSize ? "grid items-stretch gap-2 sm:grid-cols-[2.25rem_1fr_2.25rem]" : ""}>
+              {people.length > pageSize && (
+                <SideSlideButton label="이전 성장 프로필 보기" onClick={() => movePeople(-1)} side="left" />
+              )}
+              <div
+                className="min-w-0"
+                onMouseDown={(event) => {
+                  dragStartX.current = event.clientX;
+                }}
+                onMouseLeave={() => {
+                  dragStartX.current = null;
+                }}
+                onMouseUp={(event) => finishPeopleDrag(event.clientX)}
+                onTouchEnd={(event) => {
+                  const touch = event.changedTouches[0];
+                  if (touch) {
+                    finishPeopleDrag(touch.clientX);
+                  }
+                }}
+                onTouchStart={(event) => {
+                  dragStartX.current = event.touches[0]?.clientX ?? null;
+                }}
+              >
+                <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
               {visibleSlots.map((person, index) => person ? (
                 <Link
                   className={[
@@ -210,10 +185,16 @@ export default function PeoplePage() {
               ) : (
                 <div aria-hidden="true" className="hidden h-full rounded-[var(--radius-card)] lg:block lg:invisible" key={`empty-slot-${index}`} />
               ))}
+                </div>
+              </div>
+              {people.length > pageSize && (
+                <SideSlideButton label="다음 성장 프로필 보기" onClick={() => movePeople(1)} side="right" />
+              )}
             </div>
           </div>}
           {!loading && people.length > pageSize && (
-            <div className="flex items-center justify-center pt-1">
+            <div className="flex items-center justify-center gap-3 pt-1 sm:gap-2">
+              <MobileSlideButton label="이전 성장 프로필 보기" onClick={() => movePeople(-1)} side="left" />
               <div className="flex items-center gap-2" aria-label="성장하는 사람들 슬라이드">
                 {Array.from({ length: pageCount }).map((_, index) => (
                   <button
@@ -229,6 +210,7 @@ export default function PeoplePage() {
                   />
                 ))}
               </div>
+              <MobileSlideButton label="다음 성장 프로필 보기" onClick={() => movePeople(1)} side="right" />
             </div>
           )}
           {!loading && !error && memberReady && (
@@ -238,7 +220,7 @@ export default function PeoplePage() {
             />
           )}
         </div>
-      </Section>
+      </section>
     </main>
   );
 }
@@ -347,56 +329,30 @@ function MonthlyActionPlanBoard({
         </p>
       ) : (
         <>
-          <div
-            className="relative select-none"
-            onMouseDown={(event) => {
-              dragStartX.current = event.clientX;
-            }}
-            onMouseLeave={() => {
-              dragStartX.current = null;
-            }}
-            onMouseUp={(event) => finishDrag(event.clientX)}
-            onTouchEnd={(event) => {
-              const touch = event.changedTouches[0];
-              if (touch) {
-                finishDrag(touch.clientX);
-              }
-            }}
-            onTouchStart={(event) => {
-              dragStartX.current = event.touches[0]?.clientX ?? null;
-            }}
-          >
+          <div className={pageCount > 1 ? "grid items-stretch gap-2 sm:grid-cols-[2.25rem_1fr_2.25rem]" : ""}>
             {pageCount > 1 && (
-              <>
-                <button
-                  aria-label="이전 실행 메모 보기"
-                  className="absolute left-0 top-1/2 z-10 flex w-9 -translate-y-1/2 items-center justify-start bg-gradient-to-r from-[rgba(31,77,58,0.08)] to-transparent pl-1 opacity-75 transition hover:opacity-100 sm:inset-y-0 sm:top-auto sm:w-12 sm:translate-y-0 sm:pl-2"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    movePlans(-1);
-                  }}
-                  type="button"
-                >
-                  <span className="grid size-6 place-items-center rounded-full border border-[rgba(31,77,58,0.16)] bg-[rgba(255,253,248,0.88)] shadow-[var(--shadow-soft)] sm:size-7">
-                    <span className="block size-2.5 rotate-45 border-b border-l border-[var(--color-deep-green)]" />
-                  </span>
-                </button>
-                <button
-                  aria-label="다음 실행 메모 보기"
-                  className="absolute right-0 top-1/2 z-10 flex w-9 -translate-y-1/2 items-center justify-end bg-gradient-to-l from-[rgba(31,77,58,0.08)] to-transparent pr-1 opacity-75 transition hover:opacity-100 sm:inset-y-0 sm:top-auto sm:w-12 sm:translate-y-0 sm:pr-2"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    movePlans(1);
-                  }}
-                  type="button"
-                >
-                  <span className="grid size-6 place-items-center rounded-full border border-[rgba(31,77,58,0.16)] bg-[rgba(255,253,248,0.88)] shadow-[var(--shadow-soft)] sm:size-7">
-                    <span className="block size-2.5 -rotate-45 border-b border-r border-[var(--color-deep-green)]" />
-                  </span>
-                </button>
-              </>
+              <SideSlideButton label="이전 실행 메모 보기" onClick={() => movePlans(-1)} side="left" />
             )}
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div
+              className="min-w-0 select-none"
+              onMouseDown={(event) => {
+                dragStartX.current = event.clientX;
+              }}
+              onMouseLeave={() => {
+                dragStartX.current = null;
+              }}
+              onMouseUp={(event) => finishDrag(event.clientX)}
+              onTouchEnd={(event) => {
+                const touch = event.changedTouches[0];
+                if (touch) {
+                  finishDrag(touch.clientX);
+                }
+              }}
+              onTouchStart={(event) => {
+                dragStartX.current = event.touches[0]?.clientX ?? null;
+              }}
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
             {visiblePlans.map((plan) => {
               const expanded = expandedPlanIds.has(plan.id);
               return (
@@ -451,11 +407,16 @@ function MonthlyActionPlanBoard({
                 </article>
               );
             })}
+              </div>
             </div>
+            {pageCount > 1 && (
+              <SideSlideButton label="다음 실행 메모 보기" onClick={() => movePlans(1)} side="right" />
+            )}
           </div>
 
           {pageCount > 1 && (
-            <div className="flex justify-center pt-1">
+            <div className="flex items-center justify-center gap-3 pt-1 sm:gap-2">
+              <MobileSlideButton label="이전 실행 메모 보기" onClick={() => movePlans(-1)} side="left" />
               <div className="flex items-center gap-2" aria-label="이달의 실행 메모 슬라이드">
                 {Array.from({ length: pageCount }).map((_, index) => (
                   <button
@@ -471,11 +432,70 @@ function MonthlyActionPlanBoard({
                   />
                 ))}
               </div>
+              <MobileSlideButton label="다음 실행 메모 보기" onClick={() => movePlans(1)} side="right" />
             </div>
           )}
         </>
       )}
     </section>
+  );
+}
+
+function SideSlideButton({
+  label,
+  onClick,
+  side,
+}: {
+  label: string;
+  onClick: () => void;
+  side: "left" | "right";
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="group hidden min-h-full items-center justify-center text-[#466657] transition hover:text-[var(--color-deep-green)] active:translate-y-px sm:flex"
+      onClick={onClick}
+      type="button"
+    >
+      <span className="grid size-7 place-items-center rounded-full border border-[rgba(31,77,58,0.14)] bg-[rgba(255,254,250,0.72)] shadow-[0_8px_18px_rgba(63,47,34,0.06)] transition group-hover:border-[rgba(31,77,58,0.26)] group-hover:bg-[rgba(246,241,232,0.88)]">
+        <ArrowIcon side={side} />
+      </span>
+    </button>
+  );
+}
+
+function MobileSlideButton({
+  label,
+  onClick,
+  side,
+}: {
+  label: string;
+  onClick: () => void;
+  side: "left" | "right";
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="group grid size-10 place-items-center rounded-full text-[#466657] transition active:scale-95 sm:hidden"
+      onClick={onClick}
+      type="button"
+    >
+      <span className="grid size-7 place-items-center rounded-full border border-[rgba(31,77,58,0.14)] bg-[rgba(255,254,250,0.82)] shadow-[0_8px_18px_rgba(63,47,34,0.06)] transition group-active:bg-[rgba(246,241,232,0.9)]">
+        <ArrowIcon side={side} />
+      </span>
+    </button>
+  );
+}
+
+function ArrowIcon({ side }: { side: "left" | "right" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={[
+        "block size-2 border-b border-current",
+        side === "left" ? "rotate-45 border-l" : "-rotate-45 border-r",
+      ].join(" ")}
+    />
   );
 }
 

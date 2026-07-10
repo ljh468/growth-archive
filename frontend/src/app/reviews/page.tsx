@@ -45,16 +45,14 @@ export default function ReviewsPage() {
                 key={review.id}
               >
                 <div className="grid grid-cols-[104px_minmax(0,1fr)] gap-3 p-3 sm:grid-cols-1 sm:gap-3 sm:p-5">
-                  {review.representativeImageUrl && (
-                    <Image
-                      alt=""
-                      className="h-32 w-full rounded-[var(--radius-card)] object-cover photo-muted transition group-hover:scale-[1.01] sm:aspect-[16/10] sm:h-auto"
-                      height={240}
-                      src={review.representativeImageUrl}
-                      unoptimized
-                      width={384}
-                    />
-                  )}
+                  <Image
+                    alt=""
+                    className="h-32 w-full rounded-[var(--radius-card)] object-cover photo-muted transition group-hover:scale-[1.01] sm:aspect-[16/9] sm:h-auto"
+                    height={216}
+                    src={reviewPreviewImage(review)}
+                    unoptimized
+                    width={384}
+                  />
                   <div className="min-w-0 max-w-[calc(100vw-168px)] sm:max-w-none">
                     <div className="flex flex-wrap gap-2">
                       <Tag>{review.meetingTitle}</Tag>
@@ -87,13 +85,22 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeZone: "Asia/Seoul" }).format(new Date(value));
 }
 
+function reviewPreviewImage(review: MeetingReviewSummary) {
+  const imageUrl = review.representativeImageUrl;
+  if (!imageUrl || imageUrl.includes("/book-shelf") || imageUrl.includes("/reading-books") || imageUrl.includes("/member-books")) {
+    const fallbacks = ["/images/korean-bookclub-discussion.jpg", "/images/meeting-table.jpg", "/images/hero-bookclub-discussion.png"];
+    return fallbacks[review.id % fallbacks.length];
+  }
+  return imageUrl;
+}
+
 function ReviewsSkeleton() {
   return (
     <div className="grid gap-4 md:grid-cols-2" aria-label="모임 후기 로딩 중">
       {Array.from({ length: 4 }).map((_, index) => (
         <article className="grid overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-warm-white)] shadow-[var(--shadow-soft)]" key={index}>
           <div className="grid grid-cols-[104px_minmax(0,1fr)] gap-3 p-3 sm:grid-cols-1 sm:p-5">
-            <SkeletonBlock className="h-32 w-full sm:aspect-[16/10] sm:h-auto" />
+            <SkeletonBlock className="h-32 w-full sm:aspect-[16/9] sm:h-auto" />
             <div className="grid min-w-0 content-start gap-2">
               <SkeletonBlock className="h-7 w-32 rounded-full" />
               <SkeletonBlock className="h-5 w-4/5" />
