@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { MobileBackButton } from "@/components/MobileBackButton";
 import { Button, Card, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
 import { apiGet, apiPut, type AdminInviteCode } from "@/lib/api";
 
@@ -48,6 +49,7 @@ function AdminInviteCodeContent() {
     <main>
       <Section>
         <div className="grid gap-8">
+          <MobileBackButton fallbackHref="/admin" />
           <PageHeader eyebrow="Admin" title="초대코드 관리" description="일반 회원용 코드와 운영진 코드를 분리해 관리합니다." />
           {message && <EmptyState title="상태" description={message} />}
           <div className="grid gap-3 sm:grid-cols-2">

@@ -2,7 +2,8 @@
 
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, EmptyState, PageHeader, RecordButton, Section, Tag } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPost, apiPut, type AdminInterestTag } from "@/lib/api";
 
 export default function AdminInterestTagsPage() {
@@ -76,6 +77,7 @@ function AdminInterestTagsContent() {
     <main>
       <Section>
         <div className="grid gap-8">
+          <MobileBackButton fallbackHref="/admin" />
           <PageHeader eyebrow="Admin" title="관심 태그 관리" description="회원은 운영진이 등록한 활성 태그 중에서만 선택할 수 있습니다." />
           {message && <EmptyState title="상태" description={message} />}
           <div className="grid gap-5">
@@ -161,9 +163,7 @@ function InterestTagEditor({
         </label>
         <div className="flex flex-wrap gap-3">
           <Button type="submit">{selected ? "수정" : "추가"}</Button>
-          <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={reset} type="button">
-            새 태그
-          </button>
+          <RecordButton onClick={reset}>새 태그</RecordButton>
         </div>
       </form>
     </Card>

@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, EmptyState, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, EmptyState, MoreButton, PageHeader, Section, SkeletonBlock, Tag } from "@/components/ui/primitives";
 import { apiGet, type MeetingSummary } from "@/lib/api";
 
 export default function MyMeetingsPage() {
@@ -55,6 +56,7 @@ function MyMeetingsContent() {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/mypage" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <PageHeader eyebrow="My Meetings" title="내가 만든 소소모임" description="직접 만든 소소모임을 최신 일정순으로 확인합니다." />
             <Button href="/meetings/new">소소모임 만들기</Button>
@@ -83,9 +85,9 @@ function MyMeetingsContent() {
                 </a>
               ))}
               {hasMore && (
-                <button className="archive-more-button justify-self-center" disabled={loadingMore} onClick={more} type="button">
+                <MoreButton className="justify-self-center" disabled={loadingMore} onClick={more}>
                   {loadingMore ? "Loading" : "More"}
-                </button>
+                </MoreButton>
               )}
             </div>
           )}

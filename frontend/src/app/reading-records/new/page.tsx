@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
+import { MobileBackButton } from "@/components/MobileBackButton";
 import { Button, Card, PageHeader, Section } from "@/components/ui/primitives";
 import { apiGet, apiPost, type BookDetailResponse, type BookSearchResult, type BookSummary, type ReadingRecord, uploadImage } from "@/lib/api";
 
@@ -174,6 +175,7 @@ export default function NewReadingRecordPage() {
         <main>
           <Section>
             <div className="grid gap-5 sm:gap-8">
+              <MobileBackButton fallbackHref="/library" />
               <PageHeader
                 eyebrow="Reading Record"
                 title="독서기록 작성"

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, EmptyState, PageHeader, Section, SkeletonBlock } from "@/components/ui/primitives";
+import { Button, EmptyState, MoreButton, PageHeader, Section, SkeletonBlock } from "@/components/ui/primitives";
 import { apiGet, type LibraryResponse } from "@/lib/api";
 
 export default function LibraryPage() {
@@ -312,14 +312,12 @@ export default function LibraryPage() {
                     ))}
                     {visibleRecordCount < filteredRecords.length && (
                       <div className="flex justify-center pt-2">
-                        <button
+                        <MoreButton
                           aria-label="최근 독서기록 더 보기"
-                          className="archive-more-button"
                           onClick={() => setVisibleRecordCount((count) => count + 10)}
-                          type="button"
                         >
                           More
-                        </button>
+                        </MoreButton>
                       </div>
                     )}
                   </div>

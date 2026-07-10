@@ -114,6 +114,34 @@ class MeetingServiceTest {
         Mockito.verify(repository, Mockito.never()).updateRegular(Mockito.anyLong(), Mockito.any());
     }
 
+    @Test
+    void createSmallMeetingStoresCurrentMemberAsHost() {
+        CurrentMemberResolver resolver = Mockito.mock(CurrentMemberResolver.class);
+        MeetingRepository repository = Mockito.mock(MeetingRepository.class);
+        ImageAssetRepository imageAssetRepository = Mockito.mock(ImageAssetRepository.class);
+        MeetingService service = new MeetingService(resolver, new AccessLevelCalculator(), repository, imageAssetRepository);
+        MeetingCommand command = new MeetingCommand(
+            "퇴근 후 독서 모임",
+            "짧게 읽고 기록을 나눕니다.",
+            OffsetDateTime.now().plusDays(3),
+            "하남 미사",
+            "비공개 장소",
+            8,
+            null,
+            0,
+            null
+        );
+        Mockito.when(resolver.require(Mockito.isNull(), Mockito.eq(AccessLevel.MEMBER))).thenReturn(member());
+        Mockito.when(imageAssetRepository.isOwnedImage(2L, null, "MEETING_COVER")).thenReturn(true);
+        Mockito.when(repository.createSmall(Mockito.eq(2L), Mockito.any(MeetingCommand.class))).thenReturn(10L);
+        Mockito.when(repository.findById(10L, false, 2L)).thenReturn(Optional.of(meeting(10L, "SCHEDULED", 8)));
+        Mockito.when(resolver.resolveOptional(Mockito.isNull())).thenReturn(member());
+
+        service.createSmall(null, command);
+
+        Mockito.verify(repository).createSmall(Mockito.eq(2L), Mockito.any(MeetingCommand.class));
+    }
+
     private MeetingDetail meeting(Long id, String status, Integer capacity) {
         return meeting(id, status, capacity, OffsetDateTime.now().plusDays(1));
     }

@@ -2,7 +2,8 @@
 
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, EmptyState, PageHeader, RecordButton, Section, Tag } from "@/components/ui/primitives";
 import { apiGet, apiPost, apiPut, type BookSummary } from "@/lib/api";
 
 type StatusFilter = "UNVERIFIED" | "VERIFIED" | "ALL";
@@ -94,6 +95,7 @@ function AdminBooksContent() {
     <main>
       <Section>
         <div className="grid gap-8">
+          <MobileBackButton fallbackHref="/admin" />
           <PageHeader eyebrow="Admin" title="책 검증" description="회원이 직접 등록한 책 정보를 확인하고 필요한 경우 수정한 뒤 검증 완료 처리합니다." />
           {message && <EmptyState title="처리 결과" description={message} />}
           <label className="grid max-w-xs gap-2 text-sm">
@@ -190,9 +192,7 @@ function BookEditor({
         <input className="min-h-11 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3" onChange={(event) => setForm((current) => ({ ...current, thumbnailUrl: event.target.value }))} placeholder="표지 이미지 URL" value={form.thumbnailUrl} />
         <div className="flex flex-wrap gap-3">
           <Button type="submit">저장</Button>
-          <button className="inline-flex min-h-11 items-center justify-center border border-[var(--color-line)] bg-[var(--color-warm-white)] px-4 py-2 text-sm font-normal" onClick={reset} type="button">
-            선택 해제
-          </button>
+          <RecordButton onClick={reset}>선택 해제</RecordButton>
         </div>
       </form>
     </Card>

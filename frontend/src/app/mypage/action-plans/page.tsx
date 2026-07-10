@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
-import { Card, ConfirmDialog, PageHeader, Section } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Card, ConfirmDialog, PageHeader, RecordButton, Section } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPost, apiPut, type MonthlyActionPlan } from "@/lib/api";
 
 export default function MyActionPlansPage() {
@@ -68,6 +69,7 @@ function ActionPlanContent() {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/mypage" />
           <PageHeader eyebrow="Monthly Action Plan" title="월간 액션플랜" description="이번 달의 선언을 자유롭게 남기고 참여 상태에 반영합니다." />
           <Card>
             <form className="grid gap-3 sm:gap-4" onSubmit={submit}>
@@ -85,13 +87,11 @@ function ActionPlanContent() {
               </label>
               {message && <p className="text-sm leading-6 text-[var(--color-muted)]">{message}</p>}
               <div className="flex flex-wrap gap-3">
-                <button className="archive-record-button archive-record-button--primary" type="submit">
+                <RecordButton type="submit" variant="primary">
                   {plan ? "수정" : "저장"}
-                </button>
+                </RecordButton>
                 {plan && (
-                  <button className="archive-record-button archive-record-button--danger" onClick={() => setDeleteOpen(true)} type="button">
-                    삭제
-                  </button>
+                  <RecordButton onClick={() => setDeleteOpen(true)} variant="danger">삭제</RecordButton>
                 )}
               </div>
             </form>

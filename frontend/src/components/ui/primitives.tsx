@@ -1,11 +1,32 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 
 type ButtonProps = {
   children: ReactNode;
+  className?: string;
   href?: string;
   onClick?: () => void;
   type?: "button" | "submit";
   variant?: "primary" | "secondary" | "ghost";
+};
+
+type RecordButtonProps = {
+  children: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  href?: string;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  style?: CSSProperties;
+  type?: "button" | "submit";
+  variant?: "default" | "primary" | "danger";
+};
+
+type MoreButtonProps = {
+  "aria-label"?: string;
+  children?: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  onClick?: () => void;
+  type?: "button" | "submit";
 };
 
 type ConfirmDialogProps = {
@@ -18,26 +39,65 @@ type ConfirmDialogProps = {
   title: string;
 };
 
-export function Button({ children, href, onClick, type = "button", variant = "primary" }: ButtonProps) {
-  const className = [
-    "inline-flex min-h-11 max-w-full self-start touch-manipulation items-center justify-center rounded-[var(--radius-card)] px-5 py-2.5 text-sm font-normal transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-bronze)] active:translate-y-px",
+export function Button({ children, className, href, onClick, type = "button", variant = "primary" }: ButtonProps) {
+  const classes = [
+    "inline-flex min-h-11 max-w-full appearance-none self-start touch-manipulation items-center justify-center rounded-[var(--radius-card)] border border-transparent px-5 py-2.5 text-sm font-normal leading-none [font-family:var(--font-body)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-bronze)] active:translate-y-px",
     variant === "primary" && "bg-[var(--color-deep-green)] !text-[var(--color-warm-white)] shadow-[var(--shadow-soft)] hover:bg-[var(--color-wood-brown)]",
     variant === "secondary" && "bg-[var(--color-deep-green)] !text-[var(--color-warm-white)] shadow-[var(--shadow-soft)] hover:bg-[var(--color-wood-brown)]",
     variant === "ghost" && "bg-[var(--color-deep-green)] !text-[var(--color-warm-white)] hover:bg-[var(--color-wood-brown)]",
+    className,
   ]
     .filter(Boolean)
     .join(" ");
+  const style: CSSProperties = {
+    appearance: "none",
+    borderColor: "transparent",
+    color: "var(--color-warm-white)",
+    fontFamily: "var(--font-body)",
+    fontSize: "0.875rem",
+    fontWeight: 400,
+    lineHeight: 1,
+  };
 
   if (href) {
     return (
-      <a className={className} href={href} style={{ color: "var(--color-warm-white)" }}>
+      <a className={classes} href={href} style={style}>
         {children}
       </a>
     );
   }
 
   return (
-    <button className={className} onClick={onClick} style={{ color: "var(--color-warm-white)" }} type={type}>
+    <button className={classes} onClick={onClick} style={style} type={type}>
+      {children}
+    </button>
+  );
+}
+
+export function RecordButton({ children, className, disabled, href, onClick, style, type = "button", variant = "default" }: RecordButtonProps) {
+  const classes = [
+    "archive-record-button",
+    variant === "primary" && "archive-record-button--primary",
+    variant === "danger" && "archive-record-button--danger",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (href) {
+    return <a className={classes} href={href}>{children}</a>;
+  }
+
+  return (
+    <button className={classes} disabled={disabled} onClick={onClick} style={style} type={type}>
+      {children}
+    </button>
+  );
+}
+
+export function MoreButton({ "aria-label": ariaLabel, children = "More", className, disabled, onClick, type = "button" }: MoreButtonProps) {
+  return (
+    <button aria-label={ariaLabel} className={["archive-more-button", className].filter(Boolean).join(" ")} disabled={disabled} onClick={onClick} type={type}>
       {children}
     </button>
   );

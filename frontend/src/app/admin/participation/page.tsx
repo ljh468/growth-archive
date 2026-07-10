@@ -2,7 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { MobileBackButton } from "@/components/MobileBackButton";
+import { Button, Card, EmptyState, PageHeader, RecordButton, Section, Tag } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPost, apiPut, type AdminParticipationMember, type AdminParticipationSummary } from "@/lib/api";
 
 export default function AdminParticipationPage() {
@@ -83,6 +84,7 @@ function AdminParticipationContent() {
     <main>
       <Section>
         <div className="grid gap-8">
+          <MobileBackButton fallbackHref="/admin" />
           <PageHeader eyebrow="Admin" title="참여 현황 관리" description="선택한 월의 참여 인원과 미참여자를 확인하고 카카오톡 안내 메시지를 만듭니다." />
           <label className="grid max-w-xs gap-2 text-sm">
             대상 월
@@ -105,9 +107,7 @@ function AdminParticipationContent() {
                     <h2 className="font-normal">카카오톡 메시지</h2>
                     <p className="mt-1 text-sm leading-6 text-[var(--color-charcoal)]">미참여자 멘션과 안내 문구를 복사합니다.</p>
                   </div>
-                  <button className="archive-record-button shrink-0" onClick={copyMessage} type="button">
-                    복사
-                  </button>
+                  <RecordButton className="shrink-0" onClick={copyMessage}>복사</RecordButton>
                 </div>
                 <label className="mt-3 grid gap-2 text-sm">
                   안내 문구
@@ -169,14 +169,12 @@ function AdminParticipationContent() {
                         </div>
                         <div className="flex items-center justify-between gap-2 sm:justify-end">
                           {!member.manuallyCompleted && <span className="text-xs text-[var(--color-bronze)]">{member.coffeeSupportItem}</span>}
-                          <button
-                            className="archive-record-button"
+                          <RecordButton
                             onClick={() => (member.manuallyCompleted ? clearManualCompletion(member.memberId) : markManualCompletion(member.memberId))}
                             style={member.manuallyCompleted ? { borderColor: "rgba(150,64,56,0.36)", color: "#964038" } : undefined}
-                            type="button"
                           >
                             {member.manuallyCompleted ? "미참여 처리" : "참여 처리"}
-                          </button>
+                          </RecordButton>
                         </div>
                       </div>
                     ))}
@@ -262,9 +260,7 @@ function NoteForm({ memberId, initialNote, compact = false, onSave }: { memberId
     <form className={compact ? "mt-3 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5" : "mt-4 flex flex-col gap-3 sm:flex-row"} onSubmit={submit}>
       <input className={`${compact ? "min-h-8 min-w-0 text-xs" : "min-h-11"} flex-1 border border-[var(--color-line)] bg-[var(--color-warm-white)] px-3`} onChange={(event) => setNote(event.target.value)} placeholder="운영 메모" value={note} />
       {compact ? (
-        <button className="archive-record-button shrink-0" type="submit">
-          저장
-        </button>
+        <RecordButton className="shrink-0" type="submit">저장</RecordButton>
       ) : (
         <Button type="submit" variant="secondary">
           저장

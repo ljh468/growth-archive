@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { MobileBackButton } from "@/components/MobileBackButton";
 import { Button, Card, PageHeader, Section } from "@/components/ui/primitives";
 import { apiGet, apiPut, type MonthlyReflectionSlot } from "@/lib/api";
 
@@ -50,6 +51,7 @@ function ReflectionContent() {
     <main>
       <Section>
         <div className="grid gap-5 sm:gap-8">
+          <MobileBackButton fallbackHref="/mypage" />
           <PageHeader eyebrow="Monthly Reflection" title="월간 회고" description="회고는 선택 기록이며 참여 현황 계산에 포함되지 않습니다." />
           <Card>
             <form className="grid gap-3 sm:gap-4" onSubmit={submit}>
