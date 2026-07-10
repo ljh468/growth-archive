@@ -282,6 +282,9 @@ public class MeetingRepository {
         String title,
         OffsetDateTime meetingAt,
         String regionText,
+        String detailAddress,
+        Integer capacity,
+        Integer costAmount,
         String description,
         LocalDate targetMonth
     ) {
@@ -299,9 +302,9 @@ public class MeetingRepository {
             description,
             meetingAt,
             regionText,
-            null,
-            null,
-            0,
+            detailAddress,
+            capacity,
+            costAmount,
             null,
             null,
             targetMonth,
