@@ -2,7 +2,7 @@
 
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
 import { AuthGate } from "@/components/AuthGate";
-import { Button, Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
+import { Card, EmptyState, PageHeader, Section, Tag } from "@/components/ui/primitives";
 import { apiDelete, apiGet, apiPost, apiPut, type MeetingDetail, type MeetingSummary } from "@/lib/api";
 
 export default function AdminMeetingsPage() {
@@ -224,7 +224,7 @@ function MeetingEditor({
             </select>
           </label>
           <div className="flex flex-wrap gap-3">
-            {selected.meetingType !== "SMALL" && <Button type="submit">정기모임 수정</Button>}
+            {selected.meetingType !== "SMALL" && <button className="archive-record-button" type="submit">정기모임 수정</button>}
             {selected.status === "HIDDEN" ? (
               <button className="archive-record-button" onClick={restore} type="button">복구</button>
             ) : (
